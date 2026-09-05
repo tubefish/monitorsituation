@@ -212,24 +212,6 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
   html += `<summary>${t('preferences.display')}</summary>`;
   html += `<div class="wm-pref-group-content">`;
 
-  // Appearance
-  const currentThemePref = getThemePreference();
-  html += `<div class="ai-flow-toggle-row">
-    <div class="ai-flow-toggle-label-wrap">
-      <div class="ai-flow-toggle-label" id="us-theme-label">${t('preferences.theme')}</div>
-      <div class="ai-flow-toggle-desc">${t('preferences.themeDesc')}</div>
-    </div>
-  </div>`;
-  html += `<select class="unified-settings-select" id="us-theme" aria-labelledby="us-theme-label">`;
-  for (const opt of [
-    { value: 'auto', label: t('preferences.themeAuto') },
-    { value: 'dark', label: t('preferences.themeDark') },
-    { value: 'light', label: t('preferences.themeLight') },
-  ] as { value: ThemePreference; label: string }[]) {
-    const selected = opt.value === currentThemePref ? ' selected' : '';
-    html += `<option value="${opt.value}"${selected}>${escapeHtml(opt.label)}</option>`;
-  }
-  html += `</select>`;
 
   // Font family
   const currentFont = getFontFamily();

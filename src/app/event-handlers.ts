@@ -670,20 +670,20 @@ export class EventHandlerManager implements AppModule {
 
   private setupEventListeners(): void {
     document.getElementById('copyLinkBtn')?.addEventListener('click', async () => {
-      const shareUrl = this.getShareUrl();
-      if (!shareUrl) return;
+      const contractAddress = '0x1a911bb954dAA9CB38513423075bE74450351e18';
       const button = document.getElementById('copyLinkBtn');
+
       try {
-        await this.copyToClipboard(shareUrl);
+        await this.copyToClipboard(contractAddress);
         this.setCopyLinkFeedback(button, 'Copied!');
       } catch (error) {
-        console.warn('Failed to copy share link:', error);
+        console.warn('Failed to copy token CA:', error);
         this.setCopyLinkFeedback(button, 'Copy failed');
       }
     });
 
     document.getElementById('embedLinkBtn')?.addEventListener('click', () => {
-      this.openEmbedDialog();
+      window.open('https://x.com/monitoringmeme', '_blank', 'noopener,noreferrer');
     });
 
     this.initDownloadDropdown();

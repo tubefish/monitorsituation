@@ -15,8 +15,6 @@ function loadMapModeFromStorage<T>(key: string, fallback: T): T {
   }
 }
 
-export function getStoredMapModePreference(
-  load: <T>(key: string, fallback: T) => T = loadMapModeFromStorage,
-): MapModePreference {
-  return normalizeMapModePreference(load<string>(STORAGE_KEYS.mapMode, DEFAULT_MAP_MODE));
+export function getStoredMapModePreference(): MapModePreference {
+  return 'globe';
 }

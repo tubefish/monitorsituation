@@ -18431,7 +18431,7 @@ a.prediction-link:hover {
   position: absolute;
   bottom: 10px;
   left: 10px;
-  z-index: 100;
+  z-index: 500;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 4px;

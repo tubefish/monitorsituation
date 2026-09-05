@@ -4,7 +4,7 @@ export type Theme = 'dark' | 'light';
 export type ThemePreference = 'auto' | 'dark' | 'light';
 
 const STORAGE_KEY = 'worldmonitor-theme';
-const DEFAULT_THEME: Theme = 'dark';
+const DEFAULT_THEME: Theme = 'light';
 
 function resolveThemeColor(theme: Theme, variant: string | undefined): string {
   if (theme === 'dark') return variant === 'happy' ? '#1A2332' : '#0a0f0a';
@@ -103,23 +103,7 @@ export function setTheme(theme: Theme): void {
  */
 export function applyStoredTheme(): void {
   const variant = document.documentElement.dataset.variant;
-
-  // Check raw localStorage to distinguish "no preference" from "explicitly chose dark"
-  let raw: string | null = null;
-  try { raw = localStorage.getItem(STORAGE_KEY); } catch { /* noop */ }
-  const hasExplicitPreference = raw === 'dark' || raw === 'light' || raw === 'auto';
-
-  let effective: Theme;
-  if (raw === 'auto') {
-    effective = resolveAutoTheme();
-  } else if (hasExplicitPreference) {
-    effective = raw as Theme;
-  } else {
-    // No stored preference: match index.html prepaint and stored `'auto'`.
-    // Happy stays light; every other variant follows prefers-color-scheme
-    // instead of snapping first-visit light OS users back to DEFAULT_THEME (dark).
-    effective = variant === 'happy' ? 'light' : resolveAutoTheme();
-  }
+  const effective: Theme = 'light';
 
   document.documentElement.dataset.theme = effective;
   updateThemeMetaColor(effective, variant);

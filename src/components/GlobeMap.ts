@@ -1953,7 +1953,6 @@ export class GlobeMap {
     const el = document.createElement('div');
     el.className = 'map-controls deckgl-controls';
     setTrustedHtml(el, trustedHtml(`
-      <span class="globe-beta-badge">BETA</span>
       <div class="zoom-controls">
         <button class="map-btn zoom-in"    title="Zoom in" aria-label="Zoom in">+</button>
         <button class="map-btn zoom-out"   title="Zoom out" aria-label="Zoom out">-</button>
@@ -2020,10 +2019,6 @@ export class GlobeMap {
           </div>`;
         }).join('')}
       </div>`, "legacy direct innerHTML migration"));
-    const authorBadge = document.createElement('div');
-    authorBadge.className = 'map-author-badge';
-    authorBadge.textContent = '© Elie Habib · Someone™';
-    el.appendChild(authorBadge);
     this.container.appendChild(el);
     this.layerTogglesEl = el;
 
