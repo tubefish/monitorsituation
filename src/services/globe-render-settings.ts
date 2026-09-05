@@ -85,11 +85,7 @@ export const GLOBE_TEXTURE_URLS: Record<GlobeTexture, string> = {
 };
 
 export function getGlobeTexture(): GlobeTexture {
-  try {
-    const raw = localStorage.getItem(TEXTURE_STORAGE_KEY);
-    if (raw === 'topographic' || raw === 'blue-marble') return raw;
-  } catch { /* ignore */ }
-  return 'topographic';
+  return 'blue-marble';
 }
 
 export function setGlobeTexture(texture: GlobeTexture): void {

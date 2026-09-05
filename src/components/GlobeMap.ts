@@ -649,7 +649,7 @@ export class GlobeMap {
     this.currentView = initialState.view;
 
     this.container.classList.add('globe-mode');
-    this.container.style.cssText = 'width:100%;height:100%;background:#000;position:relative;';
+    this.container.style.cssText = 'width:100%;height:100%;background:#e5e5e5;position:relative;';
 
     this.initPromise = this.initGlobe();
     this.initPromise.catch(err => {
@@ -710,6 +710,7 @@ export class GlobeMap {
     globe
       .globeImageUrl(GLOBE_TEXTURE_URLS[initialTexture])
       .backgroundImageUrl('')
+      .backgroundColor('#e5e5e5')
       .atmosphereColor('#4466cc')
       .atmosphereAltitude(0.18)
       .width(initW)
@@ -3815,14 +3816,14 @@ export class GlobeMap {
       const oldMat = this.globe.globeMaterial();
       if (oldMat) {
         const stdMat = new THREE.MeshStandardMaterial({
-          color: 0xffffff, roughness: 0.8, metalness: 0.1,
-          emissive: new THREE.Color(0x0a1f2e), emissiveIntensity: 0.3,
+          color: 0xffffff, roughness: 0.9, metalness: 0.0,
+          emissive: new THREE.Color(0x202020), emissiveIntensity: 0.55,
         });
         if ((oldMat as any).map) stdMat.map = (oldMat as any).map;
         (this.globe as any).globeMaterial(stdMat);
       }
 
-      this.cyanLight = new THREE.PointLight(0x00d4ff, 0.3);
+      this.cyanLight = new THREE.PointLight(0xffffff, 1.0);
       this.cyanLight.position.set(-10, -10, -10);
       scene.add(this.cyanLight);
 

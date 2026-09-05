@@ -137,13 +137,12 @@ const FULL_PANELS: Record<string, PanelConfig> = {
 };
 
 const FULL_MAP_LAYERS: MapLayers = {
-  iranAttacks: IRAN_ATTACKS_ENABLED && !_desktop,
+  iranAttacks: false,
   gpsJamming: false,
   satellites: false,
 
-
   conflicts: true,
-  bases: !_desktop,
+  bases: true,
   cables: false,
   pipelines: false,
   storageFacilities: false,
@@ -151,57 +150,61 @@ const FULL_MAP_LAYERS: MapLayers = {
   hotspots: true,
   ais: false,
   nuclear: true,
-  irradiators: false,
-  radiationWatch: false,
-  sanctions: true,
-  weather: true,
-  // Opt-in — see DEFAULT_MAP_LAYERS in src/config/variants/full.ts. Its four
-  // sources are on-demand bootstrap keys (~2.7 MB), so shipping the layer on
-  // put that on every visitor (#6763).
+  irradiators: true,
+  radiationWatch: true,
+  sanctions: false,
+  weather: false,
   canadaRoads: false,
-  canadaAlerts: true,
-  economic: true,
-  waterways: true,
+  canadaAlerts: false,
+  economic: false,
+  waterways: false,
   outages: true,
   cyberThreats: false,
   datacenters: false,
-  protests: false,
+  protests: true,
   flights: false,
   military: true,
-  natural: true,
+  natural: false,
   spaceports: false,
   minerals: false,
   fires: false,
+
   // Data source layers
-  ucdpEvents: false,
+  ucdpEvents: true,
   displacement: false,
   climate: false,
-  // Tech layers (disabled in full variant)
+
+  // Tech layers
   startupHubs: false,
   cloudRegions: false,
   accelerators: false,
   techHQs: false,
   techEvents: false,
-  // Finance layers (disabled in full variant)
+
+  // Finance layers
   stockExchanges: false,
   financialCenters: false,
   centralBanks: false,
   commodityHubs: false,
   gulfInvestments: false,
-  // Happy variant layers
+
+  // Happy layers
   positiveEvents: false,
   kindness: false,
   happiness: false,
   speciesRecovery: false,
   renewableInstallations: false,
+
   tradeRoutes: false,
   ciiChoropleth: false,
   resilienceScore: false,
   dayNight: false,
-  // Commodity layers (disabled in full variant)
+
+  // Commodity layers
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+
   webcams: false,
   diseaseOutbreaks: false,
 };

@@ -2768,9 +2768,6 @@ export class App {
     if (!isAisConfigured()) {
       this.state.map?.hideLayerToggle('ais');
     }
-    if (isOutagesConfigured() === false) {
-      this.state.map?.hideLayerToggle('outages');
-    }
     if (!CYBER_LAYER_ENABLED) {
       this.state.map?.hideLayerToggle('cyberThreats');
     }
