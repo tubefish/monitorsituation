@@ -1079,10 +1079,8 @@ export class PanelLayoutManager implements AppModule {
           </div>
           <div class="map-container" id="mapContainer"></div>
           ${SITE_VARIANT === 'happy' ? '<button class="tv-exit-btn" id="tvExitBtn">Exit TV Mode</button>' : ''}
-          <div class="map-resize-handle" id="mapResizeHandle"></div>
           <div class="map-bottom-grid" id="mapBottomGrid"></div>
         </div>
-        <div class="map-width-resize-handle" id="mapWidthResizeHandle"></div>
         <div class="panels-grid" id="panelsGrid" role="tabpanel" aria-label="Dashboard panels"></div>
       </main>
       <nav class="mobile-tab-bar" id="mobileTabBar" aria-label="Primary">
@@ -2465,6 +2463,7 @@ export class PanelLayoutManager implements AppModule {
 
     this.lazyDefaultPanel('heatmap', () => import('@/components/MarketPanel'), 'HeatmapPanel');
     this.lazyDefaultPanel('markets', () => import('@/components/MarketPanel'), 'MarketPanel');
+    this.lazyDefaultPanel('monitor-market', () => import('@/components/MonitorMarketPanel'), 'MonitorMarketPanel');
     this.lazyDefaultPanel('stock-analysis', () => import('@/components/StockAnalysisPanel'), 'StockAnalysisPanel');
     this.lazyDefaultPanel('stock-backtest', () => import('@/components/StockBacktestPanel'), 'StockBacktestPanel');
     // Web premium gating for stock-analysis and stock-backtest is handled

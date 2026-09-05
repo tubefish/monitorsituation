@@ -2004,8 +2004,7 @@ export class GlobeMap {
         <span>${t('components.deckgl.layersTitle')}</span>
         <button class="toggle-collapse">&#9660;</button>
       </div>
-      <input type="text" class="layer-search" placeholder="${t('components.deckgl.layerSearch')}" autocomplete="off" spellcheck="false" />
-      <div class="toggle-list" style="max-height:32vh;overflow-y:auto;scrollbar-width:thin;">
+      <div class="toggle-list">
         ${layers.map(({ key, label, icon, presentation }) => {
             const explainLabel = escapeHtml(`Explain ${label} layer`);
             const hasExplanation = hasCuratedLayerExplanation(key);
