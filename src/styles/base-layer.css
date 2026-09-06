@@ -11,18 +11,22 @@
 @import url('./map-context-menu.css') layer(base);
 @import url('./supply-chain-panel.css') layer(base);
 
-/* $MONITOR mobile-only panel heights. The base mobile dashboard switches
- * #panelsGrid to flex-column, so grid-row spans do not control height here.
- * Keep desktop on each component's normal 3-row defaults. */
+/* $MONITOR mobile-only panel heights.
+ * Mobile #panelsGrid is a flex-column stack, so the desktop span-N grid rules
+ * do not define the visible footprint. These selectors intentionally target
+ * the rendered panel regardless of whether it is wrapped/reordered by the
+ * mobile dashboard. Desktop keeps each component's normal 3-row default. */
 @media (max-width: 768px) {
-  #panelsGrid > .panel[data-panel="live-news"]:not(.panel-collapsed) {
+  html body #app #panelsGrid .panel[data-panel="live-news"],
+  html body #app #panelsGrid .panel-deferred-shell[data-panel="live-news"] {
     flex: 0 0 324px !important;
     height: 324px !important;
     min-height: 324px !important;
     max-height: 324px !important;
   }
 
-  #panelsGrid > .panel[data-panel="monitor-market"]:not(.panel-collapsed) {
+  html body #app #panelsGrid .panel[data-panel="monitor-market"],
+  html body #app #panelsGrid .panel-deferred-shell[data-panel="monitor-market"] {
     flex: 0 0 652px !important;
     height: 652px !important;
     min-height: 652px !important;
