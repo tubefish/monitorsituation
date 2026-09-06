@@ -39,6 +39,7 @@ export class MobilePrimaryNav {
   ) {}
 
   init(): void {
+    this.installCompactMapStyle();
     this.setupTabBar();
     this.setupMenu();
     this.unsubscribeHistory = overlayHistory.subscribe((top) => {
@@ -110,6 +111,23 @@ export class MobilePrimaryNav {
     this.menuTrap = null;
     this.regionTrap?.deactivate({ restoreFocus: false });
     this.regionTrap = null;
+  }
+
+  private installCompactMapStyle(): void {
+    if (document.getElementById('monitor-mobile-map-size')) return;
+
+    const style = document.createElement('style');
+    style.id = 'monitor-mobile-map-size';
+    style.textContent = `
+      @media (max-width: 768px) {
+        #mapSection.map-section:not(.collapsed):not(.live-news-fullscreen) {
+          height: clamp(420px, 62dvh, 560px) !important;
+          min-height: 0 !important;
+          max-height: 560px !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   private setupTabBar(): void {
