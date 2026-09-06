@@ -60,6 +60,7 @@ const def = (
 export const LAYER_REGISTRY: Record<keyof MapLayers, LayerDefinition> = {
   iranAttacks:              def('iranAttacks',              '&#127919;', 'iranAttacks',              'Iran Attacks', ['svg', 'deck', 'globe'], _desktop ? 'locked' : undefined),
   hotspots:                 def('hotspots',                 '&#127919;', 'intelHotspots',            'Intel Hotspots'),
+  news:                     def('news',                     '&#128240;', 'news',                      'News', ['globe']),
   conflicts:                def('conflicts',                '&#9876;',   'conflictZones',            'Conflict Zones'),
 
   bases:                    def('bases',                    '&#127963;', 'militaryBases',            'Military Bases'),
@@ -350,6 +351,7 @@ export const LAYER_EXPLANATIONS: Partial<Record<keyof MapLayers, LayerExplanatio
 const VARIANT_LAYER_ORDER: Record<MapVariant, Array<keyof MapLayers>> = {
   full: [
     'hotspots',
+    'news',
     'conflicts',
     'bases',
     'nuclear',

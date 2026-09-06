@@ -649,23 +649,6 @@ export class EventHandlerManager implements AppModule {
     };
     wireSearchButton('searchBtn', 'desktop');
     wireSearchButton('mobileSearchBtn', 'mobile');
-    if (!this.boundSearchKeyHandler) {
-      this.boundSearchKeyHandler = (e: KeyboardEvent) => {
-        // !e.shiftKey so Cmd/Ctrl+Shift+K (e.g. Firefox web console) doesn't
-        // also toggle search; .toLowerCase() still tolerates CapsLock. (#4403)
-        if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'k') {
-          e.preventDefault();
-          // A keyboard toggle can arrive while the mobile tab is still
-          // loading Search. Reuse that pending marker so the eventual modal
-          // replaces it instead of pushing a second history entry.
-          this.callbacks.openSearch({
-            toggle: true,
-            historyPending: overlayHistory.top() === 'search-pending',
-          });
-        }
-      };
-      document.addEventListener('keydown', this.boundSearchKeyHandler);
-    }
   }
 
   private setupEventListeners(): void {

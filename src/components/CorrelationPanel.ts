@@ -172,7 +172,7 @@ constructor(id: string, title: string, domain: CorrelationDomain, infoTooltip?: 
     );
   }
 
-  private buildCard(card: ConvergenceCard): HTMLElement {
+  protected buildCard(card: ConvergenceCard): HTMLElement {
     const scoreColor = card.score >= 70 ? SCORE_COLORS.critical
       : card.score >= 50 ? SCORE_COLORS.high
       : card.score >= 30 ? SCORE_COLORS.medium

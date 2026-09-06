@@ -148,6 +148,7 @@ const FULL_MAP_LAYERS: MapLayers = {
   storageFacilities: false,
   fuelShortages: false,
   hotspots: true,
+  news: true,
   ais: false,
   nuclear: true,
   irradiators: true,

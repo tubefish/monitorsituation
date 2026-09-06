@@ -93,7 +93,7 @@ function renderGauge(score: number): string {
   const needleAngle = ((180 - score * 1.8) * Math.PI) / 180;
   const needleX = (cx + 75 * Math.cos(needleAngle)).toFixed(1);
   const needleY = (cy - 75 * Math.sin(needleAngle)).toFixed(1);
-  const color = scoreColor(score);
+  const color = '#111111';
 
   return `
     <svg
@@ -105,6 +105,7 @@ function renderGauge(score: number): string {
     >
       ${segments}
 
+    <g transform="translate(0,-10)">  
       <line
         x1="${cx}"
         y1="${cy}"
@@ -117,6 +118,7 @@ function renderGauge(score: number): string {
 
       <circle cx="${cx}" cy="${cy}" r="7" fill="${color}" />
       <circle cx="${cx}" cy="${cy}" r="3" fill="var(--panel-bg, #fff)" />
+    </g>  
     </svg>
   `;
 }

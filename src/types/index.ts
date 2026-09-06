@@ -664,6 +664,7 @@ export interface MapLayers {
   cables: boolean;
   pipelines: boolean;
   hotspots: boolean;
+  news?: boolean;
   ais: boolean;
   nuclear: boolean;
   irradiators: boolean;

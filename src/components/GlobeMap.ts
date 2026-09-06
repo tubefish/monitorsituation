@@ -39,7 +39,7 @@ import { resolveTradeRouteSegments, type TradeRouteSegment } from '@/config/trad
 import { GAMMA_IRRADIATORS } from '@/config/irradiators';
 import { AI_DATA_CENTERS } from '@/config/ai-datacenters';
 import { getCountryBbox, getCountriesGeoJson, getCountryAtCoordinates, getCountryNameByCode } from '@/services/country-geometry';
-import { escapeHtml } from '@/utils/sanitize';
+import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
 import { showLayerWarning } from '@/utils/layer-warning';
 import { isMobileDevice } from '@/utils';
 import { setGlobeMarkerLoad } from '@/bootstrap/globe-marker-probe';
@@ -371,6 +371,7 @@ interface NewsLocationMarker extends BaseMarker {
   id: string;
   title: string;
   threatLevel: string;
+  url?: string;
 }
 interface FlashMarker extends BaseMarker {
   _kind: 'flash';
@@ -1296,10 +1297,8 @@ export class GlobeMap {
       setTrustedHtml(el, trustedHtml(GlobeMap.wrapHit(`<div style="font-size:calc(11px * var(--wm-panel-effective-scale, 1));color:${sc};text-shadow:0 0 4px ${sc}88;">🚢</div>`), "legacy direct innerHTML migration"));
       el.title = d.name;
     } else if (d._kind === 'newsLocation') {
-      const tc = d.threatLevel === 'critical' ? '#ff2020'
-               : d.threatLevel === 'high'     ? '#ff6600'
-               : (d.threatLevel === 'elevated' || d.threatLevel === 'medium') ? '#ffaa00'
-               : '#44aaff';
+      const tc = '#8054ff';
+
       setTrustedHtml(el, trustedHtml(`
         <div style="position:relative;width:16px;height:16px;">
           <div style="position:absolute;inset:0;border-radius:50%;background:${tc}44;border:1.5px solid ${tc};box-shadow:0 0 5px 2px ${tc}55;"></div>
@@ -1676,9 +1675,17 @@ export class GlobeMap {
              `<br><span style="opacity:.7;">${esc(d.name)}</span>` +
              `<br><span style="opacity:.5;">${esc(d.severity)} · ${esc(d.description.slice(0, 60))}</span>`;
     } else if (d._kind === 'newsLocation') {
-      const tc = d.threatLevel === 'critical' ? '#ff2020' : d.threatLevel === 'high' ? '#ff6600' : (d.threatLevel === 'elevated' || d.threatLevel === 'medium') ? '#ffaa00' : '#44aaff';
-      html = `<span style="color:${tc};font-weight:bold;">📰 ${esc(d.title.slice(0, 60))}</span>` +
-             `<br><span style="opacity:.5;">${esc(d.threatLevel)}</span>`;
+      const tc = '#8054ff';
+      const href = d.url ? sanitizeUrl(d.url) : '';
+
+      html =
+        `<span style="color:${tc};font-weight:bold;">📰 ${esc(d.title)}</span>` +
+        (href
+          ? `<br><a href="${href}" target="_blank" rel="noopener noreferrer"
+                style="display:inline-block;margin-top:7px;color:${tc};font-weight:bold;text-decoration:none;">
+                OPEN ARTICLE ↗
+            </a>`
+          : '');
     } else if (d._kind === 'satellite') {
       const sc = SAT_COUNTRY_COLORS[d.country] || '#ccccff';
       const altBand = d.alt < 2000 ? 'LEO' : d.alt < 35786 ? 'MEO' : 'GEO';
@@ -2257,7 +2264,9 @@ export class GlobeMap {
     if (this.layers.webcams) add('webcams', this.webcamMarkers);
     // Exempt like flash: `news` has no layer-toggle row, so a truncation here
     // would have nowhere to be disclosed. It was ungated before this change too.
-    add('news', this.newsLocationMarkers, { exempt: true });
+   if (this.layers.news) {
+     add('news', this.newsLocationMarkers, { exempt: true });
+    }
     // Flash markers are the "jump to this location" affordance — dropping one
     // would break navigation, and there are only ever a handful.
     add('flash', this.flashMarkers, { exempt: true });
@@ -3520,7 +3529,14 @@ export class GlobeMap {
       }));
     this.flushMarkers();
   }
-  public setNewsLocations(data: Array<{ lat: number; lon: number; title: string; threatLevel: string; timestamp?: Date }>): void {
+  public setNewsLocations(data: Array<{
+    lat: number;
+    lon: number;
+    title: string;
+    threatLevel: string;
+    timestamp?: Date;
+    url?: string;
+}>): void {
     this.newsLocationMarkers = (data ?? [])
       .filter(d => d.lat != null && d.lon != null)
       .map((d, i) => ({
@@ -3530,6 +3546,7 @@ export class GlobeMap {
         id: `news-${i}-${d.title.slice(0, 20)}`,
         title: d.title,
         threatLevel: d.threatLevel ?? 'info',
+        url: d.url,
       }));
     this.flushMarkers();
   }

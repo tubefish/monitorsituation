@@ -28685,3 +28685,87 @@ body.map-width-resizing {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   $MONITOR — LOCKED DASHBOARD LAYOUT
+   ========================================================= */
+
+/* Visitors cannot close or collapse panels */
+.panel-close-btn,
+.panel-collapse-btn {
+  display: none !important;
+}
+
+/* Visitors cannot resize panel height or width */
+.panel-resize-handle,
+.panel-col-resize-handle {
+  display: none !important;
+}
+
+/* Hide keyboard panel-reorder control */
+.panel-move-btn {
+  display: none !important;
+}
+
+/* Lock the map/sidebar dimensions too */
+.map-resize-handle,
+.map-width-resize-handle {
+  display: none !important;
+}
+.iran-watch-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px;
+}
+
+.iran-watch-item {
+  display: block;
+  padding: 10px 12px;
+  border: 1px solid #d7d7d7;
+  background: #f7f7f7;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.iran-watch-item:hover {
+  background: #f1f1f1;
+  border-color: #bdbdbd;
+}
+
+.iran-watch-item .article-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.iran-watch-item .article-source {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.iran-watch-item .article-time {
+  font-size: 11px;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.iran-watch-item .article-title {
+  font-size: 14px;
+  line-height: 1.45;
+}
+/* $MONITOR — no dashboard panel additions */
+.add-panel-block {
+  display: none !important;
+}
+/* $MONITOR — search disabled */
+.search-btn,
+.mobile-search-btn,
+.mobile-tab[data-mobile-tab="search"] {
+  display: none !important;
+}

@@ -1,4 +1,4 @@
-import type { Hotspot } from '@/types';
+import type { Hotspot, NewsItem } from '@/types';
 import { createLazyClient, getRpcBaseUrl } from '@/services/rpc-client';
 import { t } from '@/services/i18n';
 import type {
@@ -6,9 +6,15 @@ import type {
   SearchGdeltDocumentsResponse,
   GdeltTimelinePoint,
 } from '@/generated/client/worldmonitor/intelligence/v1/service_client';
-import { createCircuitBreaker } from '@/utils';
+import { createCircuitBreaker, rssProxyUrl } from '@/utils';
 import { getHydratedData } from '@/services/bootstrap';
 import { IntelligenceServiceClient } from '@/services/generated-rpc-clients';
+import {
+  BRIEF_ONLY_RSS_FETCH_POLICY,
+  fetchFeed,
+} from '@/services/rss';
+import { effectivePubDateMs } from '@/services/feed-date';
+import { isDesktopRuntime } from '@/services/runtime';
 
 export interface GdeltArticle {
   title: string;
@@ -40,17 +46,12 @@ export interface TopicTimeline {
   fetchedAt: string;
 }
 
-/**
- * $MONITOR Live Intelligence topics.
- *
- * Sanctions intentionally removed so the desktop tab bar fits cleanly.
- */
 export const INTEL_TOPICS: IntelTopic[] = [
   {
     id: 'military',
     name: 'Military Activity',
     query:
-      '(military exercise OR troop deployment OR airstrike OR "naval exercise") sourcelang:eng',
+      '("military exercise" OR "troop deployment" OR airstrike OR "naval exercise" OR missile OR drone)',
     icon: '⚔️',
     description: 'Military exercises, deployments, and operations',
   },
@@ -58,7 +59,7 @@ export const INTEL_TOPICS: IntelTopic[] = [
     id: 'cyber',
     name: 'Cyber Threats',
     query:
-      '(cyberattack OR ransomware OR hacking OR "data breach" OR APT) sourcelang:eng',
+      '(cyberattack OR ransomware OR hacking OR "data breach" OR "cyber attack" OR APT)',
     icon: '🔓',
     description: 'Cyber attacks, ransomware, and digital threats',
   },
@@ -66,7 +67,7 @@ export const INTEL_TOPICS: IntelTopic[] = [
     id: 'nuclear',
     name: 'Nuclear',
     query:
-      '(nuclear OR uranium enrichment OR IAEA OR "nuclear weapon" OR plutonium) sourcelang:eng',
+      '(nuclear OR uranium OR IAEA OR "nuclear weapon" OR plutonium)',
     icon: '☢️',
     description: 'Nuclear programs, IAEA inspections, proliferation',
   },
@@ -74,7 +75,7 @@ export const INTEL_TOPICS: IntelTopic[] = [
     id: 'intelligence',
     name: 'Intelligence',
     query:
-      '(espionage OR spy OR "intelligence agency" OR covert OR surveillance) sourcelang:eng',
+      '(espionage OR spy OR "intelligence agency" OR covert OR surveillance)',
     icon: '🕵️',
     description: 'Espionage, intelligence operations, surveillance',
   },
@@ -82,7 +83,7 @@ export const INTEL_TOPICS: IntelTopic[] = [
     id: 'maritime',
     name: 'Maritime Security',
     query:
-      '(naval blockade OR piracy OR "strait of hormuz" OR "south china sea" OR warship) sourcelang:eng',
+      '("naval blockade" OR piracy OR "strait of hormuz" OR "south china sea" OR warship OR "maritime security")',
     icon: '🚢',
     description: 'Naval operations, maritime chokepoints, sea lanes',
   },
@@ -139,10 +140,16 @@ export function getIntelTopics(): IntelTopic[] {
   }));
 }
 
-// ---- Existing World Monitor RPC client ----
+// ---------------------------------------------------------
+// EXISTING WORLDMONITOR RPC CLIENT
+// ---------------------------------------------------------
 //
-// We still keep this because the timeline and positive-GDELT functions below
-// use the original backend when it is available.
+// Live Intelligence ARTICLES now come from Google News RSS.
+//
+// The existing RPC client remains for:
+// - GDELT tone / volume timeline
+// - the unused Happy-variant positive feed
+//
 
 const getClient = createLazyClient(
   () =>
@@ -164,45 +171,66 @@ const emptyGdeltFallback: SearchGdeltDocumentsResponse = {
   error: '',
 };
 
-// Normal Live Intelligence article results stay fresh for 15 minutes.
-// If GDELT is temporarily unavailable, we can serve a successful result
-// for up to one hour.
-const CACHE_TTL = 15 * 60 * 1000;
-const STALE_MAX = 60 * 60 * 1000;
+const TIMELINE_CACHE_TTL =
+  30 * 60 * 1000;
 
-const articleCache = new Map<
-  string,
-  {
-    articles: GdeltArticle[];
-    timestamp: number;
-  }
->();
+const POSITIVE_CACHE_TTL =
+  10 * 60 * 1000;
 
-const timelineCache = new Map<
-  string,
-  {
-    data: TopicTimeline;
-    timestamp: number;
-  }
->();
+const timelineCache =
+  new Map<
+    string,
+    {
+      data: TopicTimeline;
+      timestamp: number;
+    }
+  >();
+
+const positiveArticleCache =
+  new Map<
+    string,
+    {
+      articles: GdeltArticle[];
+      timestamp: number;
+    }
+  >();
+
+// ---------------------------------------------------------
+// GDELT TIMELINE
+// ---------------------------------------------------------
+//
+// We KEEP this.
+//
+// Your Network panel showed these timeline requests returning 200.
+// They provide the Tone / Volume summary above the articles.
+//
 
 export async function fetchTopicTimeline(
   topicId: string,
 ): Promise<TopicTimeline | null> {
-  const cached = timelineCache.get(topicId);
+  const cached =
+    timelineCache.get(topicId);
 
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+  if (
+    cached &&
+    Date.now() - cached.timestamp <
+      TIMELINE_CACHE_TTL
+  ) {
     return cached.data;
   }
 
   try {
-    const resp = await getClient().getGdeltTopicTimeline({
-      topic: topicId,
-    });
+    const resp =
+      await getClient().getGdeltTopicTimeline({
+        topic: topicId,
+      });
 
     if (
       resp.error ||
-      (resp.tone.length === 0 && resp.vol.length === 0)
+      (
+        resp.tone.length === 0 &&
+        resp.vol.length === 0
+      )
     ) {
       return null;
     }
@@ -224,245 +252,371 @@ export async function fetchTopicTimeline(
   }
 }
 
+// ---------------------------------------------------------
+// GOOGLE NEWS RSS
+// ---------------------------------------------------------
+
+function googleNewsFeedUrl(
+  query: string,
+): string {
+  const feedUrl =
+    new URL(
+      'https://news.google.com/rss/search',
+    );
+
+  feedUrl.searchParams.set(
+    'q',
+    query,
+  );
+
+  feedUrl.searchParams.set(
+    'hl',
+    'en-US',
+  );
+
+  feedUrl.searchParams.set(
+    'gl',
+    'US',
+  );
+
+  feedUrl.searchParams.set(
+    'ceid',
+    'US:en',
+  );
+
+  // This is the same pattern already used by the
+  // repo's country-coverage service.
+  if (isDesktopRuntime()) {
+    return `/api/rss-proxy?${
+      new URLSearchParams({
+        url: feedUrl.toString(),
+      }).toString()
+    }`;
+  }
+
+  return rssProxyUrl(
+    feedUrl.toString(),
+  );
+}
+
 /**
- * Map the original World Monitor protobuf GDELT response into the
- * GdeltArticle format used by the frontend.
- *
- * Still used by the positive-news functions at the bottom of this file.
+ * Convert our old "24h / 48h / 72h" style value
+ * into Google News' "when:" syntax.
  */
-function toGdeltArticle(
-  article: ProtoGdeltArticle,
-): GdeltArticle {
+function timespanToGoogleWhen(
+  timespan: string,
+): string {
+  const match =
+    timespan
+      .trim()
+      .match(
+        /^(\d+)(h|d|w)$/i,
+      );
+
+  if (!match) {
+    return '2d';
+  }
+
+  const amount =
+    Number(match[1]);
+
+  const unit =
+    match[2]!.toLowerCase();
+
+  if (unit === 'w') {
+    return `${Math.max(
+      1,
+      amount,
+    )}w`;
+  }
+
+  if (unit === 'd') {
+    return `${Math.max(
+      1,
+      amount,
+    )}d`;
+  }
+
+  // Google News RSS behaves more consistently with
+  // day windows than very short hour windows.
+  return `${Math.max(
+    1,
+    Math.ceil(
+      amount / 24,
+    ),
+  )}d`;
+}
+
+/**
+ * Remove old GDELT-specific query syntax before sending
+ * the search to Google News.
+ */
+function buildGoogleNewsQuery(
+  query: string,
+  timespan: string,
+): string {
+  const cleaned =
+    query
+      .replace(
+        /\bsourcelang:eng\b/gi,
+        '',
+      )
+      .replace(
+        /\bwhen:\S+/gi,
+        '',
+      )
+      .replace(
+        /\s+/g,
+        ' ',
+      )
+      .trim();
+
+  return `${cleaned} when:${timespanToGoogleWhen(
+    timespan,
+  )}`;
+}
+
+/**
+ * Google News RSS titles normally look like:
+ *
+ * Headline text - Reuters
+ *
+ * Split that into the headline and publisher.
+ */
+function splitGoogleNewsPublisher(
+  title: string,
+): {
+  title: string;
+  source: string;
+} {
+  const separator =
+    title.lastIndexOf(' - ');
+
+  if (separator === -1) {
+    return {
+      title:
+        title.trim(),
+      source:
+        'Google News',
+    };
+  }
+
+  const cleanTitle =
+    title
+      .slice(
+        0,
+        separator,
+      )
+      .trim();
+
+  const source =
+    title
+      .slice(
+        separator + 3,
+      )
+      .trim();
+
   return {
-    title: article.title,
-    url: article.url,
-    source: article.source,
-    date: article.date,
-    image: article.image || undefined,
-    language: article.language || undefined,
-    tone: article.tone || undefined,
+    title:
+      cleanTitle ||
+      title.trim(),
+
+    source:
+      source ||
+      'Google News',
   };
 }
 
 /**
- * Convert a normal date into the compact GDELT format expected by
- * formatArticleDate().
+ * GdeltIntelPanel already understands this compact date format,
+ * so convert RSS Date objects into it.
  */
-function normalizeGdeltDate(value: string): string {
-  if (!value) {
+function toCompactDate(
+  date: Date,
+): string {
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
     return '';
   }
 
-  if (/^\d{8}T\d{6}Z$/.test(value)) {
-    return value;
-  }
+  const year =
+    date.getUTCFullYear();
 
-  const date = new Date(value);
+  const month =
+    String(
+      date.getUTCMonth() + 1,
+    ).padStart(
+      2,
+      '0',
+    );
 
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
+  const day =
+    String(
+      date.getUTCDate(),
+    ).padStart(
+      2,
+      '0',
+    );
 
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const hour = String(date.getUTCHours()).padStart(2, '0');
-  const minute = String(date.getUTCMinutes()).padStart(2, '0');
-  const second = String(date.getUTCSeconds()).padStart(2, '0');
+  const hour =
+    String(
+      date.getUTCHours(),
+    ).padStart(
+      2,
+      '0',
+    );
+
+  const minute =
+    String(
+      date.getUTCMinutes(),
+    ).padStart(
+      2,
+      '0',
+    );
+
+  const second =
+    String(
+      date.getUTCSeconds(),
+    ).padStart(
+      2,
+      '0',
+    );
 
   return `${year}${month}${day}T${hour}${minute}${second}Z`;
 }
 
-/**
- * Build the correct request URL.
- *
- * LOCAL DEVELOPMENT:
- * Vite already proxies /api/gdelt to api.gdeltproject.org.
- *
- * PRODUCTION:
- * Use the /api/gdelt-proxy endpoint we created so browsers never need
- * to contact GDELT directly.
- */
-function buildGdeltRequestUrl(
-  params: URLSearchParams,
-): string {
-  const isLocal =
-    typeof window !== 'undefined' &&
-    (
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1'
+function rssItemToArticle(
+  item: NewsItem,
+): GdeltArticle {
+  const normalized =
+    splitGoogleNewsPublisher(
+      item.title,
     );
 
-  if (isLocal) {
-    return `/api/gdelt/api/v2/doc/doc?${params.toString()}`;
-  }
+  return {
+    title:
+      normalized.title,
 
-  return `/api/gdelt-proxy?${params.toString()}`;
+    url:
+      item.link,
+
+    source:
+      normalized.source,
+
+    date:
+      toCompactDate(
+        item.pubDate,
+      ),
+
+    image:
+      item.imageUrl,
+
+    language:
+      item.lang || 'en',
+  };
 }
 
-/**
- * Small delay helper used only when GDELT returns HTTP 429.
- */
-function wait(ms: number): Promise<void> {
-  return new Promise(resolve => {
-    setTimeout(resolve, ms);
-  });
-}
+// ---------------------------------------------------------
+// LIVE INTELLIGENCE ARTICLE FETCH
+// ---------------------------------------------------------
 
 /**
- * Main $MONITOR Live Intelligence article fetch.
+ * Compatibility note:
  *
- * This no longer depends on World Monitor's seeded intelligence backend.
- * It requests live GDELT articles through a proxy.
+ * We KEEP the function name fetchGdeltArticles because other
+ * files already import it.
+ *
+ * It no longer calls GDELT's document API.
+ *
+ * It now uses:
+ *
+ * Google News RSS
+ *       ↓
+ * WorldMonitor /api/rss-proxy
+ *       ↓
+ * fetchFeed()
+ *       ↓
+ * existing persistent RSS cache
  */
 export async function fetchGdeltArticles(
   query: string,
   maxrecords = 10,
   timespan = '24h',
 ): Promise<GdeltArticle[]> {
-  const cacheKey =
-    `${query}:${maxrecords}:${timespan}`;
-
-  const cached = articleCache.get(cacheKey);
-
-  if (
-    cached &&
-    Date.now() - cached.timestamp < CACHE_TTL
-  ) {
-    return cached.articles;
-  }
-
-  try {
-    const params = new URLSearchParams({
+  const googleQuery =
+    buildGoogleNewsQuery(
       query,
-      mode: 'ArtList',
-      maxrecords: String(maxrecords),
-      format: 'json',
       timespan,
-      sort: 'HybridRel',
-    });
-
-    const url = buildGdeltRequestUrl(params);
-
-    let response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-      },
-    });
-
-    /**
-     * GDELT occasionally rate-limits requests.
-     *
-     * Wait five seconds and retry once.
-     * We deliberately do NOT loop repeatedly because that can make
-     * rate limiting worse.
-     */
-    if (response.status === 429) {
-      console.warn(
-        '[GDELT-Intel] Rate limited by GDELT. Retrying once in 5 seconds...',
-      );
-
-      await wait(5000);
-
-      response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      });
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        `GDELT request failed: ${response.status}`,
-      );
-    }
-
-    const data = (await response.json()) as {
-      articles?: Array<{
-        title?: string;
-        url?: string;
-        domain?: string;
-        seendate?: string;
-        socialimage?: string;
-        language?: string;
-        tone?: number | string;
-      }>;
-    };
-
-    const articles: GdeltArticle[] =
-      (data.articles ?? [])
-        .filter(article => {
-          return Boolean(article.title && article.url);
-        })
-        .map(article => {
-          let tone: number | undefined;
-
-          if (
-            article.tone !== undefined &&
-            article.tone !== ''
-          ) {
-            const parsedTone = Number(article.tone);
-
-            if (Number.isFinite(parsedTone)) {
-              tone = parsedTone;
-            }
-          }
-
-          return {
-            title: article.title ?? '',
-            url: article.url ?? '',
-            source: article.domain ?? '',
-            date: normalizeGdeltDate(
-              article.seendate ?? '',
-            ),
-            image:
-              article.socialimage || undefined,
-            language:
-              article.language || undefined,
-            tone,
-          };
-        });
-
-    articleCache.set(cacheKey, {
-      articles,
-      timestamp: Date.now(),
-    });
-
-    return articles;
-  } catch (error) {
-    console.error(
-      '[GDELT-Intel] GDELT article request failed:',
-      error,
     );
 
-    /**
-     * If we previously loaded this topic successfully and that cached
-     * result is less than one hour old, show it instead of leaving the
-     * panel blank.
-     */
-    if (
-      cached &&
-      Date.now() - cached.timestamp < STALE_MAX
-    ) {
-      console.warn(
-        '[GDELT-Intel] Serving stale cached articles after request failure.',
-      );
+  const items =
+    await fetchFeed(
+      {
+        name:
+          `$MONITOR Intelligence: ${googleQuery}`,
 
-      return cached.articles;
-    }
+        url:
+          googleNewsFeedUrl(
+            googleQuery,
+          ),
+      },
+      {
+        policy:
+          BRIEF_ONLY_RSS_FETCH_POLICY,
+      },
+    );
 
-    return [];
-  }
+  /**
+   * fetchFeed currently parses a maximum of five articles
+   * from one RSS feed.
+   *
+   * That's actually a good size for this 2-row panel.
+   */
+  const limit =
+    Math.max(
+      1,
+      Math.min(
+        maxrecords,
+        items.length,
+      ),
+    );
+
+  return [
+    ...items,
+  ]
+    .sort(
+      (a, b) =>
+        effectivePubDateMs(b) -
+        effectivePubDateMs(a),
+    )
+    .slice(
+      0,
+      limit,
+    )
+    .map(
+      rssItemToArticle,
+    );
 }
+
+// ---------------------------------------------------------
+// HOTSPOT CONTEXT
+// ---------------------------------------------------------
 
 export async function fetchHotspotContext(
   hotspot: Hotspot,
 ): Promise<GdeltArticle[]> {
-  const query = hotspot.keywords
-    .slice(0, 5)
-    .join(' OR ');
+  const query =
+    hotspot.keywords
+      .slice(
+        0,
+        5,
+      )
+      .join(
+        ' OR ',
+      );
 
   return fetchGdeltArticles(
     query,
@@ -471,40 +625,57 @@ export async function fetchHotspotContext(
   );
 }
 
-// ---- Existing bootstrapped intelligence data ----
+// ---------------------------------------------------------
+// EXISTING BOOTSTRAP SUPPORT
+// ---------------------------------------------------------
 
-let _bootstrapConsumed = false;
+let _bootstrapConsumed =
+  false;
 
 const _bootstrapData =
-  new Map<string, TopicIntelligence>();
+  new Map<
+    string,
+    TopicIntelligence
+  >();
 
 function _consumeBootstrap(): void {
   if (_bootstrapConsumed) {
     return;
   }
 
-  _bootstrapConsumed = true;
+  _bootstrapConsumed =
+    true;
 
-  const raw = getHydratedData('gdeltIntel') as
-    | {
-        topics?: Array<{
-          id: string;
-          articles: GdeltArticle[];
-          fetchedAt?: string;
-        }>;
-      }
-    | undefined;
+  const raw =
+    getHydratedData(
+      'gdeltIntel',
+    ) as
+      | {
+          topics?: Array<{
+            id: string;
+            articles:
+              GdeltArticle[];
+            fetchedAt?: string;
+          }>;
+        }
+      | undefined;
 
   if (!raw?.topics) {
     return;
   }
 
-  const now = new Date();
+  const now =
+    new Date();
 
-  for (const entry of raw.topics) {
-    const topic = INTEL_TOPICS.find(
-      item => item.id === entry.id,
-    );
+  for (
+    const entry of raw.topics
+  ) {
+    const topic =
+      INTEL_TOPICS.find(
+        candidate =>
+          candidate.id ===
+          entry.id,
+      );
 
     if (
       !topic ||
@@ -513,13 +684,22 @@ function _consumeBootstrap(): void {
       continue;
     }
 
-    _bootstrapData.set(entry.id, {
-      topic,
-      articles: entry.articles,
-      fetchedAt: now,
-    });
+    _bootstrapData.set(
+      entry.id,
+      {
+        topic,
+        articles:
+          entry.articles,
+        fetchedAt:
+          now,
+      },
+    );
   }
 }
+
+// ---------------------------------------------------------
+// TOPIC INTELLIGENCE
+// ---------------------------------------------------------
 
 export async function fetchTopicIntelligence(
   topic: IntelTopic,
@@ -527,44 +707,62 @@ export async function fetchTopicIntelligence(
   _consumeBootstrap();
 
   const bootstrapped =
-    _bootstrapData.get(topic.id);
+    _bootstrapData.get(
+      topic.id,
+    );
 
   if (bootstrapped) {
-    _bootstrapData.delete(topic.id);
+    _bootstrapData.delete(
+      topic.id,
+    );
 
     return bootstrapped;
   }
 
-  const articles = await fetchGdeltArticles(
-    topic.query,
-    10,
-    '24h',
-  );
+  const articles =
+    await fetchGdeltArticles(
+      topic.query,
+      10,
+      '24h',
+    );
 
   return {
     topic,
     articles,
-    fetchedAt: new Date(),
+    fetchedAt:
+      new Date(),
   };
 }
 
 export async function fetchAllTopicIntelligence():
 Promise<TopicIntelligence[]> {
-  const results = await Promise.allSettled(
-    INTEL_TOPICS.map(topic =>
-      fetchTopicIntelligence(topic),
-    ),
-  );
+  const results =
+    await Promise.allSettled(
+      INTEL_TOPICS.map(
+        topic =>
+          fetchTopicIntelligence(
+            topic,
+          ),
+      ),
+    );
 
   return results
     .filter(
       (
         result,
       ): result is PromiseFulfilledResult<TopicIntelligence> =>
-        result.status === 'fulfilled',
+        result.status ===
+        'fulfilled',
     )
-    .map(result => result.value);
+    .map(
+      result =>
+        result.value,
+    );
 }
+
+// ---------------------------------------------------------
+// DATE / DOMAIN HELPERS
+// ---------------------------------------------------------
 
 export function formatArticleDate(
   dateStr: string,
@@ -574,35 +772,79 @@ export function formatArticleDate(
   }
 
   try {
-    // GDELT compact format: "20260111T093000Z"
-    const year = dateStr.slice(0, 4);
-    const month = dateStr.slice(4, 6);
-    const day = dateStr.slice(6, 8);
-    const hour = dateStr.slice(9, 11);
-    const min = dateStr.slice(11, 13);
-    const sec = dateStr.slice(13, 15);
+    const year =
+      dateStr.slice(
+        0,
+        4,
+      );
 
-    const date = new Date(
-      `${year}-${month}-${day}T${hour}:${min}:${sec}Z`,
-    );
+    const month =
+      dateStr.slice(
+        4,
+        6,
+      );
 
-    if (Number.isNaN(date.getTime())) {
+    const day =
+      dateStr.slice(
+        6,
+        8,
+      );
+
+    const hour =
+      dateStr.slice(
+        9,
+        11,
+      );
+
+    const min =
+      dateStr.slice(
+        11,
+        13,
+      );
+
+    const sec =
+      dateStr.slice(
+        13,
+        15,
+      );
+
+    const date =
+      new Date(
+        `${year}-${month}-${day}T${hour}:${min}:${sec}Z`,
+      );
+
+    if (
+      Number.isNaN(
+        date.getTime(),
+      )
+    ) {
       return '';
     }
 
-    const now = Date.now();
-    const diff = now - date.getTime();
+    const diff =
+      Date.now() -
+      date.getTime();
 
     if (diff < 0) {
       return 'just now';
     }
 
-    if (diff < 60 * 60 * 1000) {
-      return `${Math.floor(diff / 60000)}m ago`;
+    if (
+      diff <
+      60 * 60 * 1000
+    ) {
+      return `${Math.floor(
+        diff / 60000,
+      )}m ago`;
     }
 
-    if (diff < 24 * 60 * 60 * 1000) {
-      return `${Math.floor(diff / 3600000)}h ago`;
+    if (
+      diff <
+      24 * 60 * 60 * 1000
+    ) {
+      return `${Math.floor(
+        diff / 3600000,
+      )}h ago`;
     }
 
     return `${Math.floor(
@@ -617,19 +859,56 @@ export function extractDomain(
   url: string,
 ): string {
   try {
-    return new URL(url)
+    return new URL(
+      url,
+    )
       .hostname
-      .replace('www.', '');
+      .replace(
+        'www.',
+        '',
+      );
   } catch {
     return '';
   }
 }
 
-// ---- Positive GDELT queries (Happy variant) ----
+// ---------------------------------------------------------
+// HAPPY VARIANT POSITIVE GDELT
+// ---------------------------------------------------------
 //
-// These are intentionally left on the original World Monitor RPC path.
-// They are unrelated to the $MONITOR Live Intelligence panel and keeping
-// them intact avoids breaking other variants of the upstream project.
+// This is unrelated to your $MONITOR Live Intelligence panel,
+// so I'm leaving its original RPC behavior intact.
+//
+
+function toGdeltArticle(
+  article: ProtoGdeltArticle,
+): GdeltArticle {
+  return {
+    title:
+      article.title,
+
+    url:
+      article.url,
+
+    source:
+      article.source,
+
+    date:
+      article.date,
+
+    image:
+      article.image ||
+      undefined,
+
+    language:
+      article.language ||
+      undefined,
+
+    tone:
+      article.tone ||
+      undefined,
+  };
+}
 
 export async function fetchPositiveGdeltArticles(
   query: string,
@@ -641,11 +920,16 @@ export async function fetchPositiveGdeltArticles(
   const cacheKey =
     `positive:${query}:${toneFilter}:${sort}:${maxrecords}:${timespan}`;
 
-  const cached = articleCache.get(cacheKey);
+  const cached =
+    positiveArticleCache.get(
+      cacheKey,
+    );
 
   if (
     cached &&
-    Date.now() - cached.timestamp < CACHE_TTL
+    Date.now() -
+      cached.timestamp <
+      POSITIVE_CACHE_TTL
   ) {
     return cached.articles;
   }
@@ -653,13 +937,15 @@ export async function fetchPositiveGdeltArticles(
   const resp =
     await positiveGdeltBreaker.execute(
       async () => {
-        return getClient().searchGdeltDocuments({
-          query,
-          maxRecords: maxrecords,
-          timespan,
-          toneFilter,
-          sort,
-        });
+        return getClient()
+          .searchGdeltDocuments({
+            query,
+            maxRecords:
+              maxrecords,
+            timespan,
+            toneFilter,
+            sort,
+          });
       },
       emptyGdeltFallback,
     );
@@ -669,16 +955,29 @@ export async function fetchPositiveGdeltArticles(
       `[GDELT-Intel] Positive RPC error: ${resp.error}`,
     );
 
-    return cached?.articles || [];
+    return (
+      cached?.articles ||
+      []
+    );
   }
 
-  const articles: GdeltArticle[] =
-    (resp.articles || []).map(toGdeltArticle);
+  const articles:
+    GdeltArticle[] =
+    (
+      resp.articles ||
+      []
+    ).map(
+      toGdeltArticle,
+    );
 
-  articleCache.set(cacheKey, {
-    articles,
-    timestamp: Date.now(),
-  });
+  positiveArticleCache.set(
+    cacheKey,
+    {
+      articles,
+      timestamp:
+        Date.now(),
+    },
+  );
 
   return articles;
 }
@@ -694,24 +993,33 @@ export async function fetchPositiveTopicIntelligence(
   return {
     topic,
     articles,
-    fetchedAt: new Date(),
+    fetchedAt:
+      new Date(),
   };
 }
 
 export async function fetchAllPositiveTopicIntelligence():
 Promise<TopicIntelligence[]> {
-  const results = await Promise.allSettled(
-    POSITIVE_GDELT_TOPICS.map(topic =>
-      fetchPositiveTopicIntelligence(topic),
-    ),
-  );
+  const results =
+    await Promise.allSettled(
+      POSITIVE_GDELT_TOPICS.map(
+        topic =>
+          fetchPositiveTopicIntelligence(
+            topic,
+          ),
+      ),
+    );
 
   return results
     .filter(
       (
         result,
       ): result is PromiseFulfilledResult<TopicIntelligence> =>
-        result.status === 'fulfilled',
+        result.status ===
+        'fulfilled',
     )
-    .map(result => result.value);
+    .map(
+      result =>
+        result.value,
+    );
 }

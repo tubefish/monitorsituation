@@ -310,12 +310,23 @@ function dashboardHtmlOutputPlugin(): Plugin {
       }
 
       const [bundleKey, dashboardHtml] = dashboardEntry;
-      delete bundle[bundleKey];
-      dashboardHtml.fileName = 'dashboard.html';
-      if (typeof dashboardHtml.source === 'string') {
-        dashboardHtml.source = deferDashboardStylesheetLinks(dashboardHtml.source, bundle);
+
+      if (dashboardHtml.type !== 'asset') {
+        throw new Error('[vite] dashboard HTML output must be an asset');
       }
-      bundle['dashboard.html'] = dashboardHtml;
+
+      delete bundle[bundleKey];
+
+      dashboardHtml.fileName = 'dashboard.html';
+
+      if (typeof dashboardHtml.source === 'string') {
+        dashboardHtml.source = deferDashboardStylesheetLinks(
+          dashboardHtml.source,
+          bundle,
+  );
+}
+
+bundle['dashboard.html'] = dashboardHtml;
     },
   };
 }
@@ -665,7 +676,7 @@ function sebufApiPlugin(): Plugin {
             body: body || undefined,
           });
 
-          const corsHeaders = corsMod.getCorsHeaders(webRequest);
+          const corsHeaders = corsMod.getCorsHeaders(webRequest) as Record<string, string>;
 
           // OPTIONS preflight
           if (req.method === 'OPTIONS') {

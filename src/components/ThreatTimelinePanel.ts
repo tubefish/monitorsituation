@@ -111,7 +111,7 @@ export class ThreatTimelinePanel extends Panel {
         <div class="threat-timeline-summary">
           <div class="threat-timeline-stat">
             <span class="threat-timeline-stat-value">${highSeverityCount}</span>
-            <span class="threat-timeline-stat-label">Critical/high</span>
+            <span class="threat-timeline-stat-label">Critical + High</span>
           </div>
           <div class="threat-timeline-stat">
             <span class="threat-timeline-stat-value">${highSeverityDays}</span>
@@ -275,6 +275,7 @@ export class ThreatTimelinePanel extends Panel {
         .threat-timeline-panel { display: grid; gap: 10px; }
         .threat-timeline-summary { display: grid; grid-template-columns: 76px 76px 1fr; gap: 8px; align-items: stretch; }
         .threat-timeline-stat, .threat-timeline-trend { border: 1px solid var(--border-color); background: var(--bg-secondary); border-radius: 8px; padding: 8px; min-width: 0; }
+        .threat-timeline-stat { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
         .threat-timeline-stat-value { display: block; font-size: calc(20px * var(--wm-panel-effective-scale, 1)); line-height: 1; font-weight: 700; color: var(--text-primary); }
         .threat-timeline-stat-label, .threat-timeline-trend-copy, .threat-timeline-footer, .threat-timeline-note { display: block; font-size: calc(11px * var(--wm-panel-effective-scale, 1)); color: var(--text-secondary); margin-top: 4px; }
         .threat-timeline-trend { border-left: 3px solid var(--accent-color); }
