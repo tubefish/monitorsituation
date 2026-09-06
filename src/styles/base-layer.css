@@ -49,6 +49,14 @@
       max-height: none !important;
     }
 
+    /* The Today button scrolls Live News into view. Leave room for the sticky
+       mobile category chip row so the Live News title lands fully visible
+       instead of being tucked underneath it. */
+    #panelsGrid .panel[data-panel="live-news"],
+    #panelsGrid .panel-deferred-shell[data-panel="live-news"] {
+      scroll-margin-top: 52px;
+    }
+
     #panelsGrid .panel[data-panel="live-news"] .panel-content {
       flex: 0 0 auto;
       min-height: 0;
