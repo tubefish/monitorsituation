@@ -125,7 +125,6 @@ import {
   hydrateGeoHubPanelFromClusters,
   hydrateTechHubPanelFromClusters,
 } from '@/app/hub-activity-hydration';
-import { movePanelToKeyboardZone } from '@/app/panel-keyboard-reorder';
 
 function readSessionStorageValue(key: string): string | null {
   try {
@@ -927,7 +926,6 @@ export class PanelLayoutManager implements AppModule {
   }
 
   async renderLayout(): Promise<void> {
-    const isGlobeMode = getStoredMapModePreference() === 'globe';
     // #5159: the collapsed-map cohort's #mapSection must be CREATED with
     // .collapsed — main.css sets the expanded mobile height with !important
     // inside a cascade layer, and layered !important beats any unlayered
@@ -1105,7 +1103,6 @@ export class PanelLayoutManager implements AppModule {
       </nav>
       <footer class="site-footer">
         <div class="site-footer-brand">
-          <img src="/favico/android-chrome-96x96.png" alt="" width="28" height="28" loading="lazy" decoding="async" class="site-footer-icon" />
           <div class="site-footer-brand-text">
             <span class="site-footer-name">$MONITOR</span>
             <span class="site-footer-sub">CA: 0x1a911bb954dAA9CB38513423075bE74450351e18 &middot; <a href="https://x.com/monitoringmeme" target="_blank" rel="noopener" class="site-footer-credit">@monitoringmeme</a></span>

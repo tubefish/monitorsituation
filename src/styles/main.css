@@ -27185,10 +27185,6 @@ body.map-width-resizing {
   height: 16px;
 }
 
-/* State variants. */
-.wm-follow-btn--unfollowed {
-  /* inherits base — outlined star, neutral border. */
-}
 
 .wm-follow-btn--followed {
   color: var(--semantic-info);
@@ -27285,10 +27281,7 @@ body.map-width-resizing {
   align-self: center;
 }
 
-.cdp-notify-link-host:not(:empty) {
-  /* Only contribute spacing when actually rendering content; rely on
-   * the parent flex `gap` for separation otherwise. */
-}
+
 
 .cdp-notify-link {
   appearance: none;
