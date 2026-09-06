@@ -10,6 +10,7 @@ export type { GlobeMapOptions } from './GlobeMapCore';
 // camera far enough away that the projected globe diameter is 75% of the
 // upstream/default size. Desktop and explicit zoom commands are untouched.
 const MOBILE_GLOBE_PROJECTED_SCALE = 0.75;
+const MOBILE_BOOT_CENTER_WINDOW_MS = 7_000;
 
 const VIEW_POVS: Record<MapView, { lat: number; lng: number; altitude: number }> = {
   global:   { lat: 20,  lng: 0,   altitude: 1.8 },
@@ -35,6 +36,12 @@ function mobileDefaultAltitude(altitude: number): number {
   return Math.sqrt(1 + scaledTangentDistance * scaledTangentDistance) - 1;
 }
 
+function hasExplicitUrlCenter(): boolean {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.has('lat') || params.has('lon');
+}
+
 type GlobeRuntime = {
   currentView: MapView;
   globe: unknown | null;
@@ -52,6 +59,9 @@ type GlobeRuntime = {
  * button. Explicit zooms continue through the upstream implementation.
  */
 export class GlobeMap extends GlobeMapCore {
+  private readonly mobileBootStartedAt = Date.now();
+  private mobileBootCenterHandled = false;
+
   public override setView(view: MapView, zoom?: number): void {
     if (!isMobileDevice() || zoom !== undefined) {
       super.setView(view, zoom);
@@ -70,6 +80,43 @@ export class GlobeMap extends GlobeMapCore {
     runtime.moveViewport({
       lat: preset.lat,
       lng: preset.lng,
+      altitude: mobileDefaultAltitude(preset.altitude),
+    });
+  }
+
+  public override setCenter(lat: number, lon: number, zoom?: number): void {
+    // App startup asks mobile maps to center on precise device coordinates at
+    // zoom 6 after the globe has already initialized. That second command was
+    // silently replacing the smaller $MONITOR camera, which is why pressing
+    // Home immediately produced the correct size. Preserve the geolocation
+    // center, but keep the exact same camera distance as Home/reset.
+    //
+    // Scope this narrowly to the one startup command: explicit lat/lon URL
+    // deep-links retain their requested zoom, and normal later setCenter calls
+    // continue through the upstream implementation unchanged.
+    const isStartupGeoCenter = isMobileDevice()
+      && !this.mobileBootCenterHandled
+      && zoom === 6
+      && !hasExplicitUrlCenter()
+      && Date.now() - this.mobileBootStartedAt <= MOBILE_BOOT_CENTER_WINDOW_MS;
+
+    if (!isStartupGeoCenter) {
+      super.setCenter(lat, lon, zoom);
+      return;
+    }
+
+    this.mobileBootCenterHandled = true;
+    const runtime = this as unknown as GlobeRuntime;
+    if (!runtime.globe) {
+      super.setCenter(lat, lon, zoom);
+      return;
+    }
+
+    runtime.wakeGlobe();
+    const preset = VIEW_POVS[runtime.currentView] ?? VIEW_POVS.global;
+    runtime.moveViewport({
+      lat,
+      lng: lon,
       altitude: mobileDefaultAltitude(preset.altitude),
     });
   }
