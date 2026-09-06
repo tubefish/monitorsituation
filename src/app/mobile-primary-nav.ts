@@ -178,11 +178,21 @@ export class MobilePrimaryNav {
           this.scrollToLiveNews();
           break;
         case 'map': {
+          // Keep the bottom Map tab on the normal mobile map path. The old
+          // implementation expanded the map and then immediately clicked the
+          // separate fullscreen control, which could race the collapse/resize
+          // state and make this tab appear intermittent.
+          this.exitMap();
           this.expandMap();
-          const mapSection = document.getElementById('mapSection');
-          if (mapSection && !mapSection.classList.contains('live-news-fullscreen')) {
-            document.getElementById('mapFullscreenBtn')?.click();
-          }
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              document.querySelector<HTMLElement>('.main-content')?.scrollTo({
+                top: 0,
+                behavior: 'smooth',
+              });
+              window.dispatchEvent(new Event('resize'));
+            });
+          });
           break;
         }
         case 'search': {
