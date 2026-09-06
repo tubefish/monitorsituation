@@ -2,6 +2,7 @@ import type { PanelConfig } from '@/types';
 import { SITE_VARIANT } from './variant';
 import {
   ALL_PANELS,
+  DEFAULT_PANELS as UPSTREAM_DEFAULT_PANELS,
   VARIANT_DEFAULTS as UPSTREAM_VARIANT_DEFAULTS,
   getEffectivePanelConfig,
 } from './panels';
@@ -44,19 +45,28 @@ export const MONITOR_DEFAULT_PANEL_ORDER = [
 /**
  * Keep every non-full monitor exactly as upstream defines it. Only the full
  * variant is narrowed to the finished $MONITOR dashboard.
+ *
+ * Mutate the upstream registry in place as well as re-exporting it. A few
+ * legacy modules import panel defaults directly from config/panels instead of
+ * the config barrel (mission reset/new-tab paths are examples). They hold live
+ * references to these objects, so aligning the registry here prevents those
+ * paths from resurrecting the old World Monitor default panel set.
  */
-export const VARIANT_DEFAULTS: Record<string, string[]> = {
-  ...UPSTREAM_VARIANT_DEFAULTS,
-  full: [...MONITOR_DEFAULT_PANEL_ORDER],
-};
+UPSTREAM_VARIANT_DEFAULTS.full = [...MONITOR_DEFAULT_PANEL_ORDER];
+
+if (SITE_VARIANT === 'full') {
+  for (const key of Object.keys(UPSTREAM_DEFAULT_PANELS)) {
+    delete UPSTREAM_DEFAULT_PANELS[key];
+  }
+  for (const key of MONITOR_DEFAULT_PANEL_ORDER) {
+    UPSTREAM_DEFAULT_PANELS[key] = getEffectivePanelConfig(key, SITE_VARIANT);
+  }
+}
+
+export const VARIANT_DEFAULTS: Record<string, string[]> = UPSTREAM_VARIANT_DEFAULTS;
 
 /** Variant-aware default panel map used whenever no saved panel preferences exist. */
-export const DEFAULT_PANELS: Record<string, PanelConfig> = Object.fromEntries(
-  (VARIANT_DEFAULTS[SITE_VARIANT] ?? VARIANT_DEFAULTS.full ?? []).map((key) => [
-    key,
-    getEffectivePanelConfig(key, SITE_VARIANT),
-  ]),
-);
+export const DEFAULT_PANELS: Record<string, PanelConfig> = UPSTREAM_DEFAULT_PANELS;
 
 /**
  * Build first-visit panel settings while keeping the complete panel catalog
