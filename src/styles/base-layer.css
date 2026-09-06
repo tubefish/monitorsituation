@@ -10,3 +10,7 @@
 @import url('./country-deep-dive.css') layer(base);
 @import url('./map-context-menu.css') layer(base);
 @import url('./supply-chain-panel.css') layer(base);
+
+/* $MONITOR-specific mobile overrides stay unlayered so they can intentionally
+ * override the base dashboard's mobile flex-column sizing rules. */
+@import url('./monitor-mobile.css');
