@@ -27,25 +27,68 @@
   }
 }
 
-/* $MONITOR mobile-only panel heights.
- * Mobile #panelsGrid is a flex-column stack, so the desktop span-N grid rules
- * do not define the visible footprint. These selectors intentionally target
- * the rendered panel regardless of whether it is wrapped/reordered by the
- * mobile dashboard. Desktop keeps each component's normal 3-row default. */
+/* $MONITOR mobile-only sizing for $MONITOR Live.
+ * Mobile #panelsGrid is a flex-column stack, so this panel uses an explicit
+ * mobile footprint while desktop keeps its normal three-row grid size. */
 @media (max-width: 768px) {
-  html body #app #panelsGrid .panel[data-panel="live-news"],
-  html body #app #panelsGrid .panel-deferred-shell[data-panel="live-news"] {
-    flex: 0 0 160px !important;
-    height: 160px !important;
-    min-height: 160px !important;
-    max-height: 160px !important;
-  }
-
   html body #app #panelsGrid .panel[data-panel="monitor-market"],
   html body #app #panelsGrid .panel-deferred-shell[data-panel="monitor-market"] {
     flex: 0 0 652px !important;
     height: 652px !important;
     min-height: 652px !important;
     max-height: 652px !important;
+  }
+}
+
+/*
+ * $MONITOR mobile Live News sizing.
+ *
+ * LiveNewsPanel intentionally carries the desktop `span-3` class so desktop
+ * stays 2 columns wide x 3 rows tall. The span rule in main.css also applies
+ * an !important min-height. Because main.css lives inside @layer base, an
+ * unlayered !important override actually loses to that layered important rule
+ * (important layer precedence is reversed). Put the mobile reset back in the
+ * same layer, after the import, so it cleanly neutralizes the desktop row
+ * contract on phones.
+ *
+ * Once that desktop minimum is removed, the panel sizes itself from its real
+ * mobile content: header + channel toolbar + a 16:9 player/placeholder. This
+ * avoids arbitrary fixed heights and scales naturally across phone widths.
+ */
+@layer base {
+  @media (max-width: 768px) {
+    #panelsGrid .panel[data-panel="live-news"],
+    #panelsGrid .panel-deferred-shell[data-panel="live-news"] {
+      flex: 0 0 auto !important;
+      grid-row: auto !important;
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+    }
+
+    #panelsGrid .panel[data-panel="live-news"] .panel-content {
+      flex: 0 0 auto;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    #panelsGrid .panel[data-panel="live-news"] .live-news-player,
+    #panelsGrid .panel[data-panel="live-news"] .live-news-placeholder,
+    #panelsGrid .panel[data-panel="live-news"] .live-news-native-video,
+    #panelsGrid .panel[data-panel="live-news"] .live-news-embed-frame {
+      flex: 0 0 auto;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 9;
+    }
+
+    /* Fullscreen owns its own height contract; do not let the mobile natural
+       sizing rule interfere when the user expands Live News. */
+    #panelsGrid .panel[data-panel="live-news"].live-news-fullscreen .panel-content,
+    #panelsGrid .panel[data-panel="live-news"].live-news-fullscreen .live-news-player,
+    #panelsGrid .panel[data-panel="live-news"].live-news-fullscreen .live-news-native-video,
+    #panelsGrid .panel[data-panel="live-news"].live-news-fullscreen .live-news-embed-frame {
+      flex: 1 1 auto;
+    }
   }
 }
