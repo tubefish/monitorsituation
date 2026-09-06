@@ -30,7 +30,8 @@ export class MobilePrimaryNav {
   private authWidget: AuthHeaderWidget | null = null;
   private unsubscribeAuth: (() => void) | null = null;
   private unsubscribeHistory: (() => void) | null = null;
-  private activeTab = 'today';
+  private activeTab = 'map';
+  private lastContentTab = 'map';
 
   constructor(
     private readonly ctx: AppContext,
@@ -43,7 +44,7 @@ export class MobilePrimaryNav {
     this.unsubscribeHistory = overlayHistory.subscribe((top) => {
       if (top === 'search' || top === 'search-pending') this.setActive('search');
       else if (top === 'menu' || top === 'region' || top === 'settings' || top === 'settings-pending') this.setActive('more');
-      else if (!top && (this.activeTab === 'search' || this.activeTab === 'more')) this.setActive('today');
+      else if (!top && (this.activeTab === 'search' || this.activeTab === 'more')) this.setActive(this.lastContentTab);
     });
   }
 
@@ -105,8 +106,6 @@ export class MobilePrimaryNav {
     this.menuOpenFrame = null;
     this.regionOpenFrame = null;
     this.alertScrollFrame = null;
-    // Teardown, not a user-initiated close: release each trap's document
-    // listener without handing focus back to a control that is also going away.
     this.menuTrap?.deactivate({ restoreFocus: false });
     this.menuTrap = null;
     this.regionTrap?.deactivate({ restoreFocus: false });
@@ -116,6 +115,15 @@ export class MobilePrimaryNav {
   private setupTabBar(): void {
     const tabBar = document.getElementById('mobileTabBar');
     if (!tabBar) return;
+
+    // $MONITOR mobile opens map-first: Map occupies slot one, Today slot two.
+    const mapButton = tabBar.querySelector<HTMLButtonElement>('[data-mobile-tab="map"]');
+    const todayButton = tabBar.querySelector<HTMLButtonElement>('[data-mobile-tab="today"]');
+    if (mapButton) tabBar.prepend(mapButton);
+    if (mapButton && todayButton) mapButton.after(todayButton);
+    this.setActive('map');
+    this.expandMap();
+
     tabBar.addEventListener('click', (event) => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-mobile-tab]');
       const tab = button?.dataset.mobileTab;
@@ -131,9 +139,10 @@ export class MobilePrimaryNav {
         case 'today':
           this.exitMap();
           this.collapseMap();
-          document.getElementById('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+          this.scrollToLiveNews();
           break;
         case 'map': {
+          this.expandMap();
           const mapSection = document.getElementById('mapSection');
           if (mapSection && !mapSection.classList.contains('live-news-fullscreen')) {
             document.getElementById('mapFullscreenBtn')?.click();
@@ -174,6 +183,10 @@ export class MobilePrimaryNav {
           break;
         default:
           return;
+      }
+
+      if (tab === 'map' || tab === 'today' || tab === 'alerts') {
+        this.lastContentTab = tab;
       }
       this.setActive(tab);
     }, { signal: this.listeners.signal });
@@ -273,9 +286,6 @@ export class MobilePrimaryNav {
     const close = (origin: OverlayCloseOrigin) => this.closeRegion(origin);
     if (replaceOverlayId) overlayHistory.replaceInPlace(replaceOverlayId, 'region', close);
     else overlayHistory.open('region', close);
-    // replaceInPlace closes the outgoing menu synchronously. Restore the lock
-    // after that callback so the region sheet does not briefly unlock the page
-    // before its opening frame runs.
     document.body.style.overflow = 'hidden';
   }
 
@@ -308,11 +318,31 @@ export class MobilePrimaryNav {
     }
   }
 
+  private expandMap(): void {
+    const mapSection = document.getElementById('mapSection');
+    if (mapSection?.classList.contains('collapsed')) {
+      document.querySelector<HTMLButtonElement>('.map-collapse-btn')?.click();
+    }
+  }
+
   private collapseMap(): void {
     const mapSection = document.getElementById('mapSection');
     if (mapSection && !mapSection.classList.contains('collapsed')) {
       document.querySelector<HTMLButtonElement>('.map-collapse-btn')?.click();
     }
+  }
+
+  private scrollToLiveNews(): void {
+    requestAnimationFrame(() => {
+      const liveNewsPanel = document.querySelector<HTMLElement>(
+        '#panelsGrid [data-panel="live-news"]:not(.hidden)',
+      );
+      if (liveNewsPanel) {
+        liveNewsPanel.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        return;
+      }
+      document.getElementById('panelsGrid')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
   }
 
   private setActive(tab: string): void {
