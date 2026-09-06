@@ -30,7 +30,9 @@ export class CascadePanel extends Panel {
       showCount: true,
       trackActivity: true,
       infoTooltip: t('components.cascade.infoTooltip'),
-    });
+      className: 'panel-wide',
+      defaultRowSpan: 2,
+});
     this.setupDelegatedListeners();
     this.init();
   }

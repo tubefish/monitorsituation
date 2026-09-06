@@ -29,6 +29,7 @@ export class GdeltIntelPanel extends Panel {
       showCount: true,
       trackActivity: true,
       infoTooltip: t('components.gdeltIntel.infoTooltip'),
+      className: 'panel-wide',
       defaultRowSpan: 2,
     });
     this.createTabs();

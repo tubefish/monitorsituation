@@ -96,7 +96,18 @@ export class NewsPanel extends Panel {
   }
 
   constructor(id: string, title: string, infoTooltip?: string) {
-    super({ id, title, showCount: true, trackActivity: true, infoTooltip });
+    const isIntelFeed = id === 'intel';
+    const isWorldNews = id === 'politics';
+
+  super({
+    id,
+    title,
+    showCount: true,
+    trackActivity: true,
+    infoTooltip,
+    className: isWorldNews ? 'panel-wide' : undefined,
+    defaultRowSpan: isIntelFeed || isWorldNews ? 2 : undefined,
+  });
     this.sortMode = this.loadSortMode();
     this.createDeviationIndicator();
     this.createSortToggle();

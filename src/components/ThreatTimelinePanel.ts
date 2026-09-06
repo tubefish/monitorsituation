@@ -40,6 +40,7 @@ export class ThreatTimelinePanel extends Panel {
       title: 'Threat Timeline',
       showCount: false,
       infoTooltip: 'Seven-day threat-level distribution from intelligence insights.',
+      className: 'panel-wide',
       defaultRowSpan: 2,
     });
 

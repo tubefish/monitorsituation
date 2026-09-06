@@ -43,12 +43,13 @@ export class MonitorMarketPanel extends Panel {
 
   constructor() {
     super({
-      id: 'monitor-market',
-      title: '$MONITOR LIVE',
-      className: 'panel-wide',
-      closable: true,
-      collapsible: true,
-    });
+        id: 'monitor-market',
+        title: '$MONITOR LIVE',
+        className: 'panel-wide',
+        defaultRowSpan: 3,
+        closable: true,
+        collapsible: true,
+});
 
     this.content.innerHTML = `
       <div class="monitor-market-panel">

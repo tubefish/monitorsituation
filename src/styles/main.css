@@ -1848,8 +1848,6 @@ canvas,
    the resize contract, and the #panelsGrid scope keeps panels dragged into
    the ultra-wide .map-bottom-grid (height:100%/1fr tracks) on that grid's
    own sizing contract. */
-#panelsGrid > .panel[data-panel="threat-timeline"].span-2:not(.resized),
-#panelsGrid > .panel[data-panel="gdelt-intel"].span-2:not(.resized),
 #panelsGrid > .panel[data-panel="energy-complex"].span-2:not(.resized),
 #panelsGrid > .panel[data-panel="strategic-posture"].span-2:not(.resized),
 #panelsGrid > .panel[data-panel="global-procurement"].span-2:not(.resized),

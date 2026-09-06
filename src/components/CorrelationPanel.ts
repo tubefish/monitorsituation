@@ -58,9 +58,20 @@ export class CorrelationPanel extends Panel {
   private hasLiveData = false;
   private correlationDestroyed = false;
 
-  constructor(id: string, title: string, domain: CorrelationDomain, infoTooltip?: string) {
-    super({ id, title, showCount: true, infoTooltip });
-    this.domain = domain;
+constructor(id: string, title: string, domain: CorrelationDomain, infoTooltip?: string) {
+  const isMonitorCorrelation =
+    id === 'escalation-correlation' ||
+    id === 'economic-correlation';
+
+  super({
+    id,
+    title,
+    showCount: true,
+    infoTooltip,
+    className: isMonitorCorrelation ? 'panel-wide' : undefined,
+    defaultRowSpan: isMonitorCorrelation ? 2 : undefined,
+  });    
+  this.domain = domain;
 
     const bootstrap = getTierCorrelationBootstrap();
     const cards = bootstrap?.[domain] ?? null;
@@ -101,16 +112,22 @@ export class CorrelationPanel extends Panel {
   private loadBootstrapCards(): void {
     void loadCorrelationBootstrap().then((onDemand) => {
       if (this.correlationDestroyed || this.hasLiveData) return;
+
       const onDemandCards = onDemand?.[this.domain];
+
       if (onDemandCards?.length) {
         this.cards = onDemandCards;
         this.requestRender();
         return;
       }
-      this.showError(t('common.failedToLoad'), () => this.loadBootstrapCards());
-    });
-  }
 
+      // No server/bootstrap data is available.
+      // This is not fatal for $MONITOR because the client-side
+      // correlation engine can populate the panel later.
+      this.cards = [];
+      this.requestRender();
+    });
+}
   private pendingRender = false;
   /** Schedule a safe redraw for subclasses that install deferred panel data. */
   protected requestRender(): void {

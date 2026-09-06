@@ -420,7 +420,15 @@ export class LiveNewsPanel extends Panel {
   };
 
   constructor() {
-    super({ id: 'live-news', title: t('panels.liveNews'), className: 'panel-wide', closable: true, collapsible: true });
+    super({
+      id: 'live-news',
+      title: t('panels.liveNews'),
+      className: 'panel-wide',
+      defaultRowSpan: 3,
+      closable: true,
+      collapsible: true,
+      });
+
     this.insertLiveCountBadge(OPTIONAL_LIVE_CHANNELS.length);
     this.youtubeOrigin = LiveNewsPanel.resolveYouTubeOrigin();
     this.playerElementId = `live-news-player-${Date.now()}`;
