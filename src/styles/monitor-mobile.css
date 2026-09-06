@@ -1,0 +1,30 @@
+@media (max-width: 768px) {
+  /* Mobile uses a flex-column panel stack, so grid-row spans alone do not
+     control height. Pin these two $MONITOR panels to their intended row
+     footprints while leaving desktop defaults untouched. */
+  #panelsGrid > .panel[data-panel="live-news"]:not(.panel-collapsed) {
+    flex: 0 0 var(--dashboard-first-grid-reservation) !important;
+    height: var(--dashboard-first-grid-reservation) !important;
+    min-height: var(--dashboard-first-grid-reservation) !important;
+    max-height: var(--dashboard-first-grid-reservation) !important;
+  }
+
+  #panelsGrid > .panel[data-panel="monitor-market"]:not(.panel-collapsed) {
+    flex: 0 0 calc(
+      var(--dashboard-panel-row-min) * 4 +
+      var(--dashboard-grid-gap) * 3
+    ) !important;
+    height: calc(
+      var(--dashboard-panel-row-min) * 4 +
+      var(--dashboard-grid-gap) * 3
+    ) !important;
+    min-height: calc(
+      var(--dashboard-panel-row-min) * 4 +
+      var(--dashboard-grid-gap) * 3
+    ) !important;
+    max-height: calc(
+      var(--dashboard-panel-row-min) * 4 +
+      var(--dashboard-grid-gap) * 3
+    ) !important;
+  }
+}
