@@ -49,18 +49,25 @@ export {
   type SourceType,
 } from './feeds';
 
-// Panel configuration - imported from panels.ts
+// $MONITOR factory defaults. These wrap the upstream variant registry so the
+// full variant opens with the finished $MONITOR panel set/order while the
+// other variants keep their existing defaults.
 export {
   DEFAULT_PANELS,
+  VARIANT_DEFAULTS,
+  getInitialPanelSettingsForVariant,
+  isPanelInVariantDefaults,
+  MONITOR_DEFAULT_PANEL_ORDER,
+} from './monitor-defaults';
+
+// Panel configuration - imported from panels.ts
+export {
   DEFAULT_MAP_LAYERS,
   MOBILE_DEFAULT_MAP_LAYERS,
   LAYER_TO_SOURCE,
   ALL_PANELS,
-  VARIANT_DEFAULTS,
   VARIANT_PANEL_OVERRIDES,
   getEffectivePanelConfig,
-  getInitialPanelSettingsForVariant,
-  isPanelInVariantDefaults,
   isPanelNativeToVariant,
   isPanelEntitled,
   enforceFreePanelLimit,
@@ -129,7 +136,7 @@ export {
 // Value re-exports of the tech-geo tables are intentionally NOT on the eager
 // @/config barrel — they pull the ~62KB tech-geo chunk onto the dashboard
 // critical path. Every consumer (search/map/globe/tech-hub services) imports
-// directly from '@/config/tech-geo'. Type re-exports are erased, no edge. (#4404)
+// directly from '@/config/tech-geo'. (#4404)
 export type {
   StartupHub,
   Accelerator,
@@ -166,4 +173,4 @@ export {
 
 // COMMODITY_MINERS: 30+ mining company HQs — not yet rendered on map.
 // Uncomment when a miners layer is added to DeckGLMap.ts.
-// export { COMMODITY_MINERS, type CommodityMiner } from './commodity-miners';
+// export { COMMODITY_MINERS, type COMMODITY_MINERS } from './commodity-miners';
