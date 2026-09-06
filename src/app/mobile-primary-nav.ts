@@ -125,6 +125,21 @@ export class MobilePrimaryNav {
           min-height: 0 !important;
           max-height: 560px !important;
         }
+
+        /* $MONITOR mobile panel footprints. Desktop retains each component's
+           natural 3-row default; these overrides only apply below 768px. */
+        #panelsGrid > .panel[data-panel="live-news"]:not(.panel-collapsed) {
+          grid-row: span 2 !important;
+          min-height: var(--dashboard-first-grid-reservation) !important;
+        }
+
+        #panelsGrid > .panel[data-panel="monitor-market"]:not(.panel-collapsed) {
+          grid-row: span 4 !important;
+          min-height: calc(
+            var(--dashboard-panel-row-min) * 4 +
+            var(--dashboard-grid-gap) * 3
+          ) !important;
+        }
       }
     `;
     document.head.appendChild(style);
