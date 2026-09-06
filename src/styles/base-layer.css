@@ -38,6 +38,14 @@
  */
 @layer base {
   @media (max-width: 768px) {
+    /* The bottom Map/Today navigation owns map visibility on mobile. Keep the
+       legacy map header and Show/Hide button in the DOM for its existing
+       collapse-state wiring, but remove the entire white header strip from
+       the mobile UI. Desktop keeps the normal map header. */
+    #mapSection > .panel-header {
+      display: none !important;
+    }
+
     #panelsGrid .panel[data-panel="live-news"],
     #panelsGrid .panel-deferred-shell[data-panel="live-news"],
     #panelsGrid .panel[data-panel="monitor-market"],
