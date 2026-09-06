@@ -11,6 +11,22 @@
 @import url('./map-context-menu.css') layer(base);
 @import url('./supply-chain-panel.css') layer(base);
 
+/* $MONITOR factory footprint for the generic Financial news panel.
+ * The finance panel uses NewsPanel, whose upstream natural size is 1x1.
+ * Give it the finished $MONITOR desktop default of 2 wide x 2 tall while
+ * allowing any explicit saved span/column classes to win after a user resize. */
+@media (min-width: 769px) {
+  #panelsGrid .panel[data-panel="finance"]:not(.col-span-1):not(.col-span-2):not(.col-span-3),
+  #panelsGrid .panel-deferred-shell[data-panel="finance"]:not(.col-span-1):not(.col-span-2):not(.col-span-3) {
+    grid-column: span 2;
+  }
+
+  #panelsGrid .panel[data-panel="finance"]:not(.span-1):not(.span-2):not(.span-3):not(.span-4),
+  #panelsGrid .panel-deferred-shell[data-panel="finance"]:not(.span-1):not(.span-2):not(.span-3):not(.span-4) {
+    grid-row: span 2;
+  }
+}
+
 /* $MONITOR mobile-only panel heights.
  * Mobile #panelsGrid is a flex-column stack, so the desktop span-N grid rules
  * do not define the visible footprint. These selectors intentionally target
