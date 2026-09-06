@@ -16,38 +16,59 @@ const GLOBE_ZOOM_ANCHORS = [
 
 const MIN_ZOOM = GLOBE_ZOOM_ANCHORS[0].zoom;
 const MAX_ZOOM = GLOBE_ZOOM_ANCHORS[GLOBE_ZOOM_ANCHORS.length - 1]!.zoom;
+const PHONE_PORTRAIT_MAX_WIDTH = 480;
+const PHONE_PORTRAIT_GLOBAL_ALTITUDE = 3.2;
+
+function isPhonePortraitViewport(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth <= PHONE_PORTRAIT_MAX_WIDTH && window.innerHeight > window.innerWidth;
+}
+
+function anchorAltitude(index: number): number {
+  const anchor = GLOBE_ZOOM_ANCHORS[index]!;
+  if (index === 0 && isPhonePortraitViewport()) return PHONE_PORTRAIT_GLOBAL_ALTITUDE;
+  return anchor.altitude;
+}
 
 function interpolateLogAltitude(
   zoom: number,
-  farther: (typeof GLOBE_ZOOM_ANCHORS)[number],
-  nearer: (typeof GLOBE_ZOOM_ANCHORS)[number],
+  fartherZoom: number,
+  fartherAltitude: number,
+  nearerZoom: number,
+  nearerAltitude: number,
 ): number {
-  const progress = (zoom - farther.zoom) / (nearer.zoom - farther.zoom);
+  const progress = (zoom - fartherZoom) / (nearerZoom - fartherZoom);
   return Math.exp(
-    Math.log(farther.altitude)
-    + progress * (Math.log(nearer.altitude) - Math.log(farther.altitude)),
+    Math.log(fartherAltitude)
+    + progress * (Math.log(nearerAltitude) - Math.log(fartherAltitude)),
   );
 }
 
 /** Converts the dashboard's logical 1-10 zoom scale to globe.gl altitude. */
 export function mapZoomToGlobeAltitude(zoom: number | null | undefined): number {
   if (typeof zoom !== 'number' || !Number.isFinite(zoom)) {
-    return GLOBE_ZOOM_ANCHORS[0].altitude;
+    return anchorAltitude(0);
   }
   const boundedZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
-  if (boundedZoom === MIN_ZOOM) return GLOBE_ZOOM_ANCHORS[0].altitude;
+  if (boundedZoom === MIN_ZOOM) return anchorAltitude(0);
   if (boundedZoom === MAX_ZOOM) {
-    return GLOBE_ZOOM_ANCHORS[GLOBE_ZOOM_ANCHORS.length - 1]!.altitude;
+    return anchorAltitude(GLOBE_ZOOM_ANCHORS.length - 1);
   }
-  const exactAnchor = GLOBE_ZOOM_ANCHORS.find((anchor) => anchor.zoom === boundedZoom);
-  if (exactAnchor) return exactAnchor.altitude;
+  const exactAnchorIndex = GLOBE_ZOOM_ANCHORS.findIndex((anchor) => anchor.zoom === boundedZoom);
+  if (exactAnchorIndex >= 0) return anchorAltitude(exactAnchorIndex);
   for (let index = 0; index < GLOBE_ZOOM_ANCHORS.length - 1; index += 1) {
     const farther = GLOBE_ZOOM_ANCHORS[index]!;
     const nearer = GLOBE_ZOOM_ANCHORS[index + 1]!;
     if (boundedZoom < farther.zoom || boundedZoom > nearer.zoom) continue;
-    return interpolateLogAltitude(boundedZoom, farther, nearer);
+    return interpolateLogAltitude(
+      boundedZoom,
+      farther.zoom,
+      anchorAltitude(index),
+      nearer.zoom,
+      anchorAltitude(index + 1),
+    );
   }
-  return GLOBE_ZOOM_ANCHORS[GLOBE_ZOOM_ANCHORS.length - 1]!.altitude;
+  return anchorAltitude(GLOBE_ZOOM_ANCHORS.length - 1);
 }
 
 /**
@@ -57,18 +78,23 @@ export function mapZoomToGlobeAltitude(zoom: number | null | undefined): number 
  */
 export function globeAltitudeToMapZoom(altitude: number | null | undefined): number {
   if (typeof altitude !== 'number' || !Number.isFinite(altitude)) return 1;
-  if (altitude >= GLOBE_ZOOM_ANCHORS[0].altitude) return 1;
-  const last = GLOBE_ZOOM_ANCHORS[GLOBE_ZOOM_ANCHORS.length - 1]!;
-  if (altitude <= last.altitude) return last.zoom;
-  const exactAnchor = GLOBE_ZOOM_ANCHORS.find((anchor) => anchor.altitude === altitude);
-  if (exactAnchor) return exactAnchor.zoom;
+  if (altitude >= anchorAltitude(0)) return 1;
+  const lastIndex = GLOBE_ZOOM_ANCHORS.length - 1;
+  const last = GLOBE_ZOOM_ANCHORS[lastIndex]!;
+  if (altitude <= anchorAltitude(lastIndex)) return last.zoom;
+  const exactAnchorIndex = GLOBE_ZOOM_ANCHORS.findIndex(
+    (_anchor, index) => anchorAltitude(index) === altitude,
+  );
+  if (exactAnchorIndex >= 0) return GLOBE_ZOOM_ANCHORS[exactAnchorIndex]!.zoom;
 
   for (let index = 0; index < GLOBE_ZOOM_ANCHORS.length - 1; index += 1) {
     const farther = GLOBE_ZOOM_ANCHORS[index]!;
     const nearer = GLOBE_ZOOM_ANCHORS[index + 1]!;
-    if (altitude > farther.altitude || altitude < nearer.altitude) continue;
-    const progress = (Math.log(farther.altitude) - Math.log(altitude))
-      / (Math.log(farther.altitude) - Math.log(nearer.altitude));
+    const fartherAltitude = anchorAltitude(index);
+    const nearerAltitude = anchorAltitude(index + 1);
+    if (altitude > fartherAltitude || altitude < nearerAltitude) continue;
+    const progress = (Math.log(fartherAltitude) - Math.log(altitude))
+      / (Math.log(fartherAltitude) - Math.log(nearerAltitude));
     return farther.zoom + progress * (nearer.zoom - farther.zoom);
   }
 
