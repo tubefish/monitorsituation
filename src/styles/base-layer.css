@@ -19,10 +19,10 @@
 @media (max-width: 768px) {
   html body #app #panelsGrid .panel[data-panel="live-news"],
   html body #app #panelsGrid .panel-deferred-shell[data-panel="live-news"] {
-    flex: 0 0 324px !important;
-    height: 324px !important;
-    min-height: 324px !important;
-    max-height: 324px !important;
+    flex: 0 0 160px !important;
+    height: 160px !important;
+    min-height: 160px !important;
+    max-height: 160px !important;
   }
 
   html body #app #panelsGrid .panel[data-panel="monitor-market"],
