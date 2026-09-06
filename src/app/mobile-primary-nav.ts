@@ -141,9 +141,9 @@ export class MobilePrimaryNav {
     if (mapButton && todayButton) mapButton.after(todayButton);
     this.setActive('map');
     this.expandMap();
-    // Match the zoomed-out globe scale used by the global view (altitude ~1.8).
-    // MapContainer translates this map-style zoom into globe altitude when globe mode is active.
-    this.ctx.map?.setZoom(9.32);
+    // On the globe renderer, lower logical zoom values are farther away.
+    // Zoom 1 maps to the standard global-view altitude (~1.8).
+    this.ctx.map?.setZoom(1);
 
     tabBar.addEventListener('click', (event) => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-mobile-tab]');
