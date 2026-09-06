@@ -2177,20 +2177,41 @@ export class DataLoaderManager implements AppModule {
       );
       this.applyTechHubActivities();
 
-      const geoLocated = this.ctx.latestClusters
-        .filter((c): c is typeof c & { lat: number; lon: number } => c.lat != null && c.lon != null)
-        .map(c => ({
-          lat: c.lat,
-          lon: c.lon,
-          title: c.primaryTitle,
-          threatLevel: c.threat?.level ?? 'info',
-          timestamp: c.lastUpdated,
-          url: c.primaryLink,
-        }));
-      if (geoLocated.length > 0) {
-        this.ctx.map?.setNewsLocations(geoLocated);
-      }
-    } catch (error) {
+// $MONITOR — place news clusters on the globe.
+// Prefer coordinates supplied by the news pipeline.
+// If none exist, infer a strategic location from the headline.
+const { inferGeoHubsFromTitle } = await import('@/services/geo-hub-index');
+
+const geoLocated = this.ctx.latestClusters.flatMap(c => {
+  let lat = c.lat;
+  let lon = c.lon;
+
+  if (lat == null || lon == null) {
+    const inferred = inferGeoHubsFromTitle(c.primaryTitle)[0];
+
+    if (inferred) {
+      lat = inferred.hub.lat;
+      lon = inferred.hub.lon;
+    }
+  }
+
+  if (lat == null || lon == null) {
+    return [];
+  }
+
+  return [{
+    lat,
+    lon,
+    title: c.primaryTitle,
+    threatLevel: c.threat?.level ?? 'info',
+    timestamp: c.lastUpdated,
+    url: c.primaryLink,
+  }];
+});
+
+if (geoLocated.length > 0) {
+  this.ctx.map?.setNewsLocations(geoLocated);
+}    } catch (error) {
       console.error('[App] Clustering failed, clusters unchanged:', error);
       this.callPanel('insights', 'updateInsights', []);
       if (isPanelInVariantDefaults('threat-timeline')) {
