@@ -11,6 +11,21 @@
 @import url('./map-context-menu.css') layer(base);
 @import url('./supply-chain-panel.css') layer(base);
 
-/* $MONITOR-specific mobile overrides stay unlayered so they can intentionally
- * override the base dashboard's mobile flex-column sizing rules. */
-@import url('./monitor-mobile.css');
+/* $MONITOR mobile-only panel heights. The base mobile dashboard switches
+ * #panelsGrid to flex-column, so grid-row spans do not control height here.
+ * Keep desktop on each component's normal 3-row defaults. */
+@media (max-width: 768px) {
+  #panelsGrid > .panel[data-panel="live-news"]:not(.panel-collapsed) {
+    flex: 0 0 324px !important;
+    height: 324px !important;
+    min-height: 324px !important;
+    max-height: 324px !important;
+  }
+
+  #panelsGrid > .panel[data-panel="monitor-market"]:not(.panel-collapsed) {
+    flex: 0 0 652px !important;
+    height: 652px !important;
+    min-height: 652px !important;
+    max-height: 652px !important;
+  }
+}
