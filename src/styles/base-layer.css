@@ -125,6 +125,18 @@
     stroke-linecap: round;
     stroke-linejoin: round;
   }
+
+  /* Use the uploaded DEX eagle mark in place of the legacy triangle.
+     The PNG is used as an alpha mask so the icon follows currentColor in
+     both light and dark themes instead of keeping a black square background. */
+  #mobileTabBar .mobile-tab[data-mobile-tab="alerts"] .mobile-tab-icon {
+    width: 20px;
+    height: 21px;
+    font-size: 0;
+    background-color: currentColor;
+    -webkit-mask: url('/icons/dex-eagle-mask.png') center / contain no-repeat;
+    mask: url('/icons/dex-eagle-mask.png') center / contain no-repeat;
+  }
 }
 
 /* $MONITOR does not expose Palantir in the public reference links. */
