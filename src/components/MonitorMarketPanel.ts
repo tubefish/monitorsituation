@@ -126,7 +126,7 @@ export class MonitorMarketPanel extends Panel {
     const positive24h = change24h >= 0;
 
     this.content.innerHTML = `
-      <div class="monitor-market-panel">
+      <div class="monitor-market-panel" style="padding-left: 20px; padding-right: 12px;">
 
         <div class="monitor-market-intro">
 
