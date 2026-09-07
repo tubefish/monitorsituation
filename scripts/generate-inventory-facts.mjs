@@ -26,9 +26,41 @@ const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
  * `sources:check` / `docs:check` failure, not a reason to skip writing
  * `api/_inventory-facts.generated.js`.
  */
+function committedAttributionCounts() {
+  const manifest = readJson('shared/source-attribution-manifest.json');
+  const entries = Array.isArray(manifest?.entries) ? manifest.entries : [];
+  const observed = entries.filter((entry) => entry?.observed === true);
+  const active = observed.filter((entry) => entry.status !== 'excluded');
+  const hasKind = (entry, kind) => String(entry?.kind || '').split('+').includes(kind);
+  const providers = new Set(
+    active
+      .map((entry) => typeof entry?.provider === 'string' ? entry.provider.trim() : '')
+      .filter(Boolean),
+  );
+
+  return {
+    activeHosts: active.length,
+    structuredHosts: active.filter((entry) => hasKind(entry, 'structured')).length,
+    feedHosts: active.filter((entry) => hasKind(entry, 'feed')).length,
+    operationalStatusHosts: active.filter((entry) => hasKind(entry, 'operational-status')).length,
+    providerCount: providers.size,
+    observedHosts: observed.length,
+    reviewNeeded: active.filter((entry) => entry.status === 'terms-review').length,
+  };
+}
+
+function fallbackAttributionStats() {
+  try {
+    return buildSourceAttributionStats({ validate: false });
+  } catch (error) {
+    if (!isSourceAttributionManifestError(error)) throw error;
+    return committedAttributionCounts();
+  }
+}
+
 export function loadStatsForInventoryFacts({
   compute = computeStats,
-  fallbackAttribution = () => buildSourceAttributionStats({ validate: false }),
+  fallbackAttribution = fallbackAttributionStats,
   warn = console.warn,
 } = {}) {
   try {
