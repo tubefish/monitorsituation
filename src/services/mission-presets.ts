@@ -424,11 +424,7 @@ export function clearMissionPreset(): void {
 }
 
 export function isMissionPresetPromptDismissed(): boolean {
-  try {
-    return localStorage.getItem(MISSION_PRESET_DISMISSED_KEY) === '1';
-  } catch {
-    return true;
-  }
+  return true;
 }
 
 export function dismissMissionPresetPrompt(): void {
