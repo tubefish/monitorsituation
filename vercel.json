@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "buildCommand": "npm run prebuild:full && npm run security:vite-env-secrets -- --strict-local && npm run typecheck && npx cross-env VITE_VARIANT=full vite build && node scripts/monitor-postbuild.mjs",
+  "buildCommand": "npm run security:vite-env-secrets -- --strict-local && npm run typecheck && npx cross-env VITE_VARIANT=full vite build && node scripts/monitor-postbuild.mjs",
   "outputDirectory": "dist",
   "trailingSlash": false,
   "redirects": [
