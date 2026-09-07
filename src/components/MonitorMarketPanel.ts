@@ -126,7 +126,24 @@ export class MonitorMarketPanel extends Panel {
     const positive24h = change24h >= 0;
 
     this.content.innerHTML = `
-      <div class="monitor-market-panel" style="width: min(100%, 720px); margin: 0 auto; padding: 16px;">
+      <div class="monitor-market-panel" style="width: min(100%, 720px); margin: 0 auto; padding: 16px; container-type: inline-size;">
+        <style>
+          .monitor-market-top-grid .monitor-market-value {
+            white-space: nowrap;
+          }
+
+          @container (max-width: 620px) {
+            .monitor-market-top-grid .monitor-market-value {
+              font-size: 18px;
+            }
+          }
+
+          @container (max-width: 540px) {
+            .monitor-market-top-grid .monitor-market-value {
+              font-size: 16px;
+            }
+          }
+        </style>
 
         <div class="monitor-market-intro">
 
