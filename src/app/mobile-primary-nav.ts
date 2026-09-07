@@ -2,7 +2,6 @@ import type { AppContext } from '@/app/app-context';
 import type { MapView } from '@/components/MapContainer';
 import type { AuthLauncher } from '@/components/AuthLauncher';
 import { AuthHeaderWidget } from '@/components/AuthHeaderWidget';
-import { SITE_VARIANT } from '@/config';
 import { getAuthState, subscribeAuthState } from '@/services/auth-state';
 import { track, trackMapViewChange, trackThemeChanged } from '@/services/analytics';
 import { getCurrentTheme, setTheme } from '@/utils';
@@ -15,6 +14,7 @@ import {
 import { reconcileOverlayForTab } from '@/app/mobile-overlay-reconcile';
 
 const MONITOR_DEX_URL = 'https://dexscreener.com/robinhood/0xcfa7bb34e23a7022c3de3e1618e1ff29cde8f16a76c341eca19d16f928968a3d?utm_source=worldmonitor&utm_medium=referral&utm_campaign=monitor-market';
+const MONITOR_CONTRACT_ADDRESS = '0x1a911bb954dAA9CB38513423075bE74450351e18';
 
 const MOBILE_MAP_GLOBE_ICON = `
   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -305,30 +305,69 @@ export class MobilePrimaryNav {
     if (!overlay || !menu || !close) return;
     const options = { signal: this.listeners.signal };
 
+    // $MONITOR's More drawer only needs Global, contract copy, theme, and X.
+    menu.querySelectorAll<HTMLElement>('.mobile-menu-variant').forEach((item) => item.remove());
+    document.getElementById('mobileMenuMission')?.remove();
+    document.getElementById('mobileMenuSettings')?.remove();
+    menu.querySelector<HTMLElement>(':scope > .mobile-menu-divider')?.remove();
+
+    const themeButton = document.getElementById('mobileMenuTheme');
+    let contractButton = document.getElementById('mobileMenuContract') as HTMLButtonElement | null;
+    if (!contractButton && themeButton) {
+      contractButton = document.createElement('button');
+      contractButton.type = 'button';
+      contractButton.className = 'mobile-menu-item';
+      contractButton.id = 'mobileMenuContract';
+
+      const icon = document.createElement('span');
+      icon.className = 'mobile-menu-item-icon';
+      icon.textContent = '⧉';
+
+      const label = document.createElement('span');
+      label.className = 'mobile-menu-item-label';
+      label.textContent = 'Contact Address';
+
+      contractButton.append(icon, label);
+      themeButton.before(contractButton);
+    }
+
     overlay.addEventListener('click', () => this.closeMenu(), options);
     close.addEventListener('click', () => this.closeMenu(), options);
-    const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    menu.querySelectorAll<HTMLButtonElement>('.mobile-menu-variant').forEach((button) => {
-      button.addEventListener('click', () => {
-        const variant = button.dataset.variant;
-        if (variant && variant !== SITE_VARIANT) void this.callbacks.navigateToVariant(variant, { isLocalDev });
-      }, options);
-    });
     document.getElementById('mobileMenuRegion')?.addEventListener('click', () => {
       this.openRegion('menu');
     }, options);
-    document.getElementById('mobileMenuSettings')?.addEventListener('click', () => {
-      this.ctx.unifiedSettings?.open(undefined, 'menu', true);
+    contractButton?.addEventListener('click', async () => {
+      const label = contractButton?.querySelector<HTMLElement>('.mobile-menu-item-label');
+      if (!label) return;
+
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(MONITOR_CONTRACT_ADDRESS);
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = MONITOR_CONTRACT_ADDRESS;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.focus();
+          textarea.select();
+          document.execCommand('copy');
+          textarea.remove();
+        }
+
+        label.textContent = 'Copied';
+        window.setTimeout(() => {
+          if (label.isConnected) label.textContent = 'Contact Address';
+        }, 1500);
+      } catch (error) {
+        console.warn('Failed to copy token CA:', error);
+      }
     }, options);
     document.getElementById('mobileMenuTheme')?.addEventListener('click', () => {
       this.closeMenu();
       const next = getCurrentTheme() === 'dark' ? 'light' : 'dark';
       setTheme(next);
       trackThemeChanged(next);
-    }, options);
-    document.getElementById('mobileMenuMission')?.addEventListener('click', (event) => {
-      this.closeMenu();
-      this.callbacks.openMission(event.currentTarget as HTMLElement);
     }, options);
     document.getElementById('regionSheetBackdrop')?.addEventListener('click', () => this.closeRegion(), options);
     sheet?.querySelectorAll<HTMLButtonElement>('.region-sheet-option').forEach((option) => {
