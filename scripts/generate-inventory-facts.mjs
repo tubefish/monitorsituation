@@ -6,12 +6,12 @@
  * generate them before API, Railway, or static-product consumers run.
  */
 
+import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { computeStats } from './docs-stats.mjs';
 import {
-  buildSourceAttributionStats,
   isSourceAttributionManifestError,
 } from './source-attribution.mjs';
 
@@ -22,54 +22,40 @@ const readJson = (path) => JSON.parse(read(path));
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
 
 /**
- * Inventory facts are a boot artifact. A stale attribution ledger is a
- * `sources:check` / `docs:check` failure, not a reason to skip writing
- * `api/_inventory-facts.generated.js`.
+ * Inventory facts are a boot artifact. Source-attribution drift can happen in
+ * a branded fork when source URLs or references are changed. The upstream
+ * attribution tool is the authority for repairing that drift, so use it here
+ * before retrying the inventory computation rather than bypassing validation.
  */
-function committedAttributionCounts() {
-  const manifest = readJson('shared/source-attribution-manifest.json');
-  const entries = Array.isArray(manifest?.entries) ? manifest.entries : [];
-  const observed = entries.filter((entry) => entry?.observed === true);
-  const active = observed.filter((entry) => entry.status !== 'excluded');
-  const hasKind = (entry, kind) => String(entry?.kind || '').split('+').includes(kind);
-  const providers = new Set(
-    active
-      .map((entry) => typeof entry?.provider === 'string' ? entry.provider.trim() : '')
-      .filter(Boolean),
+function refreshSourceAttribution() {
+  const result = spawnSync(
+    process.execPath,
+    [join(ROOT, 'scripts/source-attribution.mjs'), '--write'],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: 'inherit',
+    },
   );
 
-  return {
-    activeHosts: active.length,
-    structuredHosts: active.filter((entry) => hasKind(entry, 'structured')).length,
-    feedHosts: active.filter((entry) => hasKind(entry, 'feed')).length,
-    operationalStatusHosts: active.filter((entry) => hasKind(entry, 'operational-status')).length,
-    providerCount: providers.size,
-    observedHosts: observed.length,
-    reviewNeeded: active.filter((entry) => entry.status === 'terms-review').length,
-  };
-}
-
-function fallbackAttributionStats() {
-  try {
-    return buildSourceAttributionStats({ validate: false });
-  } catch (error) {
-    if (!isSourceAttributionManifestError(error)) throw error;
-    return committedAttributionCounts();
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(`source-attribution regeneration exited with ${result.status ?? 'unknown status'}`);
   }
 }
 
 export function loadStatsForInventoryFacts({
   compute = computeStats,
-  fallbackAttribution = fallbackAttributionStats,
+  refreshAttribution = refreshSourceAttribution,
   warn = console.warn,
 } = {}) {
   try {
     return compute();
   } catch (error) {
     if (!isSourceAttributionManifestError(error)) throw error;
-    const sourceAttribution = fallbackAttribution();
-    warn(`inventory facts: proceeding with committed attribution counts; ${error.message}`);
-    return compute({ sourceAttribution });
+    warn(`inventory facts: refreshing stale source attribution; ${error.message}`);
+    refreshAttribution();
+    return compute();
   }
 }
 
