@@ -126,3 +126,9 @@
     stroke-linejoin: round;
   }
 }
+
+/* $MONITOR does not expose Palantir in the public reference links. */
+.site-footer a[href="https://www.palantir.com/"],
+.mobile-menu-footer-links a[href="https://www.palantir.com/"] {
+  display: none !important;
+}
