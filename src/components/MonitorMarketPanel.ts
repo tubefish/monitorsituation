@@ -146,7 +146,7 @@ export class MonitorMarketPanel extends Panel {
             <div class="monitor-market-value">
               $${price.toFixed(8)}
             </div>
-            <div class="monitor-market-meta">USD</div>
+            <div class="monitor-market-meta">USD vs PLTR</div>
           </div>
 
           <div class="monitor-market-card">
