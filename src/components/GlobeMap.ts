@@ -1,4 +1,5 @@
 import { isMobileDevice } from '@/utils';
+import type { MapLayers } from '@/types';
 import type { MapView } from './MapContainer';
 import { GlobeMap as GlobeMapCore } from './GlobeMapCore';
 
@@ -44,6 +45,7 @@ function hasExplicitUrlCenter(): boolean {
 
 type GlobeRuntime = {
   currentView: MapView;
+  layers: MapLayers;
   globe: unknown | null;
   wakeGlobe: () => void;
   moveViewport: (
@@ -61,6 +63,29 @@ type GlobeRuntime = {
 export class GlobeMap extends GlobeMapCore {
   private readonly mobileBootStartedAt = Date.now();
   private mobileBootCenterHandled = false;
+
+  // The upstream full/mobile layer presets drifted: desktop explicitly enables
+  // the non-toggleable `news` layer while the mobile preset omits it. The core
+  // globe renderer therefore receives news locations on mobile but drops them
+  // in flushMarkers() because layers.news is falsy. Keep the $MONITOR mobile
+  // globe's news overlay always enabled, matching desktop behavior.
+  public override setLayers(layers: MapLayers): void {
+    super.setLayers(isMobileDevice() ? { ...layers, news: true } : layers);
+  }
+
+  public override setNewsLocations(
+    data: Parameters<GlobeMapCore['setNewsLocations']>[0],
+  ): void {
+    if (isMobileDevice()) {
+      const runtime = this as unknown as GlobeRuntime;
+      // Initial construction copies the mobile preset directly before any
+      // setLayers() call, so repair that one boot-time state as news arrives.
+      if (!runtime.layers.news) {
+        super.setLayers({ ...runtime.layers, news: true });
+      }
+    }
+    super.setNewsLocations(data);
+  }
 
   public override setView(view: MapView, zoom?: number): void {
     if (!isMobileDevice() || zoom !== undefined) {
