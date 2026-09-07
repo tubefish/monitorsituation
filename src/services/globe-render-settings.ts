@@ -4,7 +4,6 @@ export type GlobeTexture = 'topographic' | 'blue-marble';
 const STORAGE_KEY = 'wm-globe-render-scale';
 const EVENT_NAME = 'wm-globe-render-scale-changed';
 
-const TEXTURE_STORAGE_KEY = 'wm-globe-texture';
 const TEXTURE_EVENT_NAME = 'wm-globe-texture-changed';
 
 export const GLOBE_RENDER_SCALE_OPTIONS: {
@@ -89,7 +88,6 @@ export function getGlobeTexture(): GlobeTexture {
 }
 
 export function setGlobeTexture(texture: GlobeTexture): void {
-  try { localStorage.setItem(TEXTURE_STORAGE_KEY, texture); } catch { /* ignore */ }
   window.dispatchEvent(new CustomEvent(TEXTURE_EVENT_NAME, { detail: { texture } }));
 }
 
