@@ -2,8 +2,11 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const VITE_CONFIG = resolve(process.cwd(), 'vite.config.ts');
+const MAIN_CSS = resolve(process.cwd(), 'src/styles/main.css');
 const MARKET_ASSIGNMENT = "MonitorMarket: 'panels-markets'";
 const RSS_INTEL_CHUNK_MARKER = "return 'gdelt-intel'; // $MONITOR: keep RSS intelligence cycle in one chunk";
+const DEFAULT_MAP_WIDTH = 'var(--map-col-width, 60%)';
+const NUDGED_MAP_WIDTH = 'var(--map-col-width, calc(60% + 15px))';
 
 let source = await readFile(VITE_CONFIG, 'utf8');
 let changed = false;
@@ -46,5 +49,19 @@ if (!source.includes(RSS_INTEL_CHUNK_MARKER)) {
   throw new Error('[monitor-vite-prebuild] RSS intelligence chunk co-location was not applied');
 }
 
+let mainCss = await readFile(MAIN_CSS, 'utf8');
+if (!mainCss.includes(NUDGED_MAP_WIDTH)) {
+  if (!mainCss.includes(DEFAULT_MAP_WIDTH)) {
+    throw new Error('[monitor-vite-prebuild] Could not find the desktop map width fallback in main.css');
+  }
+  mainCss = mainCss.replaceAll(DEFAULT_MAP_WIDTH, NUDGED_MAP_WIDTH);
+  await writeFile(MAIN_CSS, mainCss, 'utf8');
+}
+
+if (!mainCss.includes(NUDGED_MAP_WIDTH)) {
+  throw new Error('[monitor-vite-prebuild] Desktop map width nudge was not applied');
+}
+
 console.log('[monitor-vite-prebuild] MonitorMarket assigned to panels-markets.');
 console.log('[monitor-vite-prebuild] gdelt-intel, rss, and trending-keywords co-located in one chunk.');
+console.log('[monitor-vite-prebuild] Desktop map divider default shifted 15px to the right.');
