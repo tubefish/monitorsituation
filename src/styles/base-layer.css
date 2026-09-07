@@ -132,3 +132,29 @@
 .mobile-menu-footer-links a[href="https://www.palantir.com/"] {
   display: none !important;
 }
+
+/* Palantir non-affiliation notice: fine print on desktop and in the mobile More menu. */
+@media (min-width: 769px) {
+  .site-footer::after {
+    content: 'We have no affiliation with Palantir, Technologies Inc.';
+    flex: 0 0 100%;
+    order: 100;
+    margin-top: 2px;
+    font-family: var(--font-mono, monospace);
+    font-size: calc(8px * var(--wm-panel-effective-scale, 1));
+    line-height: 1.25;
+    color: var(--text-dim);
+  }
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-footer-links::after {
+    content: 'We have no affiliation with Palantir, Technologies Inc.';
+    flex: 0 0 100%;
+    margin-top: 4px;
+    font-family: var(--font-mono, monospace);
+    font-size: calc(9px * var(--wm-panel-effective-scale, 1));
+    line-height: 1.35;
+    color: var(--text-dim);
+  }
+}
