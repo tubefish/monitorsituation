@@ -19,6 +19,12 @@ target/
 # Common local artifacts
 .DS_Store
 
+# $MONITOR does not use the upstream World Monitor routing middleware.
+# Vercel otherwise deploys middleware.ts and invokes it before serving the
+# static dashboard, which can crash because the lean deployment intentionally
+# omits upstream docs/auth/product-routing subsystems.
+middleware.ts
+
 # Never deploy api test files: every non-underscore file under api/ becomes a
 # live serverless function, and a deployed *.test.mjs executes its whole
 # node:test suite (production env + Sentry) on every request (WORLDMONITOR-VD).
