@@ -12,8 +12,8 @@ const KEYWORDS =
   '$MONITOR, Monitor the Situation, global situation dashboard, breaking news, geopolitical intelligence, OSINT, conflict tracking, military activity, infrastructure monitoring, market sentiment, real-time news, situation awareness';
 const X_HANDLE = '@monitoringmeme';
 const X_URL = 'https://x.com/monitoringmeme';
-const SOURCE_URL = 'https://github.com/tubefish/worldmonitor';
-const LICENSE_URL = 'https://github.com/tubefish/worldmonitor/blob/monitor-redesign/LICENSE';
+const SOURCE_URL = 'https://github.com/tubefish/monitorsituation';
+const LICENSE_URL = 'https://github.com/tubefish/monitorsituation/blob/monitor-redesign/LICENSE';
 const OG_IMAGE = `${SITE_URL}favico/og-image.png`;
 
 function escapeRegex(value) {
