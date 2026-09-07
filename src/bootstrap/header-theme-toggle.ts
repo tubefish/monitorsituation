@@ -88,20 +88,17 @@ function mountToggle(): void {
   updateToggleState(button);
 }
 
-function removeToggleOnMobile(): void {
-  if (!window.matchMedia(DESKTOP_QUERY).matches) {
-    document.getElementById(TOGGLE_ID)?.remove();
-  } else {
+function syncToggleForViewport(): void {
+  if (window.matchMedia(DESKTOP_QUERY).matches) {
     mountToggle();
+    return;
   }
-}
 
-function restoreStoredTheme(): void {
-  setTheme(getStoredTheme());
+  document.getElementById(TOGGLE_ID)?.remove();
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  restoreStoredTheme();
+  setTheme(getStoredTheme());
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', mountToggle, { once: true });
@@ -112,7 +109,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   const observer = new MutationObserver(() => mountToggle());
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
-  window.matchMedia(DESKTOP_QUERY).addEventListener('change', removeToggleOnMobile);
+  window.matchMedia(DESKTOP_QUERY).addEventListener('change', syncToggleForViewport);
   window.addEventListener('theme-changed', () => {
     const button = document.getElementById(TOGGLE_ID);
     if (button instanceof HTMLButtonElement) updateToggleState(button);
