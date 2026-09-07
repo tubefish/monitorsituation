@@ -17,6 +17,5 @@ run('npx', ['tsc', '--noEmit', '--noUnusedLocals', 'false']);
 run('node', ['scripts/monitor-vite-prebuild.mjs']);
 run('npx', ['cross-env', 'VITE_VARIANT=full', 'vite', 'build']);
 run('node', ['scripts/monitor-postbuild.mjs']);
-run('node', ['scripts/monitor-prune-vercel-api.mjs']);
 
 console.log('\n[monitor-vercel-build] Build pipeline complete.');

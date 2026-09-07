@@ -24,3 +24,27 @@ target/
 # node:test suite (production env + Sentry) on every request (WORLDMONITOR-VD).
 # Guarded by tests/deploy-config.test.mjs.
 api/**/*.test.mjs
+
+# $MONITOR production API allowlist.
+# Vercel discovers /api routes before the build command runs, so unused routes
+# must be excluded here rather than deleted from the temporary build workspace.
+# Keep top-level shared helper modules (api/_*) plus only the route families the
+# current $MONITOR dashboard needs.
+api/*
+!api/_*
+!api/bootstrap.js
+!api/health.js
+!api/rss-proxy.js
+!api/wm-session.js
+!api/conflict/
+!api/economic/
+!api/infrastructure/
+!api/intelligence/
+!api/military/
+!api/radiation/
+!api/unrest/
+!api/youtube/
+
+# Live News only needs the YouTube live endpoint.
+api/youtube/*
+!api/youtube/live.js
