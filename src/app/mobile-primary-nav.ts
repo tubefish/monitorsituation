@@ -176,15 +176,15 @@ export class MobilePrimaryNav {
     if (mapButton) tabBar.prepend(mapButton);
     if (mapButton && todayButton) mapButton.after(todayButton);
 
-    // Keep all four controls evenly distributed regardless of the upstream
-    // button widths/labels. Each control owns exactly one quarter of the bar.
+    // The shared shell reserves five grid tracks, but $MONITOR hides Search.
+    // Replace that template with four equal tracks so each visible control
+    // occupies exactly one quarter of the available tab-bar width.
+    tabBar.style.gridTemplateColumns = 'repeat(4, minmax(0, 1fr))';
     [mapButton, todayButton, dexButton, moreButton].forEach((button) => {
       if (!button) return;
-      button.style.flex = '1 1 25%';
-      button.style.width = '25%';
+      button.style.width = '100%';
       button.style.minWidth = '0';
     });
-    tabBar.style.justifyContent = 'stretch';
 
     this.setTabIcon(mapButton, MOBILE_MAP_GLOBE_ICON);
     this.setTabLabel(dexButton, 'DEX');
