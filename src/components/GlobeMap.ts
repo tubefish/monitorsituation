@@ -1,7 +1,8 @@
 import { isMobileDevice } from '@/utils';
 import type { MapLayers } from '@/types';
-import type { MapView } from './MapContainer';
+import type { MapContainerState, MapView } from './MapContainer';
 import { GlobeMap as GlobeMapCore } from './GlobeMapCore';
+import type { GlobeMapOptions } from './GlobeMapCore';
 
 export type { GlobeMapOptions } from './GlobeMapCore';
 
@@ -54,6 +55,10 @@ type GlobeRuntime = {
   ) => void;
 };
 
+type GlobeBackgroundRuntime = {
+  backgroundColor: (color: string) => unknown;
+};
+
 /**
  * Thin $MONITOR wrapper around the upstream globe implementation.
  * The base constructor calls setView() during globe initialization, so this
@@ -63,6 +68,55 @@ type GlobeRuntime = {
 export class GlobeMap extends GlobeMapCore {
   private readonly mobileBootStartedAt = Date.now();
   private mobileBootCenterHandled = false;
+  private themeObserver: MutationObserver | null = null;
+
+  public constructor(
+    container: HTMLElement,
+    initialState: MapContainerState,
+    options: GlobeMapOptions = {},
+  ) {
+    super(container, initialState, options);
+
+    // GlobeMapCore hardcodes #e5e5e5 on both the container and globe.gl scene.
+    // Keep the globe texture itself untouched, but make the surrounding area
+    // use the same --bg token as the rest of the active site theme.
+    container.style.background = 'var(--bg)';
+
+    if (typeof document === 'undefined') return;
+
+    // The renderer needs a concrete color rather than a CSS variable. Apply it
+    // once async globe initialization finishes, then keep it synchronized with
+    // the site's existing [data-theme="light"] toggle.
+    void this.whenReady()
+      .then(() => this.syncThemeSurround())
+      .catch(() => undefined);
+
+    if (typeof MutationObserver !== 'undefined') {
+      this.themeObserver = new MutationObserver(() => this.syncThemeSurround());
+      this.themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme'],
+      });
+    }
+  }
+
+  private syncThemeSurround(): void {
+    if (typeof document === 'undefined') return;
+
+    const runtime = this as unknown as GlobeRuntime;
+    const globe = runtime.globe as GlobeBackgroundRuntime | null;
+    if (!globe || typeof globe.backgroundColor !== 'function') return;
+
+    const cssBackground = typeof getComputedStyle === 'function'
+      ? getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+      : '';
+    const fallbackBackground = document.documentElement.dataset.theme === 'light'
+      ? '#f8f9fa'
+      : '#0a0a0a';
+
+    runtime.wakeGlobe();
+    globe.backgroundColor(cssBackground || fallbackBackground);
+  }
 
   // The upstream full/mobile layer presets drifted: desktop explicitly enables
   // the non-toggleable `news` layer while the mobile preset omits it. The core
@@ -144,5 +198,11 @@ export class GlobeMap extends GlobeMapCore {
       lng: lon,
       altitude: mobileDefaultAltitude(preset.altitude),
     });
+  }
+
+  public override destroy(): void {
+    this.themeObserver?.disconnect();
+    this.themeObserver = null;
+    super.destroy();
   }
 }
