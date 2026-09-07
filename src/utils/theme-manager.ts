@@ -103,7 +103,7 @@ export function setTheme(theme: Theme): void {
  */
 export function applyStoredTheme(): void {
   const variant = document.documentElement.dataset.variant;
-  const effective: Theme = 'light';
+  const effective: Theme = getStoredTheme();
 
   document.documentElement.dataset.theme = effective;
   updateThemeMetaColor(effective, variant);

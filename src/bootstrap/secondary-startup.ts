@@ -1,3 +1,4 @@
+import '@/bootstrap/header-theme-toggle';
 import { scheduleAfterFirstPaint } from '@/utils/after-paint';
 
 let vercelAnalyticsScheduled = false;
