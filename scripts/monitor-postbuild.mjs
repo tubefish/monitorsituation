@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const DIST_DIR = resolve(process.cwd(), 'dist');
+const DASHBOARD_FILE = resolve(DIST_DIR, 'dashboard.html');
 const INDEX_FILE = resolve(DIST_DIR, 'index.html');
 
 const SITE_URL = 'https://monitorsituation.xyz/';
@@ -116,8 +117,8 @@ function replaceStructuredData(html) {
   return insertBeforeHeadClose(clean, markup);
 }
 
-async function prepareIndex() {
-  let html = await readFile(INDEX_FILE, 'utf8');
+async function prepareDashboard() {
+  let html = await readFile(DASHBOARD_FILE, 'utf8');
 
   html = replaceTitle(html);
   html = upsertMeta(html, 'name', 'title', TITLE);
@@ -160,7 +161,13 @@ async function prepareIndex() {
 
   html = replaceStructuredData(html);
 
-  await writeFile(INDEX_FILE, html, 'utf8');
+  // Upstream Vite intentionally renames the dashboard entry to dashboard.html.
+  // Keep that file for compatibility and also publish the same prepared document
+  // as index.html so Vercel can serve the $MONITOR dashboard directly at `/`.
+  await Promise.all([
+    writeFile(DASHBOARD_FILE, html, 'utf8'),
+    writeFile(INDEX_FILE, html, 'utf8'),
+  ]);
 }
 
 async function writeCrawlerFiles() {
@@ -173,7 +180,7 @@ async function writeCrawlerFiles() {
   ]);
 }
 
-await prepareIndex();
+await prepareDashboard();
 await writeCrawlerFiles();
 
 console.log('[monitor-postbuild] Prepared monitorsituation.xyz production output.');
