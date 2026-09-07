@@ -13,6 +13,7 @@ export type { GlobeMapOptions } from './GlobeMapCore';
 // upstream/default size. Desktop and explicit zoom commands are untouched.
 const MOBILE_GLOBE_PROJECTED_SCALE = 0.75;
 const MOBILE_BOOT_CENTER_WINDOW_MS = 7_000;
+const DESKTOP_GLOBE_OFFSET_PX = 20;
 
 const VIEW_POVS: Record<MapView, { lat: number; lng: number; altitude: number }> = {
   global:   { lat: 20,  lng: 0,   altitude: 1.8 },
@@ -47,6 +48,7 @@ function hasExplicitUrlCenter(): boolean {
 type GlobeRuntime = {
   currentView: MapView;
   layers: MapLayers;
+  container: HTMLElement;
   globe: unknown | null;
   wakeGlobe: () => void;
   moveViewport: (
@@ -57,6 +59,23 @@ type GlobeRuntime = {
 
 type GlobeBackgroundRuntime = {
   backgroundColor: (color: string) => unknown;
+};
+
+type GlobeCameraRuntime = {
+  setViewOffset: (
+    fullWidth: number,
+    fullHeight: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ) => void;
+  clearViewOffset: () => void;
+  updateProjectionMatrix: () => void;
+};
+
+type GlobeViewportRuntime = {
+  camera: () => GlobeCameraRuntime;
 };
 
 /**
@@ -86,9 +105,13 @@ export class GlobeMap extends GlobeMapCore {
 
     // The renderer needs a concrete color rather than a CSS variable. Apply it
     // once async globe initialization finishes, then keep it synchronized with
-    // the site's existing [data-theme="light"] toggle.
+    // the site's existing [data-theme="light"] toggle. Apply the desktop camera
+    // offset at the same point so the first ready frame is already centered.
     void this.whenReady()
-      .then(() => this.syncThemeSurround())
+      .then(() => {
+        this.syncThemeSurround();
+        this.applyDesktopGlobeOffset();
+      })
       .catch(() => undefined);
 
     if (typeof MutationObserver !== 'undefined') {
@@ -116,6 +139,39 @@ export class GlobeMap extends GlobeMapCore {
 
     runtime.wakeGlobe();
     globe.backgroundColor(cssBackground || fallbackBackground);
+  }
+
+  private applyDesktopGlobeOffset(): void {
+    if (typeof window === 'undefined') return;
+
+    const runtime = this as unknown as GlobeRuntime;
+    const globe = runtime.globe as GlobeViewportRuntime | null;
+    if (!globe || typeof globe.camera !== 'function') return;
+
+    const width = runtime.container.clientWidth;
+    const height = runtime.container.clientHeight;
+    if (width <= 0 || height <= 0) return;
+
+    const camera = globe.camera();
+    if (!camera) return;
+
+    if (isMobileDevice()) {
+      camera.clearViewOffset();
+    } else {
+      // A negative camera view offset moves the rendered globe to the right
+      // without moving the layers panel, map controls, canvas or hit targets.
+      camera.setViewOffset(
+        width,
+        height,
+        -DESKTOP_GLOBE_OFFSET_PX,
+        0,
+        width,
+        height,
+      );
+    }
+
+    camera.updateProjectionMatrix();
+    runtime.wakeGlobe();
   }
 
   // The upstream full/mobile layer presets drifted: desktop explicitly enables
@@ -198,6 +254,11 @@ export class GlobeMap extends GlobeMapCore {
       lng: lon,
       altitude: mobileDefaultAltitude(preset.altitude),
     });
+  }
+
+  public override resize(): void {
+    super.resize();
+    this.applyDesktopGlobeOffset();
   }
 
   public override destroy(): void {
