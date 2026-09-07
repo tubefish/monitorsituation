@@ -48,16 +48,3 @@ api/*
 # Live News only needs the YouTube live endpoint.
 api/youtube/*
 !api/youtube/live.js
-
-# Build-time inventory support only. These four files are parsed as source text
-# during npm install; they are not part of the $MONITOR runtime feature set.
-!api/mcp/
-api/mcp/*
-!api/mcp/ui/
-api/mcp/ui/*
-!api/mcp/ui/registry.ts
-!api/mcp/ui/shell.ts
-!api/mcp/registry/
-api/mcp/registry/*
-!api/mcp/registry/rpc-tools.ts
-!api/mcp/registry/cache-tools.ts
