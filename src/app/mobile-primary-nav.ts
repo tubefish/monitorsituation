@@ -17,7 +17,7 @@ import { reconcileOverlayForTab } from '@/app/mobile-overlay-reconcile';
 const MONITOR_DEX_URL = 'https://dexscreener.com/robinhood/0xcfa7bb34e23a7022c3de3e1618e1ff29cde8f16a76c341eca19d16f928968a3d?utm_source=worldmonitor&utm_medium=referral&utm_campaign=monitor-market';
 
 const MOBILE_MAP_GLOBE_ICON = `
-  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="9"></circle>
     <path d="M3 12h18"></path>
     <path d="M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9"></path>
@@ -26,7 +26,7 @@ const MOBILE_MAP_GLOBE_ICON = `
 `;
 
 const MOBILE_MORE_MENU_ICON = `
-  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
     <path d="M4 6h16"></path>
     <path d="M4 12h16"></path>
     <path d="M4 18h16"></path>
@@ -176,6 +176,16 @@ export class MobilePrimaryNav {
     if (mapButton) tabBar.prepend(mapButton);
     if (mapButton && todayButton) mapButton.after(todayButton);
 
+    // Keep all four controls evenly distributed regardless of the upstream
+    // button widths/labels. Each control owns exactly one quarter of the bar.
+    [mapButton, todayButton, dexButton, moreButton].forEach((button) => {
+      if (!button) return;
+      button.style.flex = '1 1 25%';
+      button.style.width = '25%';
+      button.style.minWidth = '0';
+    });
+    tabBar.style.justifyContent = 'stretch';
+
     this.setTabIcon(mapButton, MOBILE_MAP_GLOBE_ICON);
     this.setTabLabel(dexButton, 'DEX');
     if (dexButton) dexButton.setAttribute('aria-label', 'Open DEX on Dexscreener');
@@ -195,6 +205,15 @@ export class MobilePrimaryNav {
         cancelAnimationFrame(this.alertScrollFrame);
         this.alertScrollFrame = null;
       }
+
+      // $MONITOR uses the former Alerts slot as a direct external DEX link.
+      // Handle it before overlay reconciliation so opening the DEX cannot alter
+      // whichever Map/Today state the user is currently viewing.
+      if (tab === 'alerts') {
+        window.open(MONITOR_DEX_URL, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
       const replaceOverlayId = this.reconcileOverlayForTab(tab);
       if (replaceOverlayId === null) return;
 
@@ -231,12 +250,6 @@ export class MobilePrimaryNav {
           });
           break;
         }
-        case 'alerts':
-          // $MONITOR uses the former Alerts slot as a direct DEX launcher.
-          // Keep the internal tab id so the upstream shell markup does not need
-          // to fork, but leave the current content tab selected when we open it.
-          window.open(MONITOR_DEX_URL, '_blank', 'noopener,noreferrer');
-          return;
         case 'more':
           this.exitMap();
           this.openMenu(replaceOverlayId);
