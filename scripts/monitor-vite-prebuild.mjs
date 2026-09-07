@@ -6,7 +6,7 @@ const MAIN_CSS = resolve(process.cwd(), 'src/styles/main.css');
 const MARKET_ASSIGNMENT = "MonitorMarket: 'panels-markets'";
 const RSS_INTEL_CHUNK_MARKER = "return 'gdelt-intel'; // $MONITOR: keep RSS intelligence cycle in one chunk";
 const DEFAULT_MAP_WIDTH = 'var(--map-col-width, 60%)';
-const NUDGED_MAP_WIDTH = 'var(--map-col-width, calc(60% + 15px))';
+const MONITOR_MAP_WIDTH = 'var(--map-col-width, 70%)';
 
 let source = await readFile(VITE_CONFIG, 'utf8');
 let changed = false;
@@ -50,18 +50,18 @@ if (!source.includes(RSS_INTEL_CHUNK_MARKER)) {
 }
 
 let mainCss = await readFile(MAIN_CSS, 'utf8');
-if (!mainCss.includes(NUDGED_MAP_WIDTH)) {
+if (!mainCss.includes(MONITOR_MAP_WIDTH)) {
   if (!mainCss.includes(DEFAULT_MAP_WIDTH)) {
     throw new Error('[monitor-vite-prebuild] Could not find the desktop map width fallback in main.css');
   }
-  mainCss = mainCss.replaceAll(DEFAULT_MAP_WIDTH, NUDGED_MAP_WIDTH);
+  mainCss = mainCss.replaceAll(DEFAULT_MAP_WIDTH, MONITOR_MAP_WIDTH);
   await writeFile(MAIN_CSS, mainCss, 'utf8');
 }
 
-if (!mainCss.includes(NUDGED_MAP_WIDTH)) {
-  throw new Error('[monitor-vite-prebuild] Desktop map width nudge was not applied');
+if (!mainCss.includes(MONITOR_MAP_WIDTH)) {
+  throw new Error('[monitor-vite-prebuild] Desktop 70/30 map split was not applied');
 }
 
 console.log('[monitor-vite-prebuild] MonitorMarket assigned to panels-markets.');
 console.log('[monitor-vite-prebuild] gdelt-intel, rss, and trending-keywords co-located in one chunk.');
-console.log('[monitor-vite-prebuild] Desktop map divider default shifted 15px to the right.');
+console.log('[monitor-vite-prebuild] Desktop map/panel split default set to 70/30.');
