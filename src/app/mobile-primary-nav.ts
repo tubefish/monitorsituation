@@ -25,6 +25,17 @@ const MOBILE_MAP_GLOBE_ICON = `
   </svg>
 `;
 
+const MOBILE_TODAY_SUNRISE_ICON = `
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="currentColor">
+    <path d="M4 21a8 8 0 0 1 16 0H4Z"></path>
+    <path d="M12 1l1.25 5h-2.5L12 1Z"></path>
+    <path d="M4.1 4.1 8.7 7 7 8.7 4.1 4.1Z"></path>
+    <path d="m1 11.7 5.4-1.1-.45 2.4L1 11.7Z"></path>
+    <path d="m19.9 4.1-4.6 2.9L17 8.7l2.9-4.6Z"></path>
+    <path d="m23 11.7-5.4-1.1.45 2.4L23 11.7Z"></path>
+  </svg>
+`;
+
 const MOBILE_MORE_MENU_ICON = `
   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
     <path d="M4 6h16"></path>
@@ -187,6 +198,7 @@ export class MobilePrimaryNav {
     });
 
     this.setTabIcon(mapButton, MOBILE_MAP_GLOBE_ICON);
+    this.setTabIcon(todayButton, MOBILE_TODAY_SUNRISE_ICON);
     this.setTabLabel(dexButton, 'DEX');
     if (dexButton) dexButton.setAttribute('aria-label', 'Open DEX on Dexscreener');
     this.setTabIcon(moreButton, MOBILE_MORE_MENU_ICON);
