@@ -47,7 +47,7 @@ export const PANELS_COL_MIN_PX = 300;
 export const MAP_COL_DIVIDER_PX = 6;
 
 /** Map column width applied when no stored preference exists. */
-export const MAP_COL_DEFAULT_PERCENT = 60;
+export const MAP_COL_DEFAULT_PERCENT = 70;
 
 export interface MapColWidthBounds {
   minPct: number;
