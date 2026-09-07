@@ -6,7 +6,7 @@ const MAIN_CSS = resolve(process.cwd(), 'src/styles/main.css');
 const MARKET_ASSIGNMENT = "MonitorMarket: 'panels-markets'";
 const RSS_INTEL_CHUNK_MARKER = "return 'gdelt-intel'; // $MONITOR: keep RSS intelligence cycle in one chunk";
 const DEFAULT_MAP_WIDTH = 'var(--map-col-width, 60%)';
-const MONITOR_MAP_WIDTH = 'var(--map-col-width, 70%)';
+const MONITOR_MAP_WIDTH = 'var(--map-col-width, 65%)';
 
 let source = await readFile(VITE_CONFIG, 'utf8');
 let changed = false;
@@ -59,9 +59,9 @@ if (!mainCss.includes(MONITOR_MAP_WIDTH)) {
 }
 
 if (!mainCss.includes(MONITOR_MAP_WIDTH)) {
-  throw new Error('[monitor-vite-prebuild] Desktop 70/30 map split was not applied');
+  throw new Error('[monitor-vite-prebuild] Desktop 65/35 map split was not applied');
 }
 
 console.log('[monitor-vite-prebuild] MonitorMarket assigned to panels-markets.');
 console.log('[monitor-vite-prebuild] gdelt-intel, rss, and trending-keywords co-located in one chunk.');
-console.log('[monitor-vite-prebuild] Desktop map/panel split default set to 70/30.');
+console.log('[monitor-vite-prebuild] Desktop map/panel split default set to 65/35.');
