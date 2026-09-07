@@ -5,7 +5,7 @@ import { AuthHeaderWidget } from '@/components/AuthHeaderWidget';
 import { SITE_VARIANT } from '@/config';
 import { getAuthState, subscribeAuthState } from '@/services/auth-state';
 import { track, trackMapViewChange, trackThemeChanged } from '@/services/analytics';
-import { getCurrentTheme, setTheme, showToast } from '@/utils';
+import { getCurrentTheme, setTheme } from '@/utils';
 import { createFocusTrap, type FocusTrap } from '@/utils/focus-trap';
 import {
   overlayHistory,
@@ -13,6 +13,25 @@ import {
   type OverlayId,
 } from '@/utils/overlay-history';
 import { reconcileOverlayForTab } from '@/app/mobile-overlay-reconcile';
+
+const MONITOR_DEX_URL = 'https://dexscreener.com/robinhood/0xcfa7bb34e23a7022c3de3e1618e1ff29cde8f16a76c341eca19d16f928968a3d?utm_source=worldmonitor&utm_medium=referral&utm_campaign=monitor-market';
+
+const MOBILE_MAP_GLOBE_ICON = `
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <circle cx="12" cy="12" r="9"></circle>
+    <path d="M3 12h18"></path>
+    <path d="M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9"></path>
+    <path d="M12 3c-2.6 2.5-4 5.6-4 9s1.4 6.5 4 9"></path>
+  </svg>
+`;
+
+const MOBILE_MORE_MENU_ICON = `
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M4 6h16"></path>
+    <path d="M4 12h16"></path>
+    <path d="M4 18h16"></path>
+  </svg>
+`;
 
 type MobilePrimaryNavCallbacks = {
   openSearch(options: { replaceOverlayId?: OverlayId; historyPending: true }): void;
@@ -152,8 +171,16 @@ export class MobilePrimaryNav {
     // $MONITOR mobile opens map-first: Map occupies slot one, Today slot two.
     const mapButton = tabBar.querySelector<HTMLButtonElement>('[data-mobile-tab="map"]');
     const todayButton = tabBar.querySelector<HTMLButtonElement>('[data-mobile-tab="today"]');
+    const dexButton = tabBar.querySelector<HTMLButtonElement>('[data-mobile-tab="alerts"]');
+    const moreButton = tabBar.querySelector<HTMLButtonElement>('[data-mobile-tab="more"]');
     if (mapButton) tabBar.prepend(mapButton);
     if (mapButton && todayButton) mapButton.after(todayButton);
+
+    this.setTabIcon(mapButton, MOBILE_MAP_GLOBE_ICON);
+    this.setTabLabel(dexButton, 'DEX');
+    if (dexButton) dexButton.setAttribute('aria-label', 'Open DEX on Dexscreener');
+    this.setTabIcon(moreButton, MOBILE_MORE_MENU_ICON);
+
     this.setActive('map');
     this.expandMap();
     // On the globe renderer, lower logical zoom values are farther away.
@@ -204,25 +231,12 @@ export class MobilePrimaryNav {
           });
           break;
         }
-        case 'alerts': {
-          this.exitMap();
-          this.collapseMap();
-          const panel = document.querySelector<HTMLElement>(
-            '#panelsGrid [data-panel="strategic-risk"]:not(.hidden), #panelsGrid [data-panel="oref-sirens"]:not(.hidden), #panelsGrid [data-panel="intel"]:not(.hidden)',
-          );
-          if (panel?.dataset.panel) {
-            window.dispatchEvent(new CustomEvent('wm:reveal-panel', { detail: { panelId: panel.dataset.panel } }));
-            this.alertScrollFrame = requestAnimationFrame(() => {
-              this.alertScrollFrame = null;
-              if (this.activeTab === 'alerts') {
-                panel.scrollIntoView({ block: 'start', behavior: 'smooth' });
-              }
-            });
-          } else {
-            showToast('No active alerts yet');
-          }
-          break;
-        }
+        case 'alerts':
+          // $MONITOR uses the former Alerts slot as a direct DEX launcher.
+          // Keep the internal tab id so the upstream shell markup does not need
+          // to fork, but leave the current content tab selected when we open it.
+          window.open(MONITOR_DEX_URL, '_blank', 'noopener,noreferrer');
+          return;
         case 'more':
           this.exitMap();
           this.openMenu(replaceOverlayId);
@@ -231,11 +245,31 @@ export class MobilePrimaryNav {
           return;
       }
 
-      if (tab === 'map' || tab === 'today' || tab === 'alerts') {
+      if (tab === 'map' || tab === 'today') {
         this.lastContentTab = tab;
       }
       this.setActive(tab);
     }, { signal: this.listeners.signal });
+  }
+
+  private setTabIcon(button: HTMLButtonElement | null, svg: string): void {
+    const icon = button?.querySelector<HTMLElement>('.mobile-tab-icon');
+    if (icon) icon.innerHTML = svg;
+  }
+
+  private setTabLabel(button: HTMLButtonElement | null, text: string): void {
+    if (!button) return;
+    const label = Array.from(button.querySelectorAll<HTMLElement>('span'))
+      .find((span) => !span.classList.contains('mobile-tab-icon'));
+    if (label) {
+      label.textContent = text;
+      return;
+    }
+
+    // Fallback for shells where the label is a direct text node rather than a span.
+    const textNode = Array.from(button.childNodes)
+      .find((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
+    if (textNode) textNode.textContent = text;
   }
 
   private setupMenu(): void {
