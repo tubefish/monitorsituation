@@ -105,7 +105,11 @@ export class ThreatTimelinePanel extends Panel {
       ? `<div class="threat-timeline-note">${escapeHtml(state.degradedReasons.join(' | '))}</div>`
       : '';
 
-    this.setDataBadge(state.status === 'ok' ? 'live' : 'cached', state.status === 'ok' ? sourceLabel : 'degraded');
+    if (sourceLabel === 'Cluster fallback') {
+      this.setDataBadge('live');
+    } else {
+      this.setDataBadge(state.status === 'ok' ? 'live' : 'cached', state.status === 'ok' ? sourceLabel : 'degraded');
+    }
     this.setSafeContent(unsafeRawHtml(`
       <div class="threat-timeline-panel">
         <div class="threat-timeline-summary">
