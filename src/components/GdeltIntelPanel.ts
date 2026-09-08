@@ -21,6 +21,8 @@ export class GdeltIntelPanel extends Panel {
   private timelineData = new Map<string, TopicTimeline>();
   private tabsEl: HTMLElement | null = null;
   private summaryEl: HTMLElement | null = null;
+  private loadGeneration = 0;
+  private refreshTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     super({
@@ -33,7 +35,12 @@ export class GdeltIntelPanel extends Panel {
       defaultRowSpan: 2,
     });
     this.createTabs();
-    this.loadActiveTopic();
+    this.runWhenConnected(() => {
+      void this.loadActiveTopic();
+      this.refreshTimer = setInterval(() => {
+        if (document.visibilityState === 'visible') void this.loadActiveTopic();
+      }, 5 * 60 * 1000);
+    });
   }
 
   private createTabs(): void {
@@ -57,6 +64,7 @@ export class GdeltIntelPanel extends Panel {
   private selectTopic(topic: IntelTopic): void {
     if (topic.id === this.activeTopic.id) return;
 
+    this.loadGeneration += 1;
     this.activeTopic = topic;
 
     this.tabsEl?.querySelectorAll('.panel-tab').forEach(tab => {
@@ -80,25 +88,36 @@ export class GdeltIntelPanel extends Panel {
 
   private async loadActiveTopic(): Promise<void> {
     const topic = this.activeTopic;
-    this.showLoading();
+    const generation = ++this.loadGeneration;
+    const current = () => !this.signal.aborted && generation === this.loadGeneration && topic.id === this.activeTopic.id;
+    if (!this.topicData.has(topic.id)) this.showLoading();
+
+    // The optional tone/volume service must never hold headlines on Loading.
+    void fetchTopicTimeline(topic.id).then(timeline => {
+      if (!current() || !timeline) return;
+      this.timelineData.set(topic.id, timeline);
+      this.renderTopicSummary(timeline);
+    }).catch(() => {});
 
     try {
-      const [data, timeline] = await Promise.all([
-        fetchTopicIntelligence(topic),
-        fetchTopicTimeline(topic.id),
-      ]);
-      if (!this.element?.isConnected || topic.id !== this.activeTopic.id) return;
+      const data = await fetchTopicIntelligence(topic, this.signal);
+      if (!current()) return;
       this.topicData.set(topic.id, data);
-      if (timeline) this.timelineData.set(topic.id, timeline);
-      this.renderTopicSummary(timeline);
+      this.renderTopicSummary(this.timelineData.get(topic.id) ?? null);
       this.renderArticles(data.articles ?? []);
       this.setCount(data.articles?.length ?? 0);
     } catch (error) {
-      if (this.isAbortError(error)) return;
-      if (!this.element?.isConnected || topic.id !== this.activeTopic.id) return;
+      if (!current()) return;
       console.error('[GdeltIntelPanel] Load error:', error);
+      if (this.topicData.get(topic.id)?.articles.length) return;
       this.showError(t('common.failedIntelFeed'), () => this.loadActiveTopic());
     }
+  }
+
+  override destroy(): void {
+    if (this.refreshTimer) clearInterval(this.refreshTimer);
+    this.loadGeneration += 1;
+    super.destroy();
   }
 
   private renderTopicSummary(timeline: TopicTimeline | null | undefined): void {

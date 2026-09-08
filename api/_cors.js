@@ -1,3 +1,5 @@
+import { isMonitorOrigin } from './_monitor-origins.js';
+
 const ALLOWED_ORIGIN_PATTERNS = [
   /^https:\/\/(.*\.)?worldmonitor\.app$/,
   // Vercel preview deployments under the "eliewm" team scope, e.g.
@@ -122,7 +124,7 @@ function isAllowedOrigin(origin) {
   if (!origin) return false;
   if (isWorldMonitorGoogleTranslateOrigin(origin)) return true;
   const candidate = originForAllowlistMatch(origin);
-  return ALLOWED_ORIGIN_PATTERNS.some((pattern) => pattern.test(candidate));
+  return isMonitorOrigin(candidate) || ALLOWED_ORIGIN_PATTERNS.some((pattern) => pattern.test(candidate));
 }
 
 export function getCorsHeaders(req, methods = 'GET, OPTIONS') {

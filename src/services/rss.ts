@@ -36,6 +36,8 @@ export const BRIEF_ONLY_RSS_FETCH_POLICY: RssFetchPolicy = Object.freeze({
 export interface FetchFeedOptions {
   policy?: RssFetchPolicy;
   signal?: AbortSignal;
+  cacheTtlMs?: number;
+  throwOnError?: boolean;
 }
 
 const FEED_COOLDOWN_MS = 5 * 60 * 1000;
@@ -44,7 +46,7 @@ const MAX_CACHE_ENTRIES = 100;
 const FEED_SCOPE_SEPARATOR = '::';
 const feedFailures = new Map<string, { count: number; cooldownUntil: number }>();
 const feedCache = new Map<string, { items: NewsItem[]; timestamp: number }>();
-const CACHE_TTL = 30 * 60 * 1000;
+const CACHE_TTL = 15 * 60 * 1000;
 const enqueueFeedParse = createYieldingWorkQueue(yieldToMain);
 
 function parseFeedXml(text: string, isMobile: boolean): Promise<Document> {
@@ -258,19 +260,23 @@ function isAbortError(error: unknown): boolean {
 export async function fetchFeed(feed: Feed, options: FetchFeedOptions = {}): Promise<NewsItem[]> {
   const policy = options.policy ?? DEFAULT_RSS_FETCH_POLICY;
   const signal = options.signal;
+  const cacheTtl = options.cacheTtlMs ?? CACHE_TTL;
   throwIfAborted(signal);
   if (feedCache.size > MAX_CACHE_ENTRIES / 2) cleanupCaches();
   const currentLang = getCurrentLanguage();
   const feedScope = getFeedScope(feed.name, currentLang);
 
   if (isFeedOnCooldown(feedScope)) {
+    if (options.throwOnError) throw new Error(`Feed temporarily unavailable: ${feed.name}`);
     const cached = feedCache.get(feedScope);
     if (cached) return cached.items;
-    return (await loadPersistentFeed(feedScope)) || [];
+    const persistent = await loadPersistentFeed(feedScope);
+    if (persistent?.length) return persistent;
+    return [];
   }
 
   const cached = feedCache.get(feedScope);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+  if (cached && Date.now() - cached.timestamp < cacheTtl) {
     return cached.items;
   }
 
@@ -282,7 +288,10 @@ export async function fetchFeed(feed: Feed, options: FetchFeedOptions = {}): Pro
 
     if (!url) throw new Error(`No URL found for feed ${feed.name}`);
 
-    const response = await fetchWithProxy(url, signal ? { signal } : {});
+    const requestSignal = signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(15_000)])
+      : AbortSignal.timeout(15_000);
+    const response = await fetchWithProxy(url, { signal: requestSignal });
     throwIfAborted(signal);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const noStoreResponse = hasNoStoreCacheDirective(response.headers);
@@ -301,9 +310,7 @@ export async function fetchFeed(feed: Feed, options: FetchFeedOptions = {}): Pro
     const parseError = doc.querySelector('parsererror');
     if (parseError) {
       console.warn(`Parse error for ${feed.name}`);
-      recordFeedFailure(feedScope);
-      const persistent = await loadPersistentFeed(feedScope);
-      return cached?.items || persistent || [];
+      throw new Error(`Invalid RSS response for ${feed.name}`);
     }
 
     let items = doc.querySelectorAll('item');
@@ -418,8 +425,11 @@ export async function fetchFeed(feed: Feed, options: FetchFeedOptions = {}): Pro
     }
     console.error(`Failed to fetch ${feed.name}:`, e);
     recordFeedFailure(feedScope);
+    if (options.throwOnError) throw e;
     const persistent = await loadPersistentFeed(feedScope);
-    return cached?.items || persistent || [];
+    const retained = cached?.items || persistent;
+    if (retained?.length) return retained;
+    return [];
   }
 }
 

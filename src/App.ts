@@ -273,7 +273,7 @@ const DEFAULT_VIEWPORT_MARGIN_PX = 400;
 // CorrelationEngine + its 4 adapters are dynamic-imported at the post-loadAllData
 // run site (#4486) so the engine bytes stay off the eager boot graph. The TYPE is
 // referenced via the inline `import(...)` type in app-context.ts (erased at build).
-import type { CorrelationPanel } from '@/components/CorrelationPanel';
+import { enqueuePanelCall, invokePanelMethod } from '@/app/pending-panel-data';
 
 const CYBER_LAYER_ENABLED = import.meta.env.VITE_ENABLE_CYBER_LAYER === 'true';
 const FREE_MAP_PANEL_ACCESS_KEY = 'worldmonitor-free-map-panel-access-v1';
@@ -1911,9 +1911,13 @@ export class App {
     // which on a first-run overlap would write empty cards into live panels.
     const didRun = await engine.run(this.state, runtimeMode);
     if (!didRun || this.state.isDestroyed) return;
-    for (const domain of ['military', 'escalation', 'economic', 'disaster'] as const) {
-      const panel = this.state.panels[`${domain}-correlation`] as CorrelationPanel | undefined;
-      panel?.updateCards(engine.getCards(domain));
+    // The economic-correlation slot is now Iran Watch, not a card consumer.
+    for (const domain of ['military', 'escalation', 'disaster'] as const) {
+      const key = `${domain}-correlation`;
+      const args = [engine.getCards(domain)];
+      if (!invokePanelMethod(this.state.panels[key], key, 'updateCards', args)) {
+        enqueuePanelCall(key, 'updateCards', args);
+      }
     }
   }
 

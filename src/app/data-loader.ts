@@ -856,7 +856,9 @@ export class DataLoaderManager implements AppModule {
   private isPerFeedFallbackEnabled(): boolean {
     // Desktop: server digest has fewer categories than client FEEDS config.
     // Enable per-feed RSS fallback so missing categories fetch directly.
-    if (isDesktopRuntime()) return true;
+    // The standalone MONITOR deployment has no guaranteed digest publisher.
+    // Keep its already-capped RSS recovery path active, including saved sessions.
+    if (isDesktopRuntime() || SITE_VARIANT === 'full') return true;
     return isFeatureEnabled('newsPerFeedFallback');
   }
 
@@ -1695,7 +1697,7 @@ export class DataLoaderManager implements AppModule {
           status: 'ok',
           itemCount: staleItems.length,
         });
-        return staleItems;
+        if (!this.isPerFeedFallbackEnabled()) return staleItems;
       }
 
       // The per-feed-fallback flag is the kill switch for the digest-down
@@ -1767,7 +1769,8 @@ export class DataLoaderManager implements AppModule {
       // a custom category that is what the panel actually shows. Using the raw
       // fetch would report this cycle's three sources as the whole category and
       // hand clustering a set the user isn't looking at.
-      const items = mergeForRender(fetchedItems);
+      const items = mergeForRender(fetchedItems.length > 0 ? fetchedItems : staleItems);
+      if (fetchedItems.length === 0 && staleItems.length > 0) recordSelectedFreshness(true);
       const failures = getFeedFailures();
       const failedFeeds = fallbackFeeds.filter(f => failures.has(f.name));
       const windowFailed = fallbackFeeds.length > 0 && failedFeeds.length === fallbackFeeds.length;
@@ -1902,13 +1905,14 @@ export class DataLoaderManager implements AppModule {
         } catch (e) { console.warn('[Baseline] news:intel write failed:', e); }
       }
       this.ctx.statusPanel?.updateFeed('Intel', { status: 'ok', itemCount: staleIntel.length });
-      return staleIntel;
+      if (!this.isPerFeedFallbackEnabled()) return staleIntel;
     }
 
     if (!this.isPerFeedFallbackEnabled() && !allowDigestPendingFallback) {
       recordSelectedFreshness(false);
       console.warn('[News] Intel digest missing, limited per-feed fallback disabled');
       delete this.ctx.newsByCategory['intel'];
+      intelPanel?.showError(t('common.failedIntelFeed'), () => this.loadNews());
       this.ctx.statusPanel?.updateFeed('Intel', { status: 'error', errorMessage: 'Digest unavailable' });
       return [];
     }
@@ -1923,15 +1927,37 @@ export class DataLoaderManager implements AppModule {
 
     let intel: NewsItem[];
     try {
-      const { fetchCategoryFeeds } = await getRssModule();
+      const { fetchCategoryFeeds, getFeedFailures } = await getRssModule();
       intel = await fetchCategoryFeeds(fallbackIntelFeeds, { batchSize: this.perFeedFallbackBatchSize });
+      if (intel.length === 0 && staleIntel.length === 0) {
+        const failures = getFeedFailures();
+        const failedFeeds = fallbackIntelFeeds.filter(feed => failures.has(feed.name));
+        if (fallbackIntelFeeds.length > 0 && failedFeeds.length === fallbackIntelFeeds.length) {
+          delete this.ctx.newsByCategory['intel'];
+          intelPanel?.showError(t('common.failedIntelFeed'), () => this.loadNews());
+          this.ctx.statusPanel?.updateFeed('Intel', {
+            status: 'error',
+            errorMessage: `${failedFeeds.map(feed => feed.name).join(', ')} failed`,
+          });
+          return [];
+        }
+      }
     } catch (e) {
       recordSelectedFreshness(false);
-      delete this.ctx.newsByCategory['intel'];
       console.error('[App] Intel feed failed:', e);
+      if (staleIntel.length > 0) {
+        recordSelectedFreshness(true);
+        return staleIntel;
+      }
+      delete this.ctx.newsByCategory['intel'];
+      intelPanel?.showError(t('common.failedIntelFeed'), () => this.loadNews());
       return [];
     }
 
+    if (intel.length === 0 && staleIntel.length > 0) {
+      recordSelectedFreshness(true);
+      return staleIntel;
+    }
     if (this.isCurrentNewsLoad(generation)) checkBatchForBreakingAlerts(intel);
     this.renderNewsForCategory('intel', intel);
     if (intelPanel && options.recordBaselineSample) {

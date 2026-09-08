@@ -1,3 +1,6 @@
+// @ts-expect-error JS deployment-origin helper shared with legacy API routes.
+import { isMonitorOrigin } from '../api/_monitor-origins.js';
+
 /**
  * CORS header generation -- TypeScript port of api/_cors.js.
  *
@@ -124,7 +127,7 @@ export function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
   if (isWorldMonitorGoogleTranslateOrigin(origin)) return true;
   const candidate = originForAllowlistMatch(origin);
-  return ALLOWED_ORIGIN_PATTERNS.some((pattern) => pattern.test(candidate));
+  return isMonitorOrigin(candidate) || ALLOWED_ORIGIN_PATTERNS.some((pattern) => pattern.test(candidate));
 }
 
 export function getCorsHeaders(req: Request): Record<string, string> {

@@ -17,7 +17,7 @@ const KEEP_ENTRYPOINTS = new Set([
   'conflict/v1/[rpc].ts',
   'military/v1/[rpc].ts',
   'radiation/v1/[rpc].ts',
-  'economic/v1/[rpc].ts',
+  'news/v1/[rpc].ts',
 ]);
 
 const SOURCE_EXTENSIONS = /\.(?:[cm]?[jt]s|tsx?)$/i;

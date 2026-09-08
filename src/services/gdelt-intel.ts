@@ -545,6 +545,7 @@ export async function fetchGdeltArticles(
   query: string,
   maxrecords = 10,
   timespan = '24h',
+  signal?: AbortSignal,
 ): Promise<GdeltArticle[]> {
   const googleQuery =
     buildGoogleNewsQuery(
@@ -566,6 +567,9 @@ export async function fetchGdeltArticles(
       {
         policy:
           BRIEF_ONLY_RSS_FETCH_POLICY,
+        signal,
+        cacheTtlMs: 5 * 60 * 1000,
+        throwOnError: true,
       },
     );
 
@@ -703,6 +707,7 @@ function _consumeBootstrap(): void {
 
 export async function fetchTopicIntelligence(
   topic: IntelTopic,
+  signal?: AbortSignal,
 ): Promise<TopicIntelligence> {
   _consumeBootstrap();
 
@@ -724,6 +729,7 @@ export async function fetchTopicIntelligence(
       topic.query,
       10,
       '24h',
+      signal,
     );
 
   return {

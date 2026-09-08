@@ -43,7 +43,7 @@ api/*
 !api/rss-proxy.js
 !api/wm-session.js
 !api/conflict/
-!api/economic/
+!api/news/
 !api/infrastructure/
 !api/intelligence/
 !api/military/

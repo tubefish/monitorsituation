@@ -152,3 +152,24 @@ describe('brief-only RSS fetch policy', () => {
     releaseFrance();
   });
 });
+
+describe('MONITOR RSS recovery', () => {
+  it('reports an HTTP failure to topic panels instead of returning an empty success', async () => {
+    proxyMocks.fetchWithProxy.mockResolvedValue(new Response('unavailable', { status: 503 }));
+    await expect(fetchFeed({ name: 'monitor-failed-fixture', url: '/api/rss-proxy?url=fixture' }, {
+      policy: BRIEF_ONLY_RSS_FETCH_POLICY, throwOnError: true,
+    })).rejects.toThrow('HTTP 503');
+    expect(proxyMocks.fetchWithProxy.mock.calls.at(-1)?.[1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('refreshes a five-minute-old feed rather than keeping headlines for half an hour', async () => {
+    const feed = { name: 'monitor-refresh-fixture', url: '/api/rss-proxy?url=refresh-fixture' };
+    vi.setSystemTime(new Date('2026-09-08T10:00:00Z'));
+    proxyMocks.fetchWithProxy.mockResolvedValue(new Response(overlappingRss(['First headline'])));
+    expect((await fetchFeed(feed, { policy: BRIEF_ONLY_RSS_FETCH_POLICY, cacheTtlMs: 5 * 60 * 1000 }))[0]?.title).toBe('First headline');
+    vi.setSystemTime(new Date('2026-09-08T10:06:00Z'));
+    proxyMocks.fetchWithProxy.mockResolvedValue(new Response(overlappingRss(['Updated headline'])));
+    expect((await fetchFeed(feed, { policy: BRIEF_ONLY_RSS_FETCH_POLICY, cacheTtlMs: 5 * 60 * 1000 }))[0]?.title).toBe('Updated headline');
+    vi.useRealTimers();
+  });
+});

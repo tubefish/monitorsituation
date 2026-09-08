@@ -14,6 +14,7 @@ const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 export class EconomicCorrelationPanel extends Panel {
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
   private hasRendered = false;
+  private loadingArticles = false;
 
   constructor() {
     super({
@@ -26,13 +27,12 @@ export class EconomicCorrelationPanel extends Panel {
         'Latest news headlines and developments involving Iran.',
     });
 
-    void this.loadArticles();
-
-    this.refreshTimer = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        void this.loadArticles(false);
-      }
-    }, REFRESH_INTERVAL_MS);
+    this.runWhenConnected(() => {
+      void this.loadArticles();
+      this.refreshTimer = setInterval(() => {
+        if (document.visibilityState === 'visible') void this.loadArticles(false);
+      }, REFRESH_INTERVAL_MS);
+    });
   }
 
   /**
@@ -64,6 +64,8 @@ export class EconomicCorrelationPanel extends Panel {
   private async loadArticles(
     showLoading = true,
   ): Promise<void> {
+    if (this.loadingArticles || this.signal.aborted) return;
+    this.loadingArticles = true;
     if (showLoading && !this.hasRendered) {
       this.showLoading();
     }
@@ -78,37 +80,42 @@ export class EconomicCorrelationPanel extends Panel {
        * This gives us broader publisher coverage while still keeping
        * the final panel as one simple chronological feed.
        */
-      const results = await Promise.all([
+      const results = await Promise.allSettled([
         fetchGdeltArticles(
           'Iran',
           5,
           '48h',
+          this.signal,
         ),
 
         fetchGdeltArticles(
           'Iran nuclear OR IAEA OR IRGC OR missile OR Israel',
           5,
           '48h',
+          this.signal,
         ),
 
         fetchGdeltArticles(
           'Iran sanctions OR oil OR diplomacy OR "Strait of Hormuz"',
           5,
           '48h',
+          this.signal,
         ),
       ]);
 
-      if (!this.element?.isConnected) {
+      if (this.signal.aborted) {
         return;
       }
 
-      const articles = this.prepareArticles(
-        results.flat(),
-      );
+      const successful = results.filter((result): result is PromiseFulfilledResult<GdeltArticle[]> => result.status === 'fulfilled');
+      if (successful.length === 0) throw new Error('All Iran news sources failed');
+      const articles = this.prepareArticles(successful.flatMap(result => result.value));
+      if (articles.length === 0 && this.hasRendered && successful.length < results.length) return;
 
       this.renderArticles(articles);
       this.hasRendered = true;
     } catch (error) {
+      if (this.signal.aborted) return;
       console.error(
         '[IranWatch] Failed to load Iran news:',
         error,
@@ -126,6 +133,8 @@ export class EconomicCorrelationPanel extends Panel {
         'Iran news temporarily unavailable',
         () => void this.loadArticles(),
       );
+    } finally {
+      this.loadingArticles = false;
     }
   }
 

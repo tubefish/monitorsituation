@@ -75,6 +75,16 @@ World Monitor is a real-time global intelligence dashboard built as a TypeScript
 
 ---
 
+### MONITOR deployment
+
+The MONITOR fork retains twelve Vercel API functions. Its current dashboard uses
+the news v1 RPC family in place of the upstream economic v1 family; `.vercelignore`
+controls route discovery and the build prune script asserts the same set. MONITOR
+origins are matched exactly by `api/_monitor-origins.js` in both API stacks. News
+has a bounded per-feed fallback, and optional GDELT statistics do not block
+headline rendering. See [MONITOR data setup](docs/monitor-data-setup.md) for
+deployment secrets, optional publishers, and live acceptance checks.
+
 ## 3. Frontend Architecture
 
 ### Entry and Initialization
