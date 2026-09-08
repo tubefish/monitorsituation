@@ -145,6 +145,15 @@
   display: none !important;
 }
 
+/* The upstream digest status only reflects the primary snapshot pipeline.
+ * MONITOR can still be serving fresh per-feed fallback news while it reports
+ * unavailable, so keep that misleading status row out of the visible footer. */
+@media (min-width: 769px) {
+  .site-footer .status-panel-container {
+    display: none !important;
+  }
+}
+
 /* Palantir non-affiliation notice: fine print on desktop and in the mobile More menu. */
 @media (min-width: 769px) {
   .site-footer::after {
