@@ -43,13 +43,21 @@ api/*
 !api/rss-proxy.js
 !api/wm-session.js
 !api/conflict/
+!api/conflict/**
 !api/news/
+!api/news/**
 !api/infrastructure/
+!api/infrastructure/**
 !api/intelligence/
+!api/intelligence/**
 !api/military/
+!api/military/**
 !api/radiation/
+!api/radiation/**
 !api/unrest/
+!api/unrest/**
 !api/youtube/
+!api/youtube/**
 
 # Live News only needs the YouTube live endpoint.
 api/youtube/*
