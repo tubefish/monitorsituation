@@ -31,12 +31,13 @@ test('explicit Vercel deployment origin is allowed without admitting other deplo
 
 test('Vercel ships news while preserving the twelve-function deployment budget', () => {
   const ignore = readFileSync(new URL('../.vercelignore', import.meta.url), 'utf8');
-  assert.ok(ignore.includes('!api/news/'));
-  assert.ok(ignore.includes('!api/news/**'));
-  assert.ok(!ignore.includes('!api/economic/'));
-  for (const family of ['conflict', 'infrastructure', 'intelligence', 'military', 'radiation', 'unrest', 'youtube']) {
-    assert.ok(ignore.includes(`!api/${family}/**`));
+  assert.ok(!ignore.split('\n').includes('api/*'));
+  assert.ok(ignore.includes('api/economic/'));
+  for (const family of ['conflict', 'news', 'infrastructure', 'intelligence', 'military', 'radiation', 'unrest']) {
+    assert.ok(!ignore.includes(`api/${family}/`));
   }
+  assert.ok(ignore.includes('api/youtube/*'));
+  assert.ok(ignore.includes('!api/youtube/live.js'));
   const prune = readFileSync(new URL('../scripts/monitor-prune-vercel-api.mjs', import.meta.url), 'utf8');
   const kept = prune.match(/const KEEP_ENTRYPOINTS = new Set\(\[([\s\S]*?)\]\)/)?.[1].match(/'[^']+'/g) ?? [];
   assert.equal(kept.length, 12);

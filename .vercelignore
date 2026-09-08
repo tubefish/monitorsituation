@@ -32,32 +32,61 @@ middleware.ts
 api/**/*.test.mjs
 
 # $MONITOR production API allowlist.
-# Vercel discovers /api routes before the build command runs, so unused routes
-# must be excluded here rather than deleted from the temporary build workspace.
-# Keep top-level shared helper modules (api/_*) plus only the route families the
-# current $MONITOR dashboard needs.
-api/*
+# Avoid a broad `api/*` exclusion: Vercel prunes ignored directories before it
+# evaluates nested negation rules. Ignore unused top-level routes and families
+# explicitly so the required dynamic gateway directories remain traversable.
+api/*.js
+api/*.ts
+api/*.mjs
+api/*.json
 !api/_*
 !api/bootstrap.js
 !api/health.js
 !api/rss-proxy.js
 !api/wm-session.js
-!api/conflict/
-!api/conflict/**
-!api/news/
-!api/news/**
-!api/infrastructure/
-!api/infrastructure/**
-!api/intelligence/
-!api/intelligence/**
-!api/military/
-!api/military/**
-!api/radiation/
-!api/radiation/**
-!api/unrest/
-!api/unrest/**
-!api/youtube/
-!api/youtube/**
+
+api/aviation/
+api/batch/
+api/brief/
+api/climate/
+api/consumer-prices/
+api/cyber/
+api/discord/
+api/displacement/
+api/economic/
+api/embed/
+api/forecast/
+api/giving/
+api/health/
+api/imagery/
+api/internal/
+api/leads/
+api/maritime/
+api/market/
+api/mcp/
+api/me/
+api/natural/
+api/oauth/
+api/positive-events/
+api/prediction/
+api/referral/
+api/research/
+api/resilience/
+api/safety/
+api/sanctions/
+api/scenario/
+api/scorecard/
+api/security/
+api/seismology/
+api/skills/
+api/slack/
+api/supply-chain/
+api/thermal/
+api/trade/
+api/user/
+api/v2/
+api/webcam/
+api/wildfire/
 
 # Live News only needs the YouTube live endpoint.
 api/youtube/*
