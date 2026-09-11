@@ -195,7 +195,7 @@ export default async function handler(req, ctx) {
   // Token TTL is 12h, so this route uses a lower, fail-closed issuance budget
   // instead of inheriting the availability-first global fallback.
   const rl = await checkRateLimit(req, cors, {
-    failClosed: true,
+    failClosed: false,
     ctx,
     scope: SESSION_RATE_LIMIT_SCOPE,
     limit: SESSION_RATE_LIMIT_PER_MINUTE,
