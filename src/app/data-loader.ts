@@ -2092,10 +2092,10 @@ export class DataLoaderManager implements AppModule {
           )
         ),
         loadIntel: SITE_VARIANT === 'full'
-          ? (selection, allowDigestPendingFallback, options) => (
+          ? (_selection, _allowDigestPendingFallback, options) => (
             this.loadIntelNews(
-              selection,
-              allowDigestPendingFallback,
+              null,
+              true,
               options,
               generation,
               servedStale => { intelServedStale = servedStale; },
