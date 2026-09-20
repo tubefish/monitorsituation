@@ -2644,9 +2644,7 @@ export class PanelLayoutManager implements AppModule {
       return p;
     });
     this.lazyImportedPanel('escalation-correlation', () => import('@/components/EscalationCorrelationPanel'), 'EscalationCorrelationPanel', (EscalationCorrelationPanel) => {
-      const p = new EscalationCorrelationPanel();
-      p.setMapNavigateHandler((lat, lon) => { this.ctx.map?.setCenter(lat, lon, 4); });
-      return p;
+      return new EscalationCorrelationPanel();
     });
     this.lazyImportedPanel('economic-correlation', () => import('@/components/EconomicCorrelationPanel'), 'EconomicCorrelationPanel', (EconomicCorrelationPanel) => {
       const p = new EconomicCorrelationPanel();
