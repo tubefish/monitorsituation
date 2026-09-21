@@ -33,7 +33,7 @@ export class EscalationCorrelationPanel extends Panel {
       id: 'escalation-correlation',
       title: 'X Tracker',
       className: 'panel-wide escalation-monitor-panel',
-      defaultRowSpan: 2,
+      defaultRowSpan: 3,
     });
 
     this.runWhenConnected(() => void this.loadCombinedFeed());
