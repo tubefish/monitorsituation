@@ -30,12 +30,12 @@ import {
 export const MONITOR_DEFAULT_PANEL_ORDER = [
   'map',
   'live-news',
+  'escalation-correlation',
   'monitor-market',
   'threat-timeline',
   'intel',
   'fear-greed',
   'gdelt-intel',
-  'escalation-correlation',
   'politics',
   'economic-correlation',
   'cascade',
