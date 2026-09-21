@@ -44,7 +44,7 @@ export class ThreatTimelinePanel extends Panel {
       defaultRowSpan: 2,
     });
 
-    this.renderEmpty('Waiting for intelligence insight data.');
+    this.renderEmpty('Waiting for intelligence insight data.', [], true);
   }
 
   public async refresh(fallbackClusters?: ClusteredEvent[]): Promise<void> {
@@ -143,9 +143,14 @@ export class ThreatTimelinePanel extends Panel {
     `, 'legacy Panel.setContent() migration'));
   }
 
-  private renderEmpty(message: string, reasons: string[] = []): void {
+  private renderEmpty(message: string, reasons: string[] = [], loading = false): void {
     this.setCount(0);
-    this.setDataBadge('unavailable');
+    if (loading) {
+      this.setDataBadge('cached');
+      if (this.statusBadgeEl) this.statusBadgeEl.textContent = 'Loading';
+    } else {
+      this.setDataBadge('unavailable');
+    }
     const reasonHtml = reasons.length > 0
       ? `<div class="threat-timeline-note">${escapeHtml(reasons.join(' | '))}</div>`
       : '';
