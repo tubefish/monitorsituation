@@ -17,7 +17,7 @@ interface XAccountTab {
 const NEW_POST_THRESHOLD_MS = 30 * 60 * 1000;
 
 export const ESCALATION_X_ACCOUNTS: readonly XAccountTab[] = [
-  { label: 'Monitoring the Situation', handle: 'monitoringmeme' },
+  { label: 'Monitoring', handle: 'monitoringmeme' },
   { label: 'OSINTdefender', handle: 'sentdefender' },
   { label: 'Open Source Intel', handle: 'osint613' },
   { label: 'OSINTtechnical', handle: 'osinttechnical' },
@@ -36,7 +36,6 @@ export class EscalationCorrelationPanel extends Panel {
       title: 'X Account Tracking',
       className: 'panel-wide escalation-monitor-panel',
       defaultRowSpan: 2,
-      infoTooltip: 'Recent public posts from five selected OSINT and situation-monitoring accounts on X. Posts are cached briefly to reduce API usage.',
     });
 
     this.tabsEl = this.createTabs();
