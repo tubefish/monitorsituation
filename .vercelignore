@@ -41,6 +41,7 @@ api/*.mjs
 api/*.json
 !api/_*
 !api/bootstrap.js
+!api/escalation-x-feed.js
 !api/health.js
 !api/rss-proxy.js
 !api/wm-session.js

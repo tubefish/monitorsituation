@@ -28,6 +28,18 @@ export interface EscalationXFeed {
 const CLIENT_CACHE_TTL_MS = 5 * 60 * 1000;
 const cache = new Map<string, { response: EscalationXFeed; cachedAt: number }>();
 
+function getErrorMessage(payload: unknown, status: number): string {
+  if (payload && typeof payload === 'object' && 'error' in payload) {
+    const error = (payload as { error?: unknown }).error;
+    if (typeof error === 'string' && error.trim()) return error;
+    if (error && typeof error === 'object' && 'message' in error) {
+      const message = (error as { message?: unknown }).message;
+      if (typeof message === 'string' && message.trim()) return message;
+    }
+  }
+  return `X feed request failed (${status})`;
+}
+
 export async function fetchEscalationXFeed(handle: string, signal?: AbortSignal): Promise<EscalationXFeed> {
   const cached = cache.get(handle);
   if (cached && Date.now() - cached.cachedAt < CLIENT_CACHE_TTL_MS) return cached.response;
@@ -36,9 +48,10 @@ export async function fetchEscalationXFeed(handle: string, signal?: AbortSignal)
     signal,
     headers: { Accept: 'application/json' },
   });
-  const payload = await response.json().catch(() => ({})) as EscalationXFeed & { error?: string };
-  if (!response.ok) throw new Error(payload.error || `X feed request failed (${response.status})`);
+  const payload: unknown = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(getErrorMessage(payload, response.status));
 
-  cache.set(handle, { response: payload, cachedAt: Date.now() });
-  return payload;
+  const feed = payload as EscalationXFeed;
+  cache.set(handle, { response: feed, cachedAt: Date.now() });
+  return feed;
 }
