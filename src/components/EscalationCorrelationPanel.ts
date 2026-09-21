@@ -31,7 +31,7 @@ export class EscalationCorrelationPanel extends Panel {
   constructor() {
     super({
       id: 'escalation-correlation',
-      title: 'X Account Tracking',
+      title: 'X Tracker',
       className: 'panel-wide escalation-monitor-panel',
       defaultRowSpan: 2,
     });
@@ -104,18 +104,9 @@ export class EscalationCorrelationPanel extends Panel {
   }
 
   private buildCombinedHeader(loadedCount: number, failedCount: number, fetchedAt: string | null): HTMLElement {
-    const total = ESCALATION_X_ACCOUNTS.length;
-    const accountStatus = loadedCount > 0 ? `${loadedCount}/${total} accounts live` : `${total} tracked accounts`;
-
     return h('div', { className: 'escalation-x-account-bar' },
       h('div', { className: 'escalation-x-identity' },
         h('span', { className: 'escalation-x-avatar escalation-x-avatar-fallback', 'aria-hidden': 'true' }, 'X'),
-        h('div', { className: 'escalation-x-account-copy' },
-          h('div', { className: 'escalation-x-name-row' },
-            h('strong', { className: 'escalation-x-name' }, 'All accounts'),
-          ),
-          h('span', { className: 'escalation-x-handle' }, accountStatus),
-        ),
       ),
       h('div', { className: 'escalation-x-status' },
         loadedCount > 0

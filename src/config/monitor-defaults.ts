@@ -29,8 +29,8 @@ import {
  */
 export const MONITOR_DEFAULT_PANEL_ORDER = [
   'map',
-  'live-news',
   'escalation-correlation',
+  'live-news',
   'monitor-market',
   'threat-timeline',
   'intel',
