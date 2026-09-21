@@ -145,8 +145,27 @@ export class EscalationCorrelationPanel extends Panel {
       post.metrics.reposts ? `${post.metrics.reposts.toLocaleString()} reposts` : '',
       post.metrics.likes ? `${post.metrics.likes.toLocaleString()} likes` : '',
     ].filter(Boolean);
+    const postUrl = sanitizeUrl(post.url);
+    const openPost = () => window.open(postUrl, '_blank', 'noopener,noreferrer');
 
-    return h('article', { className: `escalation-x-post ${isNew ? 'is-new' : ''}` },
+    return h('article', {
+      className: `escalation-x-post ${isNew ? 'is-new' : ''}`,
+      role: 'link',
+      tabindex: '0',
+      'aria-label': `Open post by ${account.name} on X`,
+      style: { cursor: 'pointer' },
+      onClick: (event: MouseEvent) => {
+        const target = event.target as HTMLElement | null;
+        if (target?.closest('a, button')) return;
+        openPost();
+      },
+      onKeyDown: (event: KeyboardEvent) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openPost();
+      },
+    },
       h('div', { className: 'escalation-x-post-rail', 'aria-hidden': 'true' }),
       h('div', { className: 'escalation-x-post-body' },
         h('div', { className: 'escalation-x-post-meta' },
@@ -157,7 +176,7 @@ export class EscalationCorrelationPanel extends Panel {
         h('p', { className: 'escalation-x-post-text' }, post.text),
         h('div', { className: 'escalation-x-post-footer' },
           h('span', { className: 'escalation-x-post-stats' }, stats.join(' · ')),
-          h('a', { className: 'escalation-x-open-post', href: sanitizeUrl(post.url), target: '_blank', rel: 'noopener noreferrer', 'aria-label': `Open post by ${account.name} on X` }, 'OPEN POST ↗'),
+          h('a', { className: 'escalation-x-open-post', href: postUrl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': `Open post by ${account.name} on X` }, 'OPEN POST ↗'),
         ),
       ),
     );
