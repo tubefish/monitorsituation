@@ -551,6 +551,13 @@
       "removal_issue": null
     },
     {
+      "path": "api/escalation-x-feed.js",
+      "category": "upstream-proxy",
+      "reason": "Server-only X API proxy for the Monitor the Situation escalation panel. The account allowlist prevents arbitrary queries, and successful responses are CDN-cached to limit paid X reads.",
+      "owner": "@tubefish",
+      "removal_issue": null
+    },
+    {
       "path": "api/supply-chain/hormuz-tracker.js",
       "category": "upstream-proxy",
       "reason": "Transparent proxy to Hormuz strait AIS tracker feed. Shape is upstream's.",

@@ -20,5 +20,13 @@ test('Escalation Monitor embeds the five requested X accounts in order', () => {
 
 test('Escalation Monitor no longer depends on correlation or Redis-backed bootstrap data', () => {
   assert.doesNotMatch(source, /from ['"]\.\/CorrelationPanel|ensureHydrated|getHydratedData|redis/i);
-  assert.match(source, /platform\.twitter\.com\/widgets\.js/);
+  assert.match(source, /fetchEscalationXFeed/);
+  assert.doesNotMatch(source, /platform\.twitter\.com\/widgets\.js/);
+});
+
+test('Escalation Monitor renders a native feed with loading, error, and post states', () => {
+  assert.match(source, /escalation-x-loading/);
+  assert.match(source, /escalation-x-error/);
+  assert.match(source, /escalation-x-post/);
+  assert.match(source, /OPEN POST/);
 });

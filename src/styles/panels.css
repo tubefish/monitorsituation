@@ -84,6 +84,240 @@
 }
 
 /* ----------------------------------------------------------
+   Escalation Monitor — native X account feed
+   ---------------------------------------------------------- */
+.escalation-monitor-panel .panel-content {
+  padding: 0;
+  overflow: auto;
+}
+
+.escalation-x-tabs {
+  padding-inline: 12px;
+  background: color-mix(in srgb, var(--surface) 72%, var(--bg));
+}
+
+.escalation-x-account-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 48%),
+    var(--surface);
+}
+
+.escalation-x-identity,
+.escalation-x-name-row,
+.escalation-x-status,
+.escalation-x-post-meta,
+.escalation-x-post-footer {
+  display: flex;
+  align-items: center;
+}
+
+.escalation-x-identity { gap: 9px; min-width: 0; }
+.escalation-x-name-row { gap: 5px; }
+.escalation-x-status { gap: 9px; justify-content: flex-end; flex-wrap: wrap; }
+
+.escalation-x-avatar {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg);
+}
+
+.escalation-x-avatar-fallback {
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.escalation-x-account-copy { min-width: 0; }
+.escalation-x-name {
+  overflow: hidden;
+  color: var(--text);
+  font-size: calc(12px * var(--wm-panel-effective-scale, 1));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.escalation-x-verified {
+  display: inline-grid;
+  width: 14px;
+  height: 14px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--bg);
+  background: var(--accent);
+  font-size: 9px;
+}
+
+.escalation-x-handle,
+.escalation-x-updated,
+.escalation-x-post-time,
+.escalation-x-post-stats {
+  color: var(--text-muted);
+  font-size: calc(10px * var(--wm-panel-effective-scale, 1));
+}
+
+.escalation-x-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--green);
+  font-size: calc(9px * var(--wm-panel-effective-scale, 1));
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.escalation-x-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 7px currentColor;
+}
+
+.escalation-x-profile-link,
+.escalation-x-open-post {
+  color: var(--accent);
+  font-size: calc(9px * var(--wm-panel-effective-scale, 1));
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+.escalation-x-profile-link:hover,
+.escalation-x-open-post:hover { text-decoration: underline; }
+
+.escalation-x-posts { padding: 8px; }
+
+.escalation-x-post {
+  position: relative;
+  display: flex;
+  margin-bottom: 7px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface) 86%, var(--bg));
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.escalation-x-post:hover {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+  background: var(--surface);
+  transform: translateY(-1px);
+}
+
+.escalation-x-post-rail { width: 3px; flex: 0 0 3px; background: var(--text-muted); opacity: 0.35; }
+.escalation-x-post.is-new .escalation-x-post-rail { background: var(--color-warning, #f59e0b); opacity: 1; }
+.escalation-x-post-body { min-width: 0; flex: 1; padding: 10px 11px 9px; }
+.escalation-x-post-meta { gap: 7px; }
+.escalation-x-post-time { margin-left: auto; }
+
+.escalation-x-signal-label {
+  color: var(--text-secondary);
+  font-size: calc(9px * var(--wm-panel-effective-scale, 1));
+  font-weight: 700;
+  letter-spacing: 0.09em;
+}
+
+.escalation-x-new-badge {
+  padding: 1px 4px;
+  border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 48%, transparent);
+  border-radius: 3px;
+  color: var(--color-warning, #f59e0b);
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 9%, transparent);
+  font-size: calc(8px * var(--wm-panel-effective-scale, 1));
+  font-weight: 700;
+}
+
+.escalation-x-post-text {
+  margin: 7px 0 9px;
+  color: var(--text);
+  font-size: calc(12px * var(--wm-panel-effective-scale, 1));
+  line-height: 1.48;
+  white-space: pre-wrap;
+}
+
+.escalation-x-post-footer { min-height: 18px; justify-content: space-between; gap: 12px; }
+.escalation-x-open-post { margin-left: auto; }
+.escalation-x-empty { padding: 30px 16px; }
+
+.escalation-x-loading { padding: 8px; }
+.escalation-x-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 7px;
+  padding: 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+}
+
+.escalation-x-skeleton span {
+  display: block;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--overlay-subtle), var(--overlay-light), var(--overlay-subtle));
+  background-size: 200% 100%;
+  animation: escalation-x-shimmer 1.4s ease-in-out infinite;
+}
+
+.escalation-x-skeleton-meta { width: 25%; height: 8px; }
+.escalation-x-skeleton-line { width: 92%; height: 11px; }
+.escalation-x-skeleton-line.short { width: 61%; }
+
+.escalation-x-error {
+  display: flex;
+  min-height: 180px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 24px;
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: calc(11px * var(--wm-panel-effective-scale, 1));
+}
+
+.escalation-x-error strong { color: var(--text); font-size: calc(13px * var(--wm-panel-effective-scale, 1)); }
+.escalation-x-retry {
+  margin-top: 5px;
+  padding: 5px 10px;
+  border: 1px solid var(--accent-dim);
+  border-radius: 4px;
+  color: var(--accent);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.escalation-x-retry:hover { background: var(--overlay-subtle); }
+
+@keyframes escalation-x-shimmer {
+  to { background-position: -200% 0; }
+}
+
+@media (max-width: 640px) {
+  .escalation-x-account-bar { align-items: flex-start; padding: 10px; }
+  .escalation-x-status { max-width: 46%; }
+  .escalation-x-updated { display: none; }
+  .escalation-x-posts { padding: 6px; }
+  .escalation-x-post-text { font-size: calc(11px * var(--wm-panel-effective-scale, 1)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .escalation-x-skeleton span { animation: none; }
+  .escalation-x-post { transition: none; }
+}
+
+/* ----------------------------------------------------------
    China Intelligence Panels
    Keep the China surfaces on the same compact, source-led rhythm
    as the rest of the dashboard. The panels still expose their
