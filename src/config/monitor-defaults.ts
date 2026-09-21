@@ -43,6 +43,45 @@ export const MONITOR_DEFAULT_PANEL_ORDER = [
 ] as const;
 
 /**
+ * Existing visitors may already have a custom panel order persisted in the
+ * browser. Changing the factory defaults above does not replace that saved
+ * layout, so migrate only the X Tracker position once and leave every other
+ * user-selected panel position untouched.
+ */
+const X_TRACKER_ORDER_MIGRATION_KEY = 'monitor-x-tracker-above-live-news-v1';
+const PANEL_ORDER_STORAGE_KEY = 'panel-order';
+
+function migrateXTrackerAboveLiveNews(): void {
+  if (SITE_VARIANT !== 'full' || typeof window === 'undefined') return;
+
+  try {
+    if (window.localStorage.getItem(X_TRACKER_ORDER_MIGRATION_KEY) === 'done') return;
+
+    const rawOrder = window.localStorage.getItem(PANEL_ORDER_STORAGE_KEY);
+    if (rawOrder) {
+      const parsed: unknown = JSON.parse(rawOrder);
+      if (Array.isArray(parsed)) {
+        const order = parsed.filter((key): key is string => typeof key === 'string');
+        const liveNewsIndex = order.indexOf('live-news');
+
+        if (liveNewsIndex >= 0) {
+          const withoutTracker = order.filter(key => key !== 'escalation-correlation');
+          const targetIndex = withoutTracker.indexOf('live-news');
+          withoutTracker.splice(targetIndex, 0, 'escalation-correlation');
+          window.localStorage.setItem(PANEL_ORDER_STORAGE_KEY, JSON.stringify(withoutTracker));
+        }
+      }
+    }
+
+    window.localStorage.setItem(X_TRACKER_ORDER_MIGRATION_KEY, 'done');
+  } catch {
+    // If storage is unavailable or corrupt, normal default layout handling still applies.
+  }
+}
+
+migrateXTrackerAboveLiveNews();
+
+/**
  * Keep every non-full monitor exactly as upstream defines it. Only the full
  * variant is narrowed to the finished $MONITOR dashboard.
  *
