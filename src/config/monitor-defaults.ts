@@ -43,43 +43,58 @@ export const MONITOR_DEFAULT_PANEL_ORDER = [
 ] as const;
 
 /**
- * Existing visitors may already have a custom panel order persisted in the
- * browser. Changing the factory defaults above does not replace that saved
- * layout, so migrate only the X Tracker position once and leave every other
- * user-selected panel position untouched.
+ * The upstream app has two legacy layout migrations that intentionally move
+ * Live News to the front. That is correct for World Monitor, but it overrides
+ * the dedicated $MONITOR order above on a fresh browser/profile.
+ *
+ * Own the saved order for the full MONITOR variant before App boots. Existing
+ * layouts keep every other panel position; only X Tracker is moved directly
+ * before Live News. Fresh layouts receive the MONITOR factory order. Mark the
+ * upstream migrations complete so they cannot rewrite that order afterward.
  */
-const X_TRACKER_ORDER_MIGRATION_KEY = 'monitor-x-tracker-above-live-news-v1';
+const MONITOR_PANEL_ORDER_MIGRATION_KEY = 'monitor-x-tracker-above-live-news-v2';
 const PANEL_ORDER_STORAGE_KEY = 'panel-order';
+const UPSTREAM_PANEL_ORDER_MIGRATION_KEY = 'worldmonitor-panel-order-v1.9';
+const UPSTREAM_LAYOUT_RESET_MIGRATION_KEY = 'worldmonitor-layout-reset-v2.5';
 
-function migrateXTrackerAboveLiveNews(): void {
+function migrateMonitorPanelOrder(): void {
   if (SITE_VARIANT !== 'full' || typeof window === 'undefined') return;
 
   try {
-    if (window.localStorage.getItem(X_TRACKER_ORDER_MIGRATION_KEY) === 'done') return;
+    if (window.localStorage.getItem(MONITOR_PANEL_ORDER_MIGRATION_KEY) === 'done') return;
 
     const rawOrder = window.localStorage.getItem(PANEL_ORDER_STORAGE_KEY);
+    let order: string[] | null = null;
+
     if (rawOrder) {
       const parsed: unknown = JSON.parse(rawOrder);
       if (Array.isArray(parsed)) {
-        const order = parsed.filter((key): key is string => typeof key === 'string');
-        const liveNewsIndex = order.indexOf('live-news');
-
-        if (liveNewsIndex >= 0) {
-          const withoutTracker = order.filter(key => key !== 'escalation-correlation');
-          const targetIndex = withoutTracker.indexOf('live-news');
-          withoutTracker.splice(targetIndex, 0, 'escalation-correlation');
-          window.localStorage.setItem(PANEL_ORDER_STORAGE_KEY, JSON.stringify(withoutTracker));
-        }
+        order = parsed.filter((key): key is string => typeof key === 'string');
       }
     }
 
-    window.localStorage.setItem(X_TRACKER_ORDER_MIGRATION_KEY, 'done');
+    if (!order || order.length === 0) {
+      order = MONITOR_DEFAULT_PANEL_ORDER.filter(key => key !== 'map');
+    } else {
+      const liveNewsIndex = order.indexOf('live-news');
+      if (liveNewsIndex >= 0) {
+        const withoutTracker = order.filter(key => key !== 'escalation-correlation');
+        const targetIndex = withoutTracker.indexOf('live-news');
+        withoutTracker.splice(targetIndex, 0, 'escalation-correlation');
+        order = withoutTracker;
+      }
+    }
+
+    window.localStorage.setItem(PANEL_ORDER_STORAGE_KEY, JSON.stringify(order));
+    window.localStorage.setItem(UPSTREAM_PANEL_ORDER_MIGRATION_KEY, 'done');
+    window.localStorage.setItem(UPSTREAM_LAYOUT_RESET_MIGRATION_KEY, 'done');
+    window.localStorage.setItem(MONITOR_PANEL_ORDER_MIGRATION_KEY, 'done');
   } catch {
     // If storage is unavailable or corrupt, normal default layout handling still applies.
   }
 }
 
-migrateXTrackerAboveLiveNews();
+migrateMonitorPanelOrder();
 
 /**
  * Keep every non-full monitor exactly as upstream defines it. Only the full
