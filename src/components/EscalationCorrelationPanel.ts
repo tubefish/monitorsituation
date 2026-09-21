@@ -33,7 +33,7 @@ export class EscalationCorrelationPanel extends Panel {
   constructor() {
     super({
       id: 'escalation-correlation',
-      title: 'Escalation Monitor',
+      title: 'X Account Tracking',
       className: 'panel-wide escalation-monitor-panel',
       defaultRowSpan: 2,
       infoTooltip: 'Recent public posts from five selected OSINT and situation-monitoring accounts on X. Posts are cached briefly to reduce API usage.',
