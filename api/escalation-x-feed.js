@@ -19,6 +19,10 @@ export const ESCALATION_X_ACCOUNTS = Object.freeze({
   osint613: 'Open Source Intel',
   osinttechnical: 'OSINTtechnical',
   ww3_monitor: 'WW3 Monitor',
+  polymarket: 'Polymarket',
+  rapidresponse47: 'Rapid Response 47',
+  zerohedge: 'ZeroHedge',
+  watcherguru: 'Watcher.Guru',
 });
 
 function cleanHttpsUrl(value) {

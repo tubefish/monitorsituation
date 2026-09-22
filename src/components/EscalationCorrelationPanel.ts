@@ -22,6 +22,10 @@ export const ESCALATION_X_ACCOUNTS: readonly XAccountSource[] = [
   { label: 'Open Source Intel', handle: 'osint613' },
   { label: 'OSINTtechnical', handle: 'osinttechnical' },
   { label: 'WW3 Monitor', handle: 'ww3_monitor' },
+  { label: 'Polymarket', handle: 'polymarket' },
+  { label: 'Rapid Response 47', handle: 'rapidresponse47' },
+  { label: 'ZeroHedge', handle: 'zerohedge' },
+  { label: 'Watcher.Guru', handle: 'watcherguru' },
 ];
 
 export class EscalationCorrelationPanel extends Panel {
