@@ -2684,7 +2684,10 @@ export class EventHandlerManager implements AppModule {
   setupMapPin(): void {
     const mapSection = document.getElementById('mapSection');
     const pinBtn = document.getElementById('mapPinBtn');
-    if (!mapSection || !pinBtn) return;
+    if (!mapSection) return;
+    this.setupMapFullscreen(mapSection);
+    this.setupMapDimensionToggle();
+    if (!pinBtn) return;
 
     const isPinned = readStorageValue('map-pinned') === 'true';
     if (isPinned) {
@@ -2698,8 +2701,6 @@ export class EventHandlerManager implements AppModule {
       writeStorageValue('map-pinned', String(nowPinned));
     });
 
-    this.setupMapFullscreen(mapSection);
-    this.setupMapDimensionToggle();
   }
 
   private setupMapDimensionToggle(): void {
@@ -2729,7 +2730,9 @@ export class EventHandlerManager implements AppModule {
       mapSection.classList.toggle('live-news-fullscreen', isFullscreen);
       document.body.classList.toggle('live-news-fullscreen-active', isFullscreen);
       setTrustedHtml(btn, trustedHtml(isFullscreen ? shrinkSvg : expandSvg, "legacy direct innerHTML migration"));
-      btn.title = isFullscreen ? 'Exit fullscreen' : 'Fullscreen';
+      btn.title = isFullscreen ? 'Restore map · Esc' : 'Expand map';
+      btn.setAttribute('aria-label', btn.title);
+      btn.setAttribute('aria-expanded', String(isFullscreen));
       this.syncMapAfterLayoutChange();
     };
 

@@ -28680,7 +28680,7 @@ body.map-width-resizing {
 }
 
 /* =========================================================
-   $MONITOR — LOCKED DASHBOARD LAYOUT
+   $MONITOR — CUSTOMIZABLE DASHBOARD
    ========================================================= */
 
 /* Visitors cannot close or collapse panels */
@@ -28689,21 +28689,148 @@ body.map-width-resizing {
   display: none !important;
 }
 
-/* Visitors cannot resize panel height or width */
-.panel-resize-handle,
-.panel-col-resize-handle {
-  display: none !important;
+/* Move only from the title bar; feed text remains selectable. */
+.panel,
+.panel:active {
+  cursor: auto;
 }
 
-/* Hide keyboard panel-reorder control */
+.panel > .panel-header {
+  cursor: grab;
+}
+
+.panel > .panel-header:active {
+  cursor: grabbing;
+}
+
 .panel-move-btn {
+  position: static;
+  transform: none;
+  clip-path: none;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 18px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.panel-header-left {
+  margin-inline-end: auto;
+}
+
+.panel-expand-btn {
+  width: 28px;
+  height: 26px;
+  flex-shrink: 0;
+  font-size: 18px;
+  color: var(--text-dim);
+}
+
+.panel-expand-btn:hover,
+.panel-move-btn:hover {
+  color: var(--accent);
+  background: var(--overlay-subtle);
+}
+
+/* Slim, visible grips leave the scrollbars and header buttons accessible. */
+.panel-resize-handle {
+  height: 10px;
+  background: var(--overlay-subtle);
+}
+
+.panel-resize-handle::after {
+  bottom: -3px;
+}
+
+.panel-col-resize-handle {
+  top: 38px;
+  bottom: 12px;
+  width: 8px;
+  background: var(--overlay-subtle);
+}
+
+.panel-col-resize-handle::after {
+  right: 0;
+}
+
+.panel-content {
+  margin-bottom: 10px;
+  margin-inline-end: 8px;
+  user-select: text;
+}
+
+.panel-drag-label {
+  padding: 12px 16px;
+  background: var(--surface);
+  color: var(--text);
+  font: 600 12px var(--font-mono, monospace);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+body.panel-drag-active,
+body.panel-drag-active .panel-move-btn {
+  cursor: grabbing;
+  user-select: none;
+}
+
+body.panel-drag-active iframe,
+body.map-width-resizing iframe {
+  pointer-events: none !important;
+}
+
+/* Raise the owning stacking context without moving a live panel in the DOM. */
+.panels-grid:has(.panel-expanded),
+.map-section:has(.panel-expanded),
+.map-bottom-grid:has(.panel-expanded) {
+  z-index: 10001;
+}
+
+.panel.panel-expanded {
+  position: fixed !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border: 0;
+  z-index: 10001;
+}
+
+.panel-expanded > .panel-content {
+  flex: 1 1 0;
+  min-height: 0;
+  margin: 0;
+  overflow: auto;
+  content-visibility: visible;
+}
+
+.panel-expanded > .panel-header {
+  cursor: default;
+  padding-block: 10px;
+}
+
+.panel-expanded > .panel-resize-handle,
+.panel-expanded > .panel-col-resize-handle,
+.panel-expanded .panel-move-btn,
+.live-news-fullscreen > .panel-resize-handle,
+.live-news-fullscreen > .panel-col-resize-handle,
+.live-news-fullscreen .panel-move-btn {
   display: none !important;
 }
 
-/* Lock the map/sidebar dimensions too */
-.map-resize-handle,
-.map-width-resize-handle {
-  display: none !important;
+body.panel-expanded-active {
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .panel-content { margin: 0; }
 }
 .iran-watch-feed {
   display: flex;

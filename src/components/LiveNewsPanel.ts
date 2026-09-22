@@ -422,6 +422,7 @@ export class LiveNewsPanel extends Panel {
   constructor() {
     super({
       id: 'live-news',
+      expandable: false,
       title: t('panels.liveNews'),
       className: 'panel-wide',
       defaultRowSpan: 3,
