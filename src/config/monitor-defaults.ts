@@ -30,6 +30,7 @@ import {
 export const MONITOR_DEFAULT_PANEL_ORDER = [
   'map',
   'escalation-correlation',
+  'market-heatmap',
   'live-news',
   'monitor-market',
   'threat-timeline',
@@ -95,6 +96,23 @@ function migrateMonitorPanelOrder(): void {
 }
 
 migrateMonitorPanelOrder();
+
+// Introduce the new section once without moving any existing panels or
+// overwriting their saved sizes, zones, or enabled/disabled preferences.
+if (SITE_VARIANT === 'full' && typeof window !== 'undefined') {
+  try {
+    const migrationKey = 'monitor-market-heatmap-order-v1';
+    if (window.localStorage.getItem(migrationKey) !== 'done') {
+      const order: unknown = JSON.parse(window.localStorage.getItem(PANEL_ORDER_STORAGE_KEY) || 'null');
+      if (Array.isArray(order) && order.every(key => typeof key === 'string') && !order.includes('market-heatmap')) {
+        const trackerIndex = order.indexOf('escalation-correlation');
+        order.splice(trackerIndex >= 0 ? trackerIndex + 1 : order.length, 0, 'market-heatmap');
+        window.localStorage.setItem(PANEL_ORDER_STORAGE_KEY, JSON.stringify(order));
+      }
+      window.localStorage.setItem(migrationKey, 'done');
+    }
+  } catch { /* Normal defaults still apply if storage is unavailable. */ }
+}
 
 /**
  * Keep every non-full monitor exactly as upstream defines it. Only the full
