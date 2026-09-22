@@ -115,12 +115,18 @@ html.monitor-dashboard[data-theme='dark'] {
 .monitor-layout-editing :is(.panel-resize-handle, .panel-col-resize-handle) { opacity: 1; background-color: var(--monitor-soft-accent); }
 .monitor-dashboard .map-width-resize-handle { transition: background-color 120ms ease; }
 .monitor-dashboard .map-width-resize-handle:hover { background: var(--monitor-accent); }
+.monitor-dashboard .time-btn { min-height: 28px; padding: 5px 8px; font-size: 11px; border-radius: 4px; }
+.monitor-dashboard .time-btn.active { background: var(--monitor-soft-accent); color: var(--monitor-accent); border-color: var(--monitor-accent); }
 
 /* Preserve each renderer's native layer controls inside a grouped disclosure. */
 .monitor-dashboard .monitor-layer-controls {
   display: block;
+  top: auto;
+  bottom: 48px;
   width: min(300px, calc(100% - 24px));
   max-width: calc(100% - 24px);
+  max-height: none;
+  overflow: visible;
   padding: 0;
   border: 0;
   background: transparent;
@@ -145,7 +151,8 @@ html.monitor-dashboard[data-theme='dark'] {
 .monitor-dashboard .monitor-layer-controls .layer-toggle { display: flex; align-items: center; gap: 8px; flex: 1; min-height: 36px; padding: 7px 8px; font: 12px var(--monitor-reading-font); text-align: left; white-space: normal; border-radius: 5px; }
 .monitor-dashboard .monitor-layer-controls .toggle-label { font: inherit; }
 .monitor-dashboard .monitor-layer-controls .layer-explain-btn { min-width: 30px; min-height: 36px; font-size: 12px; }
-.monitor-dashboard .monitor-layer-controls .layer-help-btn { min-height: 32px; width: auto; margin-bottom: 6px; padding: 5px 8px; font-size: 12px; }
+.monitor-dashboard .monitor-layer-controls .layer-help-btn { min-height: 36px; height: auto; width: auto; margin: 0 0 6px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 12px; }
+.monitor-dashboard .monitor-layer-controls .layer-help-btn::before { content: none; }
 .monitor-active-layers { display: flex; gap: 4px; flex-wrap: wrap; padding-top: 6px; }
 .monitor-active-layers[hidden] { display: none; }
 .monitor-active-layers span { padding: 4px 6px; background: var(--panel-bg); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 4px; font: 10px var(--monitor-reading-font); }
@@ -168,6 +175,7 @@ html.monitor-dashboard[data-theme='dark'] {
   .monitor-layout-toolbar button { min-height: 44px; flex: 1; }
   .monitor-dashboard .monitor-layer-controls .layer-toggle,
   .monitor-dashboard .monitor-layer-controls .layer-explain-btn { min-height: 44px; }
+  .monitor-dashboard .monitor-layer-controls { bottom: 12px; }
   .monitor-layer-body .toggle-list { max-height: 32vh !important; }
 }
 @media (prefers-reduced-motion: reduce) {
