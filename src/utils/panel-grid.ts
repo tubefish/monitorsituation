@@ -55,6 +55,16 @@ export function getGridColumnCount(element: HTMLElement): number {
   const grid = getPanelGrid(element);
   if (!grid || typeof window === 'undefined' || typeof window.getComputedStyle !== 'function') return MAX_PANEL_COL_SPAN;
   const style = window.getComputedStyle(grid);
+  // Count the tracks that FIT, not implicit tracks created by a previously
+  // wider panel. Otherwise a saved span can keep phantom columns alive after
+  // the user narrows the map/feed divider.
+  const width = grid.clientWidth || getPanelGridWidth(grid);
+  if (width > 0) {
+    const gap = Number.parseFloat(style.columnGap || '0') || 0;
+    const padding = (Number.parseFloat(style.paddingLeft || '0') || 0)
+      + (Number.parseFloat(style.paddingRight || '0') || 0);
+    return Math.max(1, Math.floor((width - padding + gap) / (PANELS_GRID_MIN_TRACK_PX + gap)));
+  }
   const template = style.gridTemplateColumns;
   if (!template || template === 'none') return MAX_PANEL_COL_SPAN;
 

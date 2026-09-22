@@ -28689,6 +28689,11 @@ body.map-width-resizing {
   display: none !important;
 }
 
+/* Below-map panels use the same available-width rules as the sidebar. */
+.main-content .map-bottom-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+}
+
 /* Move only from the title bar; feed text remains selectable. */
 .panel,
 .panel:active {

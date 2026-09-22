@@ -111,6 +111,7 @@ export class Panel {
   private expandButton: HTMLButtonElement | null = null;
   private expandedFocus: HTMLElement | null = null;
   private expandedTitle = '';
+  private expandedKeyHandler: ((event: KeyboardEvent) => void) | null = null;
   protected element: HTMLElement;
   protected content: HTMLElement;
   protected header: HTMLElement;
@@ -350,20 +351,22 @@ export class Panel {
   private restoreSavedColSpan(): void {
     const savedColSpans = loadPanelColSpans();
     const savedColSpan = savedColSpans[this.panelId];
-    if (typeof savedColSpan === 'number' && Number.isInteger(savedColSpan) && savedColSpan >= 1) {
-      const naturalSpan = getDefaultColSpan(this.element);
-      if (savedColSpan === naturalSpan) {
-        clearColSpanClass(this.element);
-        clearPanelColSpan(this.panelId);
-        return;
-      }
-
-      const maxSpan = getMaxColSpan(this.element);
-      const clampedSavedSpan = clampColSpan(savedColSpan, maxSpan);
-      setColSpanClass(this.element, clampedSavedSpan);
-    } else if (savedColSpan !== undefined) {
+    const naturalSpan = getDefaultColSpan(this.element);
+    const validSaved = typeof savedColSpan === 'number' && Number.isInteger(savedColSpan) && savedColSpan >= 1;
+    if (savedColSpan !== undefined && (!validSaved || savedColSpan === naturalSpan)) {
       clearPanelColSpan(this.panelId);
     }
+    const preferred = validSaved ? savedColSpan : naturalSpan;
+    const visible = clampColSpan(preferred, getMaxColSpan(this.element));
+    if (visible === naturalSpan) clearColSpanClass(this.element);
+    else setColSpanClass(this.element, visible);
+  }
+
+  /** Refit to a resized/reordered grid without overwriting a saved preference. */
+  public refreshGridWidth(): void {
+    if (this.isColResizing) return;
+    this.restoreSavedColSpan();
+    this.syncKeyboardColResizeAria();
   }
 
   private reconcileColSpanAfterAttach(attempts = 3): void {
@@ -843,7 +846,7 @@ export class Panel {
     });
     this.expandButton = btn;
     this.header.appendChild(btn);
-    document.addEventListener('keydown', (event) => {
+    this.expandedKeyHandler = (event) => {
       if (Panel.expandedPanel !== this) return;
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -862,7 +865,7 @@ export class Panel {
           first.focus();
         }
       }
-    }, { signal: this.abortController.signal });
+    };
   }
 
   public supportsFullscreen(): boolean {
@@ -881,11 +884,13 @@ export class Panel {
       Panel.expandedPanel?.setFullscreen(false);
       this.expandedFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       Panel.expandedPanel = this;
+      if (this.expandedKeyHandler) document.addEventListener('keydown', this.expandedKeyHandler);
       this.element.setAttribute('role', 'dialog');
       this.element.setAttribute('aria-modal', 'true');
       this.element.setAttribute('aria-label', this.expandedTitle);
     } else {
       Panel.expandedPanel = null;
+      if (this.expandedKeyHandler) document.removeEventListener('keydown', this.expandedKeyHandler);
       this.element.removeAttribute('role');
       this.element.removeAttribute('aria-modal');
       this.element.removeAttribute('aria-label');

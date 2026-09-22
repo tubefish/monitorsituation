@@ -1139,6 +1139,17 @@ export class PanelLayoutManager implements AppModule {
 
     await this.createPanels();
 
+    // The divider changes the grid independently of the window viewport.
+    // Refit spans when either zone changes size, preserving saved widths.
+    const gridObserver = new ResizeObserver(() => {
+      for (const panel of Object.values(this.ctx.panels)) panel.refreshGridWidth();
+    });
+    for (const id of ['panelsGrid', 'mapBottomGrid']) {
+      const grid = document.getElementById(id);
+      if (grid) gridObserver.observe(grid);
+    }
+    this.panelDragCleanupHandlers.push(() => gridObserver.disconnect());
+
     this.initPanelTabs();
     if (import.meta.env.DEV && bootShellFootprint) warnOnBootShellFootprintDrift(bootShellFootprint);
 
@@ -4201,6 +4212,7 @@ export class PanelLayoutManager implements AppModule {
         }
 
         if (moved) {
+          this.ctx.panels[key]?.refreshGridWidth();
           const isInBottom = !!el.closest('.map-bottom-grid');
           if (isInBottom) {
             this.bottomSetMemory.add(key);
@@ -4273,7 +4285,10 @@ export class PanelLayoutManager implements AppModule {
             bottomGrid,
             bottomSet: this.bottomSetMemory,
           });
-          if (moved) this.savePanelOrder();
+          if (moved) {
+            this.ctx.panels[key]?.refreshGridWidth();
+            this.savePanelOrder();
+          }
           moveBtn.focus();
           return;
         }
