@@ -85,6 +85,13 @@ has a bounded per-feed fallback, and optional GDELT statistics do not block
 headline rendering. See [MONITOR data setup](docs/monitor-data-setup.md) for
 deployment secrets, optional publishers, and live acceptance checks.
 
+The Market Heatmap panel embeds TradingView's provider-hosted stock and crypto
+heatmaps in one active iframe. TradingView owns the market-data requests and
+updates inside that frame, so it does not add a bootstrap key, RPC, or seed job.
+Stocks show S&P 500 daily changes; crypto shows 24-hour changes. Tile area tracks
+market capitalization. Provider attribution and the stock-data delay notice are
+visible in the panel footer.
+
 ## 3. Frontend Architecture
 
 ### Entry and Initialization

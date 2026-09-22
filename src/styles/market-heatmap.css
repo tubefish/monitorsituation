@@ -1,0 +1,74 @@
+.market-heatmap-panel .panel-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.market-heatmap-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+  gap: 12px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.market-heatmap-tabs { display: flex; gap: 4px; }
+.market-heatmap-tabs button {
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-dim);
+}
+.market-heatmap-tabs button[aria-selected="true"] {
+  border-color: var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 700;
+}
+.market-heatmap-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.market-heatmap-key { display: flex; gap: 10px; font-size: 10px; white-space: nowrap; }
+.market-heatmap-up { color: #16824b; }
+.market-heatmap-down { color: #cc323b; }
+[data-theme="dark"] .market-heatmap-up { color: #54d894; }
+[data-theme="dark"] .market-heatmap-down { color: #ff7d85; }
+.market-heatmap-stage { position: relative; flex: 1 1 0; min-height: 0; width: 100%; }
+.market-heatmap-frame { display: block; border: 0; width: 100%; height: 100%; }
+.market-heatmap-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: var(--panel-bg, var(--bg));
+  color: var(--text-dim);
+  text-align: center;
+  font-size: 12px;
+  pointer-events: none;
+}
+.market-heatmap-status-delayed { inset: auto 0 0; padding: 8px; }
+.market-heatmap-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 9px;
+  line-height: 1.5;
+}
+.market-heatmap-footer a { color: var(--text-dim); text-decoration: underline; text-underline-offset: 2px; }
+.market-heatmap-footer a:hover { color: var(--text); }
+
+@media (max-width: 768px) {
+  .panel.market-heatmap-panel:not(.panel-expanded):not(.panel-collapsed) { height: 460px; min-height: 360px; }
+}
