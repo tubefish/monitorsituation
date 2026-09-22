@@ -106,7 +106,7 @@ const PANEL_CLUSTER: Record<string, PanelChunkName> = {
   EconomicCalendar: 'panels-markets', FearGreed: 'panels-markets',
   Fx: 'panels-markets',
   GoldIntelligence: 'panels-markets', LiquidityShifts: 'panels-markets',
-  MacroSignals: 'panels-markets', Market: 'panels-markets',
+  MacroSignals: 'panels-markets', Market: 'panels-markets', MarketHeatmap: 'panels-markets',
   MarketBreadth: 'panels-markets', MarketImplications: 'panels-markets',
   NewsMarketCorrelation: 'panels-markets',
   NqCatalysts: 'panels-markets', NqPulse: 'panels-markets',
