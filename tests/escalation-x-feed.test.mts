@@ -7,7 +7,7 @@ const source = readFileSync(
   'utf8',
 );
 
-test('Escalation Monitor embeds the five requested X accounts in order', () => {
+test('X Tracker includes the nine requested X accounts in order', () => {
   const handles = [...source.matchAll(/handle: '([^']+)'/g)].map(match => match[1]);
   assert.deepEqual(handles, [
     'monitoringmeme',
@@ -15,6 +15,10 @@ test('Escalation Monitor embeds the five requested X accounts in order', () => {
     'osint613',
     'osinttechnical',
     'ww3_monitor',
+    'polymarket',
+    'rapidresponse47',
+    'zerohedge',
+    'watcherguru',
   ]);
 });
 

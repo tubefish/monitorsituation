@@ -12,13 +12,17 @@ afterEach(() => {
   else process.env.X_BEARER_TOKEN = originalToken;
 });
 
-test('only the five curated account handles are accepted', async () => {
+test('only the nine curated account handles are accepted', async () => {
   assert.deepEqual(Object.keys(ESCALATION_X_ACCOUNTS), [
     'monitoringmeme',
     'sentdefender',
     'osint613',
     'osinttechnical',
     'ww3_monitor',
+    'polymarket',
+    'rapidresponse47',
+    'zerohedge',
+    'watcherguru',
   ]);
 
   const response = await handler(new Request('https://example.test/api/escalation-x-feed?account=somebodyelse'));
