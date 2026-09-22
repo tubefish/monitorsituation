@@ -44,6 +44,8 @@ export interface PanelOptions {
   premium?: 'locked' | 'enhanced';
   closable?: boolean;
   collapsible?: boolean;
+  /** Media panels may keep their own fullscreen player controls. */
+  expandable?: boolean;
   defaultRowSpan?: number;
 }
 
@@ -52,7 +54,8 @@ const COL_RESIZE_STEP_PX = 80;
 const FRESHNESS_BADGE_REFRESH_MS = 60_000;
 
 function getDefaultColSpan(element: HTMLElement): number {
-  return element.classList.contains('panel-wide') ? 2 : 1;
+  // Financial's MONITOR factory footprint is declared in base-layer.css.
+  return element.classList.contains('panel-wide') || element.dataset.panel === 'finance' ? 2 : 1;
 }
 
 function getColSpan(element: HTMLElement): number {
@@ -105,6 +108,11 @@ function setSpanClass(element: HTMLElement, span: number): void {
 }
 
 export class Panel {
+  private static expandedPanel: Panel | null = null;
+  private expandButton: HTMLButtonElement | null = null;
+  private expandedFocus: HTMLElement | null = null;
+  private expandedTitle = '';
+  private expandedKeyHandler: ((event: KeyboardEvent) => void) | null = null;
   protected element: HTMLElement;
   protected content: HTMLElement;
   protected header: HTMLElement;
@@ -294,6 +302,8 @@ export class Panel {
     this.element.appendChild(this.header);
     this.element.appendChild(this.content);
 
+    if (options.expandable !== false) this.appendExpandButton(options.title);
+
     if (this._collapseBtn && loadPanelCollapsed()[this.panelId]) {
       this._applyCollapsed(this._collapseBtn, true);
     }
@@ -342,20 +352,22 @@ export class Panel {
   private restoreSavedColSpan(): void {
     const savedColSpans = loadPanelColSpans();
     const savedColSpan = savedColSpans[this.panelId];
-    if (typeof savedColSpan === 'number' && Number.isInteger(savedColSpan) && savedColSpan >= 1) {
-      const naturalSpan = getDefaultColSpan(this.element);
-      if (savedColSpan === naturalSpan) {
-        clearColSpanClass(this.element);
-        clearPanelColSpan(this.panelId);
-        return;
-      }
-
-      const maxSpan = getMaxColSpan(this.element);
-      const clampedSavedSpan = clampColSpan(savedColSpan, maxSpan);
-      setColSpanClass(this.element, clampedSavedSpan);
-    } else if (savedColSpan !== undefined) {
+    const naturalSpan = getDefaultColSpan(this.element);
+    const validSaved = typeof savedColSpan === 'number' && Number.isInteger(savedColSpan) && savedColSpan >= 1;
+    if (savedColSpan !== undefined && (!validSaved || savedColSpan === naturalSpan)) {
       clearPanelColSpan(this.panelId);
     }
+    const preferred = validSaved ? savedColSpan : naturalSpan;
+    const visible = clampColSpan(preferred, getMaxColSpan(this.element));
+    if (visible === naturalSpan) clearColSpanClass(this.element);
+    else setColSpanClass(this.element, visible);
+  }
+
+  /** Refit to a resized/reordered grid without overwriting a saved preference. */
+  public refreshGridWidth(): void {
+    if (this.isColResizing) return;
+    this.restoreSavedColSpan();
+    this.syncKeyboardColResizeAria();
   }
 
   private reconcileColSpanAfterAttach(attempts = 3): void {
@@ -819,18 +831,81 @@ export class Panel {
     return { ok: true, persisted: true };
   }
 
-  /** Override in panels that expose a fullscreen control. */
+  private appendExpandButton(title: string): void {
+    this.expandedTitle = title;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'icon-btn panel-expand-btn';
+    btn.textContent = '⛶';
+    btn.title = `Expand ${title}`;
+    btn.setAttribute('aria-label', btn.title);
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-controls', this.content.id);
+    btn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.setFullscreen(!this.isFullscreenActive());
+    });
+    this.expandButton = btn;
+    this.header.appendChild(btn);
+    this.expandedKeyHandler = (event) => {
+      if (Panel.expandedPanel !== this) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        this.setFullscreen(false);
+      } else if (event.key === 'Tab') {
+        const focusable = Array.from(this.element.querySelectorAll<HTMLElement>(
+          'button, a[href], input, select, textarea, iframe, [tabindex="0"]',
+        )).filter((node) => !node.hasAttribute('disabled') && node.getClientRects().length > 0);
+        const first = focusable[0] ?? btn;
+        const last = focusable[focusable.length - 1] ?? btn;
+        if (event.shiftKey && (document.activeElement === first || !this.element.contains(document.activeElement))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (document.activeElement === last || !this.element.contains(document.activeElement))) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+  }
+
   public supportsFullscreen(): boolean {
-    return false;
+    return this.expandButton !== null;
   }
 
   public isFullscreenActive(): boolean {
-    return false;
+    return Panel.expandedPanel === this;
   }
 
-  /** Apply fullscreen through the visible control path. Default: unsupported. */
-  public setFullscreen(_fullscreen: boolean): boolean {
-    return false;
+  /** Expand in place so scrolling, loaded feeds, and grid order survive. */
+  public setFullscreen(fullscreen: boolean): boolean {
+    if (!this.expandButton) return false;
+    if (fullscreen === this.isFullscreenActive()) return true;
+    if (fullscreen) {
+      Panel.expandedPanel?.setFullscreen(false);
+      this.expandedFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      Panel.expandedPanel = this;
+      if (this.expandedKeyHandler) document.addEventListener('keydown', this.expandedKeyHandler);
+      this.element.setAttribute('role', 'dialog');
+      this.element.setAttribute('aria-modal', 'true');
+      this.element.setAttribute('aria-label', this.expandedTitle);
+    } else {
+      Panel.expandedPanel = null;
+      if (this.expandedKeyHandler) document.removeEventListener('keydown', this.expandedKeyHandler);
+      this.element.removeAttribute('role');
+      this.element.removeAttribute('aria-modal');
+      this.element.removeAttribute('aria-label');
+    }
+    this.element.classList.toggle('panel-expanded', fullscreen);
+    document.body.classList.toggle('panel-expanded-active', fullscreen);
+    this.expandButton.textContent = fullscreen ? '↙' : '⛶';
+    this.expandButton.title = fullscreen ? `Restore ${this.expandedTitle} · Esc` : `Expand ${this.expandedTitle}`;
+    this.expandButton.setAttribute('aria-label', this.expandButton.title);
+    this.expandButton.setAttribute('aria-expanded', String(fullscreen));
+    if (fullscreen) this.expandButton.focus({ preventScroll: true });
+    else this.expandedFocus?.focus({ preventScroll: true });
+    window.dispatchEvent(new Event('resize'));
+    return true;
   }
 
   protected appendCollapseButton(): void {
@@ -1624,6 +1699,7 @@ export class Panel {
   }
 
   public destroy(): void {
+    if (Panel.expandedPanel === this) this.setFullscreen(false);
     this.destroyed = true;
     this.abortController.abort();
     this.clearRetryCountdown();

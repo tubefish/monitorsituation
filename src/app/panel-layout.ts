@@ -1,3 +1,4 @@
+import { movePanelToKeyboardZone } from '@/app/panel-keyboard-reorder';
 import type { AppContext, AppModule } from '@/app/app-context';
 import { normalizeExclusiveChoropleths } from '@/components/resilience-choropleth-utils';
 import { replayPendingCalls, clearAllPendingCalls } from '@/app/pending-panel-data';
@@ -1077,11 +1078,14 @@ export class PanelLayoutManager implements AppModule {
               <span class="panel-title">${SITE_VARIANT === 'tech' ? t('panels.techMap') : SITE_VARIANT === 'happy' ? 'Good News Map' : t('panels.map')}</span>
             </div>
             <span class="header-clock" id="headerClock" translate="no"></span>
+            <button class="icon-btn panel-expand-btn" id="mapFullscreenBtn" type="button" title="Expand map" aria-label="Expand map" aria-expanded="false">⛶</button>
           </div>
           <div class="map-container" id="mapContainer"></div>
           ${SITE_VARIANT === 'happy' ? '<button class="tv-exit-btn" id="tvExitBtn">Exit TV Mode</button>' : ''}
+          <div class="map-resize-handle" id="mapResizeHandle" title="Drag to resize the map"></div>
           <div class="map-bottom-grid" id="mapBottomGrid"></div>
         </div>
+        <div class="map-width-resize-handle" id="mapWidthResizeHandle" title="Drag to widen the map or panels"></div>
         <div class="panels-grid" id="panelsGrid" role="tabpanel" aria-label="Dashboard panels"></div>
       </main>
       <nav class="mobile-tab-bar" id="mobileTabBar" aria-label="Primary">
@@ -1134,6 +1138,20 @@ export class PanelLayoutManager implements AppModule {
     });
 
     await this.createPanels();
+
+    // The divider changes the grid independently of the window viewport.
+    // Refit spans when either zone changes size, preserving saved widths.
+    const gridObserver = new ResizeObserver(() => {
+      for (const panel of Object.values(this.ctx.panels)) panel.refreshGridWidth();
+      document.querySelectorAll<HTMLElement>('.panel-deferred-shell').forEach((shell) => {
+        reconcileDeferredPanelShellColSpan(shell);
+      });
+    });
+    for (const id of ['panelsGrid', 'mapBottomGrid']) {
+      const grid = document.getElementById(id);
+      if (grid) gridObserver.observe(grid);
+    }
+    this.panelDragCleanupHandlers.push(() => gridObserver.disconnect());
 
     this.initPanelTabs();
     if (import.meta.env.DEV && bootShellFootprint) warnOnBootShellFootprintDrift(bootShellFootprint);
@@ -3859,11 +3877,467 @@ export class PanelLayoutManager implements AppModule {
   }
 
   private makeDraggable(el: HTMLElement, key: string): void {
-  // $MONITOR uses a fixed dashboard layout.
-  // Keep data-panel because styling and panel lookups rely on it,
-  // but do not attach drag/reorder controls.
+    type DropPosition = {
+      grid: HTMLElement;
+      panel: HTMLElement | null;
+      insertBefore: boolean;
+    };
+
     el.dataset.panel = key;
-}
+    let isDragging = false;
+    let dragStarted = false;
+    let startX = 0;
+    let startY = 0;
+    let rafId = 0;
+    let ghostEl: HTMLElement | null = null;
+    let dropIndicator: HTMLElement | null = null;
+    let originalParent: HTMLElement | null = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let originalIndex = -1;
+    let originalRect: DOMRect | null = null;
+    let onKeyDown: ((e: KeyboardEvent) => void) | null = null;
+    const DRAG_THRESHOLD = 8;
+
+    const onMouseDown = (e: PointerEvent) => {
+      if (e.button !== 0 || !e.isPrimary) return;
+      if (e.pointerType !== 'mouse' && !(e.target as HTMLElement).closest('.panel-move-btn')) return;
+      const target = e.target as HTMLElement;
+      if (el.dataset.resizing === 'true') return;
+      if (
+        target.classList?.contains('panel-resize-handle') ||
+        target.closest?.('.panel-resize-handle') ||
+        target.classList?.contains('panel-col-resize-handle') ||
+        target.closest?.('.panel-col-resize-handle')
+      ) return;
+      if (!target.closest('.panel-header') || el.classList.contains('panel-expanded') || el.classList.contains('live-news-fullscreen')) return;
+      if (target.closest('button, a, input, select, textarea') && !target.closest('.panel-move-btn')) return;
+
+      isDragging = true;
+      dragStarted = false;
+      startX = e.clientX;
+      startY = e.clientY;
+
+      // Calculate offset within the element for smooth dragging
+      const rect = el.getBoundingClientRect();
+      dragOffsetX = e.clientX - rect.left;
+      dragOffsetY = e.clientY - rect.top;
+
+      e.preventDefault();
+    };
+
+    const createGhostElement = (): HTMLElement => {
+      const ghost = document.createElement('div');
+      ghost.className = 'panel-drag-ghost panel-drag-label';
+      ghost.textContent = el.querySelector('.panel-title')?.textContent || key;
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.style.position = 'fixed';
+      ghost.style.pointerEvents = 'none';
+      ghost.style.zIndex = '10000';
+      ghost.style.width = Math.min(el.getBoundingClientRect().width, 300) + 'px';
+      dragOffsetX = Math.min(dragOffsetX, 150);
+      dragOffsetY = 18;
+      document.body.appendChild(ghost);
+      return ghost;
+    };
+
+    const createDropIndicator = (): HTMLElement => {
+      const indicator = document.createElement('div');
+      indicator.classList.add('panel-drop-indicator');
+      // overlay on body so it doesn't shift grid children
+      indicator.style.position = 'fixed';
+      indicator.style.pointerEvents = 'none';
+      indicator.style.zIndex = '9999';
+      document.body.appendChild(indicator);
+      return indicator;
+    };
+
+    const isWithinOriginalRect = (clientX: number, clientY: number) =>
+      !!originalRect &&
+      clientX >= originalRect.left &&
+      clientX <= originalRect.right &&
+      clientY >= originalRect.top &&
+      clientY <= originalRect.bottom;
+
+    const getAppendReference = (grid: HTMLElement): ChildNode | null => {
+      if (grid.id !== 'panelsGrid') return null;
+      return grid.querySelector('.add-panel-block');
+    };
+
+    const canAppendToGrid = (grid: HTMLElement, clientY: number): boolean => {
+      if (grid !== originalParent) return true;
+      const panelBottoms = Array.from(grid.children)
+        .filter((child): child is HTMLElement =>
+          child instanceof HTMLElement &&
+          child !== el &&
+          child.classList.contains('panel') &&
+          !child.classList.contains('hidden'),
+        )
+        .map((panel) => panel.getBoundingClientRect().bottom);
+      if (panelBottoms.length === 0) return false;
+      return clientY > Math.max(...panelBottoms);
+    };
+
+    const commitDrop = (dropPos: DropPosition, clientX: number, clientY: number): boolean => {
+      const { grid, panel, insertBefore } = dropPos;
+
+      if (panel) {
+        if (panel === el || panel.parentElement !== grid) return false;
+
+        if (insertBefore) {
+          if (el.nextSibling === panel) return false;
+        } else {
+          if (panel.nextSibling === el) return false;
+        }
+
+        const referenceNode = insertBefore ? panel : panel.nextSibling;
+        if (referenceNode && referenceNode.parentNode !== grid) return false;
+
+        grid.insertBefore(el, referenceNode);
+        return true;
+      }
+
+      if (grid === originalParent && isWithinOriginalRect(clientX, clientY)) {
+        return false;
+      }
+      if (!canAppendToGrid(grid, clientY)) return false;
+
+      const referenceNode = getAppendReference(grid);
+      if (referenceNode && referenceNode.parentNode !== grid) return false;
+      if (referenceNode === el) return false;
+      if (el.parentElement === grid && el.nextSibling === referenceNode) return false;
+
+      grid.insertBefore(el, referenceNode);
+      return true;
+    };
+
+    const updateGhostPosition = (clientX: number, clientY: number) => {
+      if (!ghostEl) return;
+      ghostEl.style.left = (clientX - dragOffsetX) + 'px';
+      ghostEl.style.top = (clientY - dragOffsetY) + 'px';
+    };
+
+    const findDropPosition = (clientX: number, clientY: number): DropPosition | null => {
+      const grid = document.getElementById('panelsGrid');
+      const bottomGrid = document.getElementById('mapBottomGrid');
+      if (!grid || !bottomGrid) return null;
+
+      // Temporarily hide the ghost to get accurate hit detection
+      const prevPointerEvents = ghostEl?.style.pointerEvents;
+      if (ghostEl) ghostEl.style.pointerEvents = 'none';
+      const target = document.elementFromPoint(clientX, clientY);
+      if (ghostEl && typeof prevPointerEvents === 'string') ghostEl.style.pointerEvents = prevPointerEvents;
+
+      if (!target) return null;
+
+      const targetGrid = (target.closest('.panels-grid') || target.closest('.map-bottom-grid')) as HTMLElement | null;
+      const targetPanel = target.closest('.panel') as HTMLElement | null;
+
+      if (!targetGrid && !targetPanel) return null;
+
+      const currentTargetGrid = targetGrid || (targetPanel ? targetPanel.parentElement as HTMLElement : null);
+      if (!currentTargetGrid || (currentTargetGrid !== grid && currentTargetGrid !== bottomGrid)) return null;
+      const panel = targetPanel && targetPanel !== el ? targetPanel : null;
+      let insertBefore = false;
+      if (panel) {
+        const panelRect = panel.getBoundingClientRect();
+        insertBefore = clientY < panelRect.top + panelRect.height / 2;
+      }
+
+      return {
+        grid: currentTargetGrid,
+        panel,
+        insertBefore,
+      };
+    };
+
+    let lastTargetPanel: HTMLElement | null = null;
+
+    const updateDropIndicator = (clientX: number, clientY: number) => {
+      const dropPos = findDropPosition(clientX, clientY);
+      if (!dropPos) {
+        if (dropIndicator) dropIndicator.style.opacity = '0';
+        if (lastTargetPanel) {
+          lastTargetPanel.classList.remove('panel-drop-target');
+          lastTargetPanel = null;
+        }
+        return;
+      }
+
+      const { grid, panel, insertBefore } = dropPos;
+      if (!dropIndicator) return;
+
+      const noOpEmptyDrop = !panel &&
+        ((grid === originalParent && isWithinOriginalRect(clientX, clientY)) || !canAppendToGrid(grid, clientY));
+      if (noOpEmptyDrop) {
+        dropIndicator.style.opacity = '0';
+        if (lastTargetPanel) {
+          lastTargetPanel.classList.remove('panel-drop-target');
+          lastTargetPanel = null;
+        }
+        return;
+      }
+
+      // highlight hovered panel
+      if (panel !== lastTargetPanel) {
+        if (lastTargetPanel) lastTargetPanel.classList.remove('panel-drop-target');
+        if (panel) panel.classList.add('panel-drop-target');
+        lastTargetPanel = panel;
+      }
+
+      // compute absolute coordinates for the indicator
+      let top = 0;
+      let left = 0;
+      let width = 0;
+
+      if (panel) {
+        const panelRect = panel.getBoundingClientRect();
+        width = panelRect.width;
+        left = panelRect.left;
+        top = insertBefore ? panelRect.top - 4 : panelRect.bottom;
+      } else {
+        // dropping into empty grid: position at grid bottom
+        const gridRect = grid.getBoundingClientRect();
+        width = gridRect.width;
+        left = gridRect.left;
+        top = gridRect.bottom;
+      }
+
+      dropIndicator.style.width = width + 'px';
+      dropIndicator.style.left = left + 'px';
+      dropIndicator.style.top = top + 'px';
+      dropIndicator.style.opacity = '0.8';
+    };
+
+    let lastX = 0;
+    let lastY = 0;
+
+    const onMouseMove = (e: PointerEvent) => {
+      if (!isDragging) return;
+      if (!dragStarted) {
+        const dx = Math.abs(e.clientX - startX);
+        const dy = Math.abs(e.clientY - startY);
+        if (dx < DRAG_THRESHOLD && dy < DRAG_THRESHOLD) return;
+        dragStarted = true;
+
+        // Initialize drag visualization
+        document.body.classList.add('panel-drag-active');
+        el.classList.add('dragging-source');
+        originalParent = el.parentElement as HTMLElement;
+        originalIndex = Array.from(originalParent.children).indexOf(el);
+        originalRect = el.getBoundingClientRect();
+        ghostEl = createGhostElement();
+        dropIndicator = createDropIndicator();
+        onKeyDown = (e: KeyboardEvent) => {
+          if (e.key === 'Escape') {
+            // Cancel drag and restore original position
+            document.body.classList.remove('panel-drag-active');
+            el.classList.remove('dragging-source');
+            if (ghostEl) {
+              ghostEl.style.opacity = '0';
+              const g = ghostEl;
+              setTimeout(() => g.remove(), 200);
+              ghostEl = null;
+            }
+            if (dropIndicator) {
+              dropIndicator.style.opacity = '0';
+              const d = dropIndicator;
+              setTimeout(() => d.remove(), 200);
+              dropIndicator = null;
+            }
+            if (lastTargetPanel) {
+              lastTargetPanel.classList.remove('panel-drop-target');
+              lastTargetPanel = null;
+            }
+
+            if (originalParent && originalIndex >= 0) {
+              const children = Array.from(originalParent.children);
+              const insertBefore = children[originalIndex];
+              if (insertBefore) {
+                originalParent.insertBefore(el, insertBefore);
+              } else {
+                originalParent.appendChild(el);
+              }
+            }
+
+            document.removeEventListener('keydown', onKeyDown!, true);
+            onKeyDown = null;
+            isDragging = false;
+            dragStarted = false;
+            originalRect = null;
+            if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+          }
+        };
+        document.addEventListener('keydown', onKeyDown, true);
+      }
+
+      lastX = e.clientX;
+      lastY = e.clientY;
+      const cx = e.clientX;
+      const cy = e.clientY;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        if (dragStarted) {
+          updateGhostPosition(cx, cy);
+          updateDropIndicator(cx, cy);
+        }
+        rafId = 0;
+      });
+    };
+
+    const onMouseUp = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+
+      if (dragStarted) {
+        // Find final drop position using most recent cursor coords
+        const dropPos = findDropPosition(lastX, lastY);
+        const moved = dropPos ? commitDrop(dropPos, lastX, lastY) : false;
+
+        // Clean up drag visualization (panel-drag-active is cleared unconditionally below)
+        el.classList.remove('dragging-source');
+        if (ghostEl) {
+          ghostEl.style.opacity = '0';
+          const g = ghostEl;
+          setTimeout(() => g.remove(), 200);
+          ghostEl = null;
+        }
+        if (dropIndicator) {
+          dropIndicator.style.opacity = '0';
+          const d = dropIndicator;
+          setTimeout(() => d.remove(), 200);
+          dropIndicator = null;
+        }
+        if (lastTargetPanel) {
+          lastTargetPanel.classList.remove('panel-drop-target');
+          lastTargetPanel = null;
+        }
+
+        if (moved) {
+          this.ctx.panels[key]?.refreshGridWidth();
+          const isInBottom = !!el.closest('.map-bottom-grid');
+          if (isInBottom) {
+            this.bottomSetMemory.add(key);
+          } else {
+            this.bottomSetMemory.delete(key);
+          }
+          this.savePanelOrder();
+        }
+      }
+      dragStarted = false;
+      document.body.classList.remove('panel-drag-active');
+      originalRect = null;
+      if (onKeyDown) {
+        document.removeEventListener('keydown', onKeyDown, true);
+        onKeyDown = null;
+      }
+    };
+
+    const cancelDrag = () => {
+      if (onKeyDown) onKeyDown(new KeyboardEvent('keydown', { key: 'Escape' }));
+      isDragging = false;
+    };
+    window.addEventListener('blur', cancelDrag);
+    document.addEventListener('pointercancel', cancelDrag);
+
+    el.addEventListener('pointerdown', onMouseDown);
+    document.addEventListener('pointermove', onMouseMove);
+    document.addEventListener('pointerup', onMouseUp);
+
+    // Keyboard path for reordering: the mouse drag above has no keyboard
+    // equivalent, so layout customization was impossible without a pointer.
+    // A visually-hidden-until-focused button in the header moves the panel
+    // one slot per arrow press and persists through the same savePanelOrder()
+    // path as a completed drag. Page Up/Page Down move between the sidebar
+    // and below-map grids when both zones are active on an ultra-wide layout.
+    const header = el.querySelector<HTMLElement>('.panel-header');
+    if (header && !header.querySelector('.panel-move-btn')) {
+      const moveBtn = document.createElement('button');
+      moveBtn.type = 'button';
+      moveBtn.className = 'panel-move-btn';
+      const panelTitle = el.querySelector('.panel-title')?.textContent?.trim() || key;
+      moveBtn.setAttribute(
+        'aria-label',
+        `Move ${panelTitle} panel; arrow keys reorder, Page Up moves to sidebar, Page Down moves below map`,
+      );
+      moveBtn.setAttribute(
+        'aria-keyshortcuts',
+        'ArrowLeft ArrowRight ArrowUp ArrowDown PageUp PageDown',
+      );
+      moveBtn.textContent = '⠿';
+      moveBtn.title = 'Drag to move · arrow keys to reorder';
+      moveBtn.addEventListener('keydown', (e: KeyboardEvent) => {
+        const targetZone = e.key === 'PageUp'
+          ? 'sidebar'
+          : e.key === 'PageDown'
+            ? 'bottom'
+            : null;
+        if (targetZone) {
+          if (!this.getEffectiveUltraWide()) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const sidebarGrid = document.getElementById('panelsGrid');
+          const bottomGrid = document.getElementById('mapBottomGrid');
+          if (!sidebarGrid || !bottomGrid) return;
+          const moved = movePanelToKeyboardZone({
+            panel: el,
+            panelKey: key,
+            targetZone,
+            sidebarGrid,
+            bottomGrid,
+            bottomSet: this.bottomSetMemory,
+          });
+          if (moved) {
+            this.ctx.panels[key]?.refreshGridWidth();
+            this.savePanelOrder();
+          }
+          moveBtn.focus();
+          return;
+        }
+
+        const back = e.key === 'ArrowLeft' || e.key === 'ArrowUp';
+        const fwd = e.key === 'ArrowRight' || e.key === 'ArrowDown';
+        if (!back && !fwd) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const parent = el.parentElement;
+        if (!parent) return;
+        const sibling = back ? el.previousElementSibling : el.nextElementSibling;
+        if (!(sibling instanceof HTMLElement) || !sibling.classList.contains('panel')) return;
+        if (back) parent.insertBefore(el, sibling);
+        else parent.insertBefore(el, sibling.nextElementSibling);
+        this.savePanelOrder();
+        // The button travels with the panel; keep focus on it so repeated
+        // presses keep moving the same panel.
+        moveBtn.focus();
+      });
+      header.prepend(moveBtn);
+    }
+
+    this.panelDragCleanupHandlers.push(() => {
+      window.removeEventListener('blur', cancelDrag);
+      document.removeEventListener('pointercancel', cancelDrag);
+      el.removeEventListener('pointerdown', onMouseDown);
+      document.removeEventListener('pointermove', onMouseMove);
+      document.removeEventListener('pointerup', onMouseUp);
+      if (onKeyDown) {
+        document.removeEventListener('keydown', onKeyDown, true);
+        onKeyDown = null;
+      }
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+      if (ghostEl) ghostEl.remove();
+      if (dropIndicator) dropIndicator.remove();
+      isDragging = false;
+      dragStarted = false;
+      document.body.classList.remove('panel-drag-active');
+      originalRect = null;
+      el.classList.remove('dragging-source');
+    });
+  }
 
   getLocalizedPanelName(panelKey: string, fallback: string): string {
     if (panelKey === 'runtime-config') {
