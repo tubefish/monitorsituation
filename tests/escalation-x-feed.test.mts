@@ -32,5 +32,5 @@ test('Escalation Monitor renders a native feed with loading, error, and post sta
   assert.match(source, /escalation-x-loading/);
   assert.match(source, /escalation-x-error/);
   assert.match(source, /escalation-x-post/);
-  assert.match(source, /OPEN POST/);
+  assert.match(source, /View on X/);
 });

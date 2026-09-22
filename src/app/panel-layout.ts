@@ -1,3 +1,5 @@
+import { installDashboardLayoutEditor } from './dashboard-layout-editor';
+import { MONITOR_DEFAULT_PANEL_ORDER } from '@/config/monitor-defaults';
 import { movePanelToKeyboardZone } from '@/app/panel-keyboard-reorder';
 import type { AppContext, AppModule } from '@/app/app-context';
 import { normalizeExclusiveChoropleths } from '@/components/resilience-choropleth-utils';
@@ -217,7 +219,7 @@ const CW_PRO_GATE_TAB_RECOVERY_KEY = 'worldmonitor-cw-pro-gate-tab-recovery-v1';
 const DASHBOARD_REFERENCE_LINKS = [
   { label: 'X', url: 'https://x.com/monitoringmeme' },
   { label: 'Dexscreener', url: 'https://dexscreener.com/robinhood/0xcfa7bb34e23a7022c3de3e1618e1ff29cde8f16a76c341eca19d16f928968a3d' },
-  { label: 'GitHub', url: 'https://github.com/tubefish/worldmonitor' },
+  { label: 'GitHub', url: 'https://github.com/tubefish/monitorsituation' },
   { label: 'Palantir', url: 'https://www.palantir.com/' },
 ] as const;
 
@@ -263,7 +265,7 @@ export const DEFERRED_PANEL_NATURAL_FOOTPRINTS: Readonly<Record<string, Deferred
   'energy-crisis': { rowSpan: 2 },
   'energy-disruptions': { rowSpan: 2 },
   'economic-correlation': { rowSpan: 2, className: 'panel-wide' },
-  'escalation-correlation': { rowSpan: 2, className: 'panel-wide' },
+  'escalation-correlation': { rowSpan: 3, className: 'panel-wide' },
   'fear-greed': { rowSpan: 2 },
   'fuel-shortages': { rowSpan: 2 },
   fx: { rowSpan: 2 },
@@ -736,6 +738,7 @@ export class PanelLayoutManager implements AppModule {
   }
 
   destroy(): void {
+    this.cleanupLayoutEditor?.();
     clearAllPendingCalls();
     this.applyTimeRangeFilterDebounced.cancel();
     this.unsubscribeAuth?.();
@@ -927,7 +930,10 @@ export class PanelLayoutManager implements AppModule {
     return loadFromStorage<boolean>('mobile-map-collapsed', true) === true;
   }
 
+  private cleanupLayoutEditor: (() => void) | null = null;
+
   async renderLayout(): Promise<void> {
+    document.documentElement.classList.toggle('monitor-dashboard', SITE_VARIANT === 'full');
     // #5159: the collapsed-map cohort's #mapSection must be CREATED with
     // .collapsed — main.css sets the expanded mobile height with !important
     // inside a cascade layer, and layered !important beats any unlayered
@@ -953,7 +959,7 @@ export class PanelLayoutManager implements AppModule {
     })();
     const bootShellFootprint = import.meta.env.DEV ? captureBootShellFootprint(this.ctx.container) : null;
     const referenceLinksHtml = DASHBOARD_REFERENCE_LINKS.map(({ label, url }) => {
-      return `<a href="${url}" target="_blank" rel="noopener">${label}</a>`;
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
     }).join('');
 
     markLcpDebug('wm:layout:render-start');
@@ -964,11 +970,11 @@ export class PanelLayoutManager implements AppModule {
       <div class="header" role="banner">
         <div class="header-left">
           <span class="logo">$MONITOR</span><span class="logo-mobile">$Monitor</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
-          <a href="https://x.com/monitoringmeme" target="_blank" rel="noopener" class="credit-link">
+          <a href="https://x.com/monitoringmeme" target="_blank" rel="noopener noreferrer" class="credit-link">
             <svg class="x-logo" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
             <span class="credit-text">@monitoringmeme</span>
           </a>
-          <a href="https://github.com/tubefish/worldmonitor" target="_blank" rel="noopener" class="github-link" title="${t('header.viewOnGitHub')}" aria-label="${t('header.viewOnGitHub')}">
+          <a href="https://github.com/tubefish/monitorsituation" target="_blank" rel="noopener noreferrer" class="github-link" title="${t('header.viewOnGitHub')}" aria-label="${t('header.viewOnGitHub')}">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
           </a>
           <div class="status-indicator">
@@ -992,6 +998,7 @@ export class PanelLayoutManager implements AppModule {
           </button>
         </div>
         <div class="header-right">
+          ${SITE_VARIANT === 'full' ? '<button type="button" id="customizeLayoutBtn" class="monitor-toolbar-button" aria-pressed="false">Customize</button><button type="button" id="shareViewBtn" class="monitor-toolbar-button">Share view</button>' : ''}
           <button class="search-btn" id="searchBtn"><kbd>⌘K</kbd> ${t('header.search')}</button>
           ${this.ctx.isDesktopApp ? '' : `<button class="copy-link-btn" id="copyLinkBtn">${t('header.copyLink')}</button>`}
           ${this.ctx.isDesktopApp ? '' : `<button class="copy-link-btn embed-link-btn" id="embedLinkBtn">${t('header.embed')}</button>`}
@@ -1043,11 +1050,12 @@ export class PanelLayoutManager implements AppModule {
           <span class="mobile-menu-item-icon">${getCurrentTheme() === 'dark' ? '☀️' : '🌙'}</span>
           <span class="mobile-menu-item-label">${getCurrentTheme() === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
         </button>
-        <a class="mobile-menu-item" href="https://x.com/monitoringmeme" target="_blank" rel="noopener">
+        <a class="mobile-menu-item" href="https://x.com/monitoringmeme" target="_blank" rel="noopener noreferrer">
           <span class="mobile-menu-item-icon"><svg class="x-logo" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span>
           <span class="mobile-menu-item-label">@monitoringmeme</span>
         </a>
         <div class="mobile-menu-divider"></div>
+        ${SITE_VARIANT === 'full' ? '<button type="button" id="mobileCustomizeLayoutBtn" class="mobile-menu-item" aria-pressed="false">Customize layout</button><button type="button" id="mobileShareViewBtn" class="mobile-menu-item">Share this view</button>' : ''}
         <div class="mobile-menu-footer-links">
           ${referenceLinksHtml}
         </div>
@@ -1110,7 +1118,7 @@ export class PanelLayoutManager implements AppModule {
         <div class="site-footer-brand">
           <div class="site-footer-brand-text">
             <span class="site-footer-name">$MONITOR</span>
-            <span class="site-footer-sub">CA: 0x1a911bb954dAA9CB38513423075bE74450351e18 &middot; <a href="https://x.com/monitoringmeme" target="_blank" rel="noopener" class="site-footer-credit">@monitoringmeme</a></span>
+            <span class="site-footer-sub"><button type="button" class="monitor-contract-copy" title="Copy full contract address" aria-label="Copy MONITOR contract address">0x1a91…1e18</button> &middot; <a href="https://x.com/monitoringmeme" target="_blank" rel="noopener noreferrer" class="site-footer-credit">@monitoringmeme</a></span>
           </div>
         </div>
         <nav aria-label="$MONITOR references">
@@ -1124,6 +1132,16 @@ export class PanelLayoutManager implements AppModule {
     // earlier than any LCP candidate in the new shell, making it useless for
     // ordering the LCP element against the shell swap (PR #4512 review).
     markLcpDebug('wm:layout:shell-replaced');
+    this.cleanupLayoutEditor?.();
+    if (SITE_VARIANT === 'full') this.cleanupLayoutEditor = installDashboardLayoutEditor({
+      defaultOrder: MONITOR_DEFAULT_PANEL_ORDER,
+      defaultRows: DEFERRED_PANEL_NATURAL_FOOTPRINTS,
+      persistOrder: bottom => {
+        this.bottomSetMemory = new Set(bottom);
+        return this.savePanelOrder().persisted;
+      },
+      refreshPanels: () => Object.values(this.ctx.panels).forEach(panel => panel.refreshGridWidth()),
+    });
 
     // Skip link: explicitly move focus to <main> on activation. Native
     // fragment focus on a tabindex="-1" target is inconsistent across
@@ -3902,6 +3920,7 @@ export class PanelLayoutManager implements AppModule {
     const DRAG_THRESHOLD = 8;
 
     const onMouseDown = (e: PointerEvent) => {
+      if (SITE_VARIANT === 'full' && !document.documentElement.classList.contains('monitor-layout-editing')) return;
       if (e.button !== 0 || !e.isPrimary) return;
       if (e.pointerType !== 'mouse' && !(e.target as HTMLElement).closest('.panel-move-btn')) return;
       const target = e.target as HTMLElement;
@@ -4270,6 +4289,7 @@ export class PanelLayoutManager implements AppModule {
       moveBtn.textContent = '⠿';
       moveBtn.title = 'Drag to move · arrow keys to reorder';
       moveBtn.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (SITE_VARIANT === 'full' && !document.documentElement.classList.contains('monitor-layout-editing')) return;
         const targetZone = e.key === 'PageUp'
           ? 'sidebar'
           : e.key === 'PageDown'

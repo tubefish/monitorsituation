@@ -1,3 +1,4 @@
+import { cleanDashboardUrl } from '@/utils/dashboard-url';
 import type {
   AppContext,
   AppModule,
@@ -335,7 +336,7 @@ export class EventHandlerManager implements AppModule {
     if (!shareUrl) return;
     // Preserve the shared mobile-overlay marker while syncing map URL state;
     // replacing it with null makes Android Back skip the open sheet.
-    try { history.replaceState(history.state, '', shareUrl); } catch { }
+    try { history.replaceState(history.state, '', SITE_VARIANT === 'full' ? cleanDashboardUrl(window.location.href, shareUrl) : shareUrl); } catch { }
   };
   private readonly debouncedUrlSync = debounce(this.writeUrlState, 250);
 
@@ -650,6 +651,19 @@ export class EventHandlerManager implements AppModule {
   }
 
   private setupEventListeners(): void {
+    for (const id of ['shareViewBtn', 'mobileShareViewBtn']) {
+      document.getElementById(id)?.addEventListener('click', async () => {
+        const url = this.getShareUrl();
+        if (!url) { showToast('The map is still loading. Try again in a moment.', 2500); return; }
+        try { await this.copyToClipboard(url); showToast('View link copied', 2500); }
+        catch { showToast('Could not copy the link. Please try again.', 2500); }
+      });
+    }
+    document.querySelector('.monitor-contract-copy')?.addEventListener('click', async () => {
+      try { await this.copyToClipboard('0x1a911bb954dAA9CB38513423075bE74450351e18'); showToast('Contract address copied', 2500); }
+      catch { showToast('Could not copy. Please try again.', 2500); }
+    });
+
     document.getElementById('copyLinkBtn')?.addEventListener('click', async () => {
       const contractAddress = '0x1a911bb954dAA9CB38513423075bE74450351e18';
       const button = document.getElementById('copyLinkBtn');

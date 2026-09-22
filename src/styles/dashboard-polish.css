@@ -1,0 +1,176 @@
+/* MONITOR working surface: quiet chrome, readable stories, explicit editing. */
+html.monitor-dashboard {
+  --monitor-reading-font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --monitor-accent: #167047;
+  --monitor-soft-accent: #eaf5ee;
+}
+html.monitor-dashboard[data-theme='dark'] {
+  --monitor-accent: #78dda9;
+  --monitor-soft-accent: #193629;
+}
+.monitor-dashboard .header {
+  min-height: 54px;
+  height: auto;
+  padding: 8px 16px;
+  gap: 16px;
+}
+.monitor-dashboard .header-right { gap: 8px; padding-left: 0; }
+.monitor-dashboard .header button,
+.monitor-dashboard .region-select,
+.monitor-dashboard .monitor-layout-toolbar button {
+  min-height: 36px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.monitor-toolbar-button,
+.monitor-layout-toolbar button {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text);
+  font-family: var(--monitor-reading-font);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.monitor-toolbar-button:hover,
+.monitor-layout-toolbar button:hover { background: var(--surface-hover); }
+.monitor-dashboard .monitor-primary-button,
+.monitor-toolbar-button[aria-pressed='true'] {
+  background: var(--monitor-soft-accent);
+  border-color: var(--monitor-accent);
+  color: var(--monitor-accent);
+}
+.monitor-dashboard :is(button, a, summary, select, input):focus-visible {
+  outline: 2px solid var(--monitor-accent);
+  outline-offset: 3px;
+}
+.monitor-dashboard .panel-header { min-height: 44px; padding: 8px 12px; }
+.monitor-dashboard .panel-title { font-size: calc(12px * var(--wm-panel-effective-scale, 1)); letter-spacing: .055em; }
+.monitor-dashboard .panel { border-radius: 7px; }
+.monitor-dashboard .panel-content { scrollbar-gutter: stable; overscroll-behavior: contain; }
+.monitor-dashboard :is(.item-title, .news-item-title, .cluster-title, .escalation-x-post-text) {
+  font-family: var(--monitor-reading-font);
+  font-size: calc(15px * var(--wm-panel-effective-scale, 1));
+  line-height: 1.55;
+  letter-spacing: normal;
+  overflow-wrap: anywhere;
+}
+.monitor-dashboard .escalation-x-post { margin-bottom: 10px; border-radius: 7px; }
+.monitor-dashboard .escalation-x-post-body { padding: 14px; }
+.monitor-dashboard .escalation-x-name { font-family: var(--monitor-reading-font); font-size: 14px; }
+.monitor-dashboard :is(.escalation-x-handle, .escalation-x-post-time, .escalation-x-post-stats, .escalation-x-updated) { font-size: 12px; }
+.monitor-dashboard .escalation-x-updated { color: var(--text-secondary); }
+.monitor-dashboard .escalation-x-post-meta { flex-wrap: wrap; gap: 8px; }
+.monitor-dashboard .escalation-x-post-time { margin-left: auto; }
+.monitor-dashboard .escalation-x-open-post { font-size: 12px; min-height: 32px; display: inline-flex; align-items: center; }
+.monitor-dashboard .escalation-x-account-bar { padding: 10px 12px; gap: 10px; }
+.monitor-dashboard .escalation-x-status { flex-wrap: wrap; justify-content: flex-end; }
+.monitor-feed-update {
+  position: absolute;
+  z-index: 4;
+  top: 48px;
+  left: 0;
+  display: block;
+  width: calc(100% - 24px);
+  margin: 8px 12px;
+  min-height: 40px;
+  border: 1px solid var(--monitor-accent);
+  border-radius: 6px;
+  background: var(--monitor-soft-accent);
+  color: var(--monitor-accent);
+  font: 600 13px var(--monitor-reading-font);
+  cursor: pointer;
+}
+.monitor-feed-update[hidden] { display: none; }
+.monitor-feed-notice { padding: 10px 12px; color: var(--text-secondary); font: 13px/1.5 var(--monitor-reading-font); }
+.monitor-feed-refresh { min-height: 32px; border: 1px solid var(--border); border-radius: 5px; padding: 4px 10px; background: var(--panel-bg); color: var(--text); cursor: pointer; }
+.monitor-dashboard .market-heatmap-tabs button { min-height: 36px; font-size: 13px; }
+.monitor-dashboard .market-heatmap-key { font-size: 12px; }
+.monitor-dashboard .market-heatmap-footer { font: 12px/1.5 var(--monitor-reading-font); padding: 9px 12px; }
+.monitor-dashboard .site-footer { padding: 8px 16px; gap: 8px 18px; }
+.monitor-dashboard .site-footer-sub { font-size: 11px; letter-spacing: .015em; }
+.monitor-dashboard .site-footer nav { align-items: center; gap: 14px; }
+.monitor-dashboard .site-footer nav a { font-size: 12px; padding: 6px 0; }
+.monitor-contract-copy { border: 0; background: none; padding: 2px 0; color: inherit; font: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.monitor-dashboard :is(.site-footer a, .mobile-menu-footer-links a, .escalation-x-open-post, .market-heatmap-footer a) { text-underline-offset: 3px; }
+.monitor-dashboard :is(.site-footer a, .mobile-menu-footer-links a, .escalation-x-open-post):hover { color: var(--monitor-accent); text-decoration: underline; }
+
+/* Browsing is stable. Layout handles become discoverable when explicitly editing. */
+.monitor-dashboard:not(.monitor-layout-editing) :is(.panel-move-btn, .panel-resize-handle, .panel-col-resize-handle) { display: none !important; }
+.monitor-dashboard:not(.monitor-layout-editing) .panel-header { cursor: default; }
+.monitor-layout-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--monitor-soft-accent);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.monitor-layout-toolbar[hidden] { display: none; }
+.monitor-layout-note { margin-right: auto; font: 13px/1.4 var(--monitor-reading-font); color: var(--text); }
+.monitor-layout-editing .panel { outline: 1px dashed var(--monitor-accent); outline-offset: -2px; }
+.monitor-layout-editing .panel-move-btn { opacity: 1; visibility: visible; min-width: 30px; min-height: 30px; color: var(--monitor-accent); }
+.monitor-layout-editing :is(.panel-resize-handle, .panel-col-resize-handle) { opacity: 1; background-color: var(--monitor-soft-accent); }
+.monitor-dashboard .map-width-resize-handle { transition: background-color 120ms ease; }
+.monitor-dashboard .map-width-resize-handle:hover { background: var(--monitor-accent); }
+
+/* Preserve each renderer's native layer controls inside a grouped disclosure. */
+.monitor-dashboard .monitor-layer-controls {
+  display: block;
+  width: min(300px, calc(100% - 24px));
+  max-width: calc(100% - 24px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  pointer-events: auto;
+}
+.monitor-layer-drawer {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  box-shadow: 0 3px 16px var(--shadow-color);
+  overflow: hidden;
+}
+.monitor-layer-drawer summary { min-height: 42px; padding: 11px 12px; cursor: pointer; color: var(--text); font: 600 13px var(--monitor-reading-font); }
+.monitor-layer-count { float: right; font-weight: 400; color: var(--text-secondary); }
+.monitor-layer-drawer[open] summary { border-bottom: 1px solid var(--border); }
+.monitor-layer-body { padding: 8px; }
+.monitor-layer-body .toggle-list { display: block; max-height: min(40vh, 360px) !important; overflow-y: auto; overscroll-behavior: contain; }
+.monitor-layer-group { margin: 0 0 10px; }
+.monitor-layer-group h3 { margin: 9px 6px 6px; color: var(--text-secondary); font: 600 11px var(--monitor-reading-font); text-transform: uppercase; letter-spacing: .05em; }
+.monitor-dashboard .monitor-layer-controls .layer-toggle-row { display: flex; width: 100%; gap: 4px; }
+.monitor-dashboard .monitor-layer-controls .layer-toggle { display: flex; align-items: center; gap: 8px; flex: 1; min-height: 36px; padding: 7px 8px; font: 12px var(--monitor-reading-font); text-align: left; white-space: normal; border-radius: 5px; }
+.monitor-dashboard .monitor-layer-controls .toggle-label { font: inherit; }
+.monitor-dashboard .monitor-layer-controls .layer-explain-btn { min-width: 30px; min-height: 36px; font-size: 12px; }
+.monitor-dashboard .monitor-layer-controls .layer-help-btn { min-height: 32px; width: auto; margin-bottom: 6px; padding: 5px 8px; font-size: 12px; }
+.monitor-active-layers { display: flex; gap: 4px; flex-wrap: wrap; padding-top: 6px; }
+.monitor-active-layers[hidden] { display: none; }
+.monitor-active-layers span { padding: 4px 6px; background: var(--panel-bg); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 4px; font: 10px var(--monitor-reading-font); }
+
+@media (max-width: 768px) {
+  .monitor-dashboard .header { min-height: 50px; padding: 6px 10px; }
+  .monitor-dashboard .header-right > #customizeLayoutBtn,
+  .monitor-dashboard .header-right > #shareViewBtn { display: none !important; }
+  .monitor-dashboard :is(.mobile-tab, .mobile-menu-item, .mobile-menu-close, .mobile-menu-footer-links a, .panel-expand-btn, .market-heatmap-tabs button) { min-height: 44px; min-width: 44px; }
+  .monitor-dashboard .mobile-menu-item { font-size: 14px; }
+  .monitor-dashboard .escalation-x-post-text { font-size: calc(16px * var(--wm-panel-effective-scale, 1)); }
+  .monitor-dashboard .escalation-x-status { max-width: none; }
+  .monitor-dashboard .escalation-x-updated { display: inline; }
+  .monitor-dashboard .escalation-x-account-bar { flex-wrap: wrap; }
+  .monitor-dashboard .market-heatmap-toolbar { gap: 6px; padding: 8px; }
+  .monitor-dashboard .market-heatmap-tabs button { padding: 6px 10px; }
+  .monitor-dashboard .market-heatmap-key { font-size: 11px; gap: 6px; }
+  .monitor-layout-toolbar { flex-wrap: wrap; padding: 8px; }
+  .monitor-layout-note { flex-basis: 100%; }
+  .monitor-layout-toolbar button { min-height: 44px; flex: 1; }
+  .monitor-dashboard .monitor-layer-controls .layer-toggle,
+  .monitor-dashboard .monitor-layer-controls .layer-explain-btn { min-height: 44px; }
+  .monitor-layer-body .toggle-list { max-height: 32vh !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .monitor-dashboard :is(.panel, .panel-header, .escalation-x-post, .map-width-resize-handle) { transition: none !important; }
+  .monitor-dashboard .escalation-x-skeleton span { animation: none; }
+}

@@ -10,6 +10,7 @@
 @import url('./country-deep-dive.css') layer(base);
 @import url('./map-context-menu.css') layer(base);
 @import url('./supply-chain-panel.css') layer(base);
+@import url('./dashboard-polish.css');
 
 /* $MONITOR factory footprint for the generic Financial news panel.
  * The finance panel uses NewsPanel, whose upstream natural size is 1x1.

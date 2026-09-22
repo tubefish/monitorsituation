@@ -1,3 +1,4 @@
+import { organizeMapLayerControls } from './map-layer-drawer';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
 import { escapeHtml } from '@/utils/sanitize';
@@ -432,7 +433,10 @@ export class MapComponent {
     this.scheduleRender();
   }
 
+  private cleanupLayerDrawer: (() => void) | null = null;
+
   public destroy(): void {
+    this.cleanupLayerDrawer?.();
     this.destroyed = true;
     this.listenerAbort.abort();
     if (this.markerSettleTimer !== null) {
@@ -707,6 +711,8 @@ export class MapComponent {
     toggles.appendChild(helpBtn);
     enforceLayerLimit();
 
+    this.cleanupLayerDrawer?.();
+    this.cleanupLayerDrawer = organizeMapLayerControls(toggles);
     return toggles;
   }
 

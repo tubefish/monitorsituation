@@ -1,3 +1,4 @@
+import { organizeMapLayerControls } from './map-layer-drawer';
 /**
  * DeckGLMap - WebGL-accelerated map visualization for desktop
  * Uses deck.gl for high-performance rendering of large datasets
@@ -5821,6 +5822,8 @@ export class DeckGLMap {
       if (searchEl) searchEl.style.display = toggleList?.classList.contains('collapsed') ? 'none' : '';
       if (collapseBtn) setTrustedHtml(collapseBtn, trustedHtml(toggleList?.classList.contains('collapsed') ? '&#9654;' : '&#9660;', "legacy direct innerHTML migration"));
     });
+    this.cleanupLayerDrawer?.();
+    this.cleanupLayerDrawer = organizeMapLayerControls(toggles);
   }
 
   private showLayerExplanation(layer: keyof MapLayers): void {
@@ -8180,7 +8183,10 @@ export class DeckGLMap {
     }
   }
 
+  private cleanupLayerDrawer: (() => void) | null = null;
+
   public destroy(): void {
+    this.cleanupLayerDrawer?.();
     this.destroyed = true;
     this.aircraftFetchSeq += 1;
     this.settleViewportMovement(false);
