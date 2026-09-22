@@ -1143,6 +1143,9 @@ export class PanelLayoutManager implements AppModule {
     // Refit spans when either zone changes size, preserving saved widths.
     const gridObserver = new ResizeObserver(() => {
       for (const panel of Object.values(this.ctx.panels)) panel.refreshGridWidth();
+      document.querySelectorAll<HTMLElement>('.panel-deferred-shell').forEach((shell) => {
+        reconcileDeferredPanelShellColSpan(shell);
+      });
     });
     for (const id of ['panelsGrid', 'mapBottomGrid']) {
       const grid = document.getElementById(id);

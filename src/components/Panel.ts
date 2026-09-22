@@ -54,7 +54,8 @@ const COL_RESIZE_STEP_PX = 80;
 const FRESHNESS_BADGE_REFRESH_MS = 60_000;
 
 function getDefaultColSpan(element: HTMLElement): number {
-  return element.classList.contains('panel-wide') ? 2 : 1;
+  // Financial's MONITOR factory footprint is declared in base-layer.css.
+  return element.classList.contains('panel-wide') || element.dataset.panel === 'finance' ? 2 : 1;
 }
 
 function getColSpan(element: HTMLElement): number {

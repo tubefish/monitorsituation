@@ -203,8 +203,10 @@ export function createDeferredPanelShell(
  */
 export function reconcileDeferredPanelShellColSpan(shell: HTMLElement, attempts = 3): void {
   const tryReconcile = (remaining: number): void => {
-    const currentSpan = getExplicitColSpanClass(shell);
-    if (currentSpan === undefined) return;
+    const naturalSpan = shell.classList.contains('panel-wide') || shell.dataset.panel === 'finance' ? 2 : 1;
+    const currentSpan = Number(shell.dataset.preferredColSpan)
+      || getExplicitColSpanClass(shell) || naturalSpan;
+    shell.dataset.preferredColSpan = String(currentSpan);
 
     if (!shell.isConnected || !shell.parentElement || !isPanelGridColumnCountReady(shell)) {
       if (remaining <= 0 || typeof requestAnimationFrame !== 'function') return;
@@ -213,9 +215,7 @@ export function reconcileDeferredPanelShellColSpan(shell: HTMLElement, attempts 
     }
     const maxSpan = getMaxColSpan(shell);
     const clampedSpan = Math.max(1, Math.min(maxSpan, currentSpan));
-    if (clampedSpan !== currentSpan) {
-      setColSpanClass(shell, clampedSpan);
-    }
+    setColSpanClass(shell, clampedSpan);
   };
 
   tryReconcile(attempts);
