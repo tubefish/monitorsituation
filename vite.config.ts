@@ -107,6 +107,7 @@ const PANEL_CLUSTER: Record<string, PanelChunkName> = {
   Fx: 'panels-markets',
   GoldIntelligence: 'panels-markets', LiquidityShifts: 'panels-markets',
   MacroSignals: 'panels-markets', Market: 'panels-markets', MarketHeatmap: 'panels-markets',
+  CommodityWatch: 'panels-markets', MonitorMarket: 'panels-markets',
   MarketBreadth: 'panels-markets', MarketImplications: 'panels-markets',
   NewsMarketCorrelation: 'panels-markets',
   NqCatalysts: 'panels-markets', NqPulse: 'panels-markets',
