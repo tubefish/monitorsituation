@@ -3920,7 +3920,6 @@ export class PanelLayoutManager implements AppModule {
     const DRAG_THRESHOLD = 8;
 
     const onMouseDown = (e: PointerEvent) => {
-      if (SITE_VARIANT === 'full' && !document.documentElement.classList.contains('monitor-layout-editing')) return;
       if (e.button !== 0 || !e.isPrimary) return;
       if (e.pointerType !== 'mouse' && !(e.target as HTMLElement).closest('.panel-move-btn')) return;
       const target = e.target as HTMLElement;
@@ -4289,7 +4288,6 @@ export class PanelLayoutManager implements AppModule {
       moveBtn.textContent = '⠿';
       moveBtn.title = 'Drag to move · arrow keys to reorder';
       moveBtn.addEventListener('keydown', (e: KeyboardEvent) => {
-        if (SITE_VARIANT === 'full' && !document.documentElement.classList.contains('monitor-layout-editing')) return;
         const targetZone = e.key === 'PageUp'
           ? 'sidebar'
           : e.key === 'PageDown'
