@@ -162,3 +162,19 @@
     display: none !important;
   }
 }
+
+/* $MONITOR restores the built-in Add Panel launcher without re-enabling the
+ * separate Pro/MCP promotional add-panel blocks. PanelLayoutManager already
+ * creates this button and opens Settings -> Panels when it is clicked; the
+ * MONITOR shell was only hiding it with a blanket .add-panel-block rule. */
+@layer base {
+  #panelsGrid .add-panel-block[data-cls-mover="add-panel"] {
+    display: flex !important;
+  }
+
+  @media (max-width: 768px) {
+    #panelsGrid.mobile-cat-filtered .add-panel-block[data-cls-mover="add-panel"] {
+      display: none !important;
+    }
+  }
+}
