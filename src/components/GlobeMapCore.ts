@@ -1,3 +1,4 @@
+import { organizeMapLayerControls } from './map-layer-drawer';
 /**
  * GlobeMap - 3D interactive globe using globe.gl
  *
@@ -2124,6 +2125,9 @@ export class GlobeMap {
       if (list) list.scrollTop += e.deltaY;
     }, { passive: false });
 
+    this.cleanupLayerDrawer?.();
+    this.cleanupLayerDrawer = organizeMapLayerControls(el);
+
     // The panel usually mounts after the first flush, so replay what that flush withheld.
     this.updateLayerTruncationLabels();
   }
@@ -4031,7 +4035,10 @@ export class GlobeMap {
 
   // ─── Destroy ──────────────────────────────────────────────────────────────
 
+  private cleanupLayerDrawer: (() => void) | null = null;
+
   public destroy(): void {
+    this.cleanupLayerDrawer?.();
     this.popup?.hide();
     this.popup = null;
     this.flightData.clear();
