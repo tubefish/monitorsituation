@@ -45,8 +45,8 @@ export class MonitorMarketPanel extends Panel {
     super({
         id: 'monitor-market',
         title: '$MONITOR LIVE',
-        className: 'panel-wide',
-        defaultRowSpan: 3,
+        className: 'monitor-token-panel',
+        defaultRowSpan: 2,
         closable: true,
         collapsible: true,
 });

@@ -25,7 +25,8 @@ export interface EscalationXFeed {
   fetchedAt: string;
 }
 
-const CLIENT_CACHE_TTL_MS = 5 * 60 * 1000;
+export const X_FEED_POLL_INTERVAL_MS = 60_000;
+const CLIENT_CACHE_TTL_MS = 55_000;
 const cache = new Map<string, { response: EscalationXFeed; cachedAt: number }>();
 
 function getErrorMessage(payload: unknown, status: number): string {

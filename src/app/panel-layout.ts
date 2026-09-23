@@ -273,8 +273,9 @@ export const DEFERRED_PANEL_NATURAL_FOOTPRINTS: Readonly<Record<string, Deferred
   intel: { rowSpan: 2 },
   'internet-disruptions': { rowSpan: 2 },
   'live-news': { rowSpan: 3, className: 'panel-wide' },
-  'monitor-market': { rowSpan: 3, className: 'panel-wide' },
+  'monitor-market': { rowSpan: 2 },
   'market-heatmap': { rowSpan: 3, className: 'panel-wide' },
+  'commodity-watch': { rowSpan: 3, className: 'panel-wide' },
   'live-webcams': { className: 'panel-wide' },
   'news-market-correlation': { rowSpan: 2, className: 'panel-wide' },
   'oil-inventories': { rowSpan: 2 },
@@ -2500,6 +2501,7 @@ export class PanelLayoutManager implements AppModule {
 
     this.lazyDefaultPanel('heatmap', () => import('@/components/MarketPanel'), 'HeatmapPanel');
     this.lazyDefaultPanel('markets', () => import('@/components/MarketPanel'), 'MarketPanel');
+    this.lazyDefaultPanel('commodity-watch', () => import('@/components/CommodityWatchPanel'), 'CommodityWatchPanel');
     this.lazyDefaultPanel('monitor-market', () => import('@/components/MonitorMarketPanel'), 'MonitorMarketPanel');
     this.lazyDefaultPanel('market-heatmap', () => import('@/components/MarketHeatmapPanel'), 'MarketHeatmapPanel');
     this.lazyDefaultPanel('stock-analysis', () => import('@/components/StockAnalysisPanel'), 'StockAnalysisPanel');

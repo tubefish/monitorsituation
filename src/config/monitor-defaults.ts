@@ -1,5 +1,6 @@
 import type { PanelConfig } from '@/types';
 import { SITE_VARIANT } from './variant';
+import { migrateMonitorMarketLayout } from './monitor-layout-migration';
 import {
   ALL_PANELS,
   DEFAULT_PANELS as UPSTREAM_DEFAULT_PANELS,
@@ -16,7 +17,8 @@ import {
  *
  * Desktop natural footprints are owned by the panel components/CSS:
  * - live-news: 2 wide x 3 tall
- * - monitor-market: 2 wide x 3 tall
+ * - monitor-market: 1 wide x 2 tall
+ * - commodity-watch: 2 wide x 3 tall
  * - threat-timeline: 2 wide x 2 tall
  * - intel: 1 wide x 2 tall
  * - fear-greed: 1 wide x 2 tall
@@ -31,8 +33,8 @@ export const MONITOR_DEFAULT_PANEL_ORDER = [
   'map',
   'escalation-correlation',
   'market-heatmap',
+  'commodity-watch',
   'live-news',
-  'monitor-market',
   'threat-timeline',
   'intel',
   'fear-greed',
@@ -41,6 +43,7 @@ export const MONITOR_DEFAULT_PANEL_ORDER = [
   'economic-correlation',
   'cascade',
   'finance',
+  'monitor-market',
 ] as const;
 
 /**
@@ -112,6 +115,10 @@ if (SITE_VARIANT === 'full' && typeof window !== 'undefined') {
       window.localStorage.setItem(migrationKey, 'done');
     }
   } catch { /* Normal defaults still apply if storage is unavailable. */ }
+}
+
+if (SITE_VARIANT === 'full' && typeof window !== 'undefined') {
+  try { migrateMonitorMarketLayout(window.localStorage); } catch { /* Storage may be disabled. */ }
 }
 
 /**

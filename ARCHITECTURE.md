@@ -92,6 +92,12 @@ Stocks show S&P 500 daily changes; crypto shows 24-hour changes. Tile area track
 market capitalization. Provider attribution and the stock-data delay notice are
 visible in the panel footer.
 
+The Commodities section (`commodity-watch`) uses TradingView’s provider-hosted
+Market Data widget for energy, metals, and agriculture. It uses no application
+RPC or bootstrap key. The native X Tracker checks visible feeds every minute
+through a shared 60-second CDN cache and automatically displays new posts when
+the reader is at the top; older posts remain stable while reading.
+
 ## 3. Frontend Architecture
 
 ### Entry and Initialization

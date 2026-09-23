@@ -7,9 +7,9 @@ export const config = { runtime: 'edge' };
 const X_API_BASE = 'https://api.x.com/2';
 const X_REQUEST_TIMEOUT_MS = 12_000;
 const SUCCESS_HEADERS = {
-  'Cache-Control': 'public, max-age=60',
-  'CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600, stale-if-error=86400',
-  'Vercel-CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600, stale-if-error=86400',
+  'Cache-Control': 'public, max-age=0',
+  'CDN-Cache-Control': 'public, s-maxage=60, stale-if-error=86400',
+  'Vercel-CDN-Cache-Control': 'public, s-maxage=60, stale-if-error=86400',
 };
 const NO_STORE_HEADERS = { 'Cache-Control': 'no-store' };
 

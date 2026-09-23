@@ -125,6 +125,7 @@ export class Panel {
   private severityDotEl: HTMLElement | null = null;
   private currentSeverity: PanelSeverity = 'none';
   protected panelId: string;
+  private readonly defaultRowSpan: number;
   private abortController: AbortController = new AbortController();
   private tooltipCloseHandler: (() => void) | null = null;
   private resizeHandle: HTMLElement | null = null;
@@ -202,6 +203,7 @@ export class Panel {
 
   constructor(options: PanelOptions) {
     this.panelId = options.id;
+    this.defaultRowSpan = options.defaultRowSpan ?? (options.className?.split(' ').includes('panel-wide') ? 2 : 1);
     this.element = document.createElement('div');
     this.element.className = `panel ${options.className || ''}`;
     this.element.dataset.panel = options.id;
@@ -428,7 +430,7 @@ export class Panel {
     handle.tabIndex = 0;
     handle.setAttribute('role', 'separator');
     handle.setAttribute('aria-orientation', 'horizontal');
-    handle.setAttribute('aria-label', t('components.panel.dragToResize'));
+    handle.setAttribute('aria-label', `Resize ${this.header.querySelector('.panel-title')?.textContent ?? this.panelId} height`);
     handle.setAttribute('aria-valuemin', '1');
     handle.setAttribute('aria-valuemax', '4');
     this.syncKeyboardRowResizeAria();
@@ -455,7 +457,7 @@ export class Panel {
     handle.tabIndex = 0;
     handle.setAttribute('role', 'separator');
     handle.setAttribute('aria-orientation', 'vertical');
-    handle.setAttribute('aria-label', t('components.panel.dragToResize'));
+    handle.setAttribute('aria-label', `Resize ${this.header.querySelector('.panel-title')?.textContent ?? this.panelId} width`);
     handle.setAttribute('aria-valuemin', '1');
     this.syncKeyboardColResizeAria();
     handle.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -1680,6 +1682,7 @@ export class Panel {
    */
   public resetHeight(): void {
     this.element.classList.remove('resized', 'span-1', 'span-2', 'span-3', 'span-4');
+    if (this.defaultRowSpan > 1) this.element.classList.add(`span-${this.defaultRowSpan}`);
     clearPanelSpan(this.panelId);
     this.syncKeyboardRowResizeAria();
   }
