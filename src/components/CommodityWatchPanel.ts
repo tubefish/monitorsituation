@@ -8,7 +8,7 @@ const SYMBOL_GROUPS = [
   { name: 'Energy', symbols: [
     { name: 'TVC:USOIL', displayName: 'WTI Crude Oil' },
     { name: 'CMCMARKETS:UKCRUDEOIL', displayName: 'Brent Crude Oil' },
-    { name: 'CMCMARKETS:USNATGAS1!', displayName: 'Natural Gas' },
+    { name: 'CMCMARKETS:USNATGAS', displayName: 'Natural Gas' },
   ] },
   { name: 'Metals', symbols: [
     { name: 'CMCMARKETS:GOLD', displayName: 'Gold' },
