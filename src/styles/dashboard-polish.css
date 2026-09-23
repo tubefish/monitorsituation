@@ -48,6 +48,28 @@ html.monitor-dashboard[data-theme='dark'] {
 .monitor-dashboard .panel-header { min-height: 44px; padding: 8px 12px; }
 .monitor-dashboard .panel-title { font-size: calc(12px * var(--wm-panel-effective-scale, 1)); letter-spacing: .055em; }
 .monitor-dashboard .panel { border-radius: 7px; }
+/* Keep the clock in normal flow, even when the map column is resized. */
+.monitor-dashboard .map-section > .panel-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 8px;
+  cursor: default;
+}
+.monitor-dashboard .map-section > .panel-header > .panel-header-left { grid-column: 1; grid-row: 1; min-width: 0; }
+.monitor-dashboard .map-section > .panel-header > .panel-expand-btn { grid-column: 2; grid-row: 1; }
+.monitor-dashboard .map-section .header-clock {
+  display: block;
+  position: static;
+  transform: none;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-width: 0;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
 .monitor-dashboard .panel-content { scrollbar-gutter: stable; overscroll-behavior: contain; }
 .monitor-dashboard :is(.item-title, .news-item-title, .cluster-title, .escalation-x-post-text) {
   font-family: var(--monitor-reading-font);
@@ -96,9 +118,11 @@ html.monitor-dashboard[data-theme='dark'] {
 .monitor-dashboard :is(.site-footer a, .mobile-menu-footer-links a, .escalation-x-open-post, .market-heatmap-footer a) { text-underline-offset: 3px; }
 .monitor-dashboard :is(.site-footer a, .mobile-menu-footer-links a, .escalation-x-open-post):hover { color: var(--monitor-accent); text-decoration: underline; }
 
-/* Browsing is stable. Layout handles become discoverable when explicitly editing. */
-.monitor-dashboard:not(.monitor-layout-editing) :is(.panel-move-btn, .panel-resize-handle, .panel-col-resize-handle) { display: none !important; }
-.monitor-dashboard:not(.monitor-layout-editing) .panel-header { cursor: default; }
+/* Section headers always move; Customize exposes sizing and reset controls. */
+.monitor-dashboard:not(.monitor-layout-editing) :is(.panel-resize-handle, .panel-col-resize-handle) { display: none !important; }
+.monitor-dashboard .panel:not(.panel-expanded):not(.live-news-fullscreen) > .panel-header { cursor: grab; }
+.monitor-dashboard .panel:not(.panel-expanded):not(.live-news-fullscreen) > .panel-header:active { cursor: grabbing; }
+.monitor-dashboard .panel-move-btn { opacity: 1; visibility: visible; min-width: 30px; min-height: 30px; }
 .monitor-layout-toolbar {
   display: flex;
   align-items: center;
