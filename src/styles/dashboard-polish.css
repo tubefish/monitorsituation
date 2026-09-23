@@ -118,8 +118,14 @@ html.monitor-dashboard[data-theme='dark'] {
 .monitor-dashboard :is(.site-footer a, .mobile-menu-footer-links a, .escalation-x-open-post, .market-heatmap-footer a) { text-underline-offset: 3px; }
 .monitor-dashboard :is(.site-footer a, .mobile-menu-footer-links a, .escalation-x-open-post):hover { color: var(--monitor-accent); text-decoration: underline; }
 
-/* Section headers always move; Customize exposes sizing and reset controls. */
-.monitor-dashboard:not(.monitor-layout-editing) :is(.panel-resize-handle, .panel-col-resize-handle) { display: none !important; }
+/* Moving and resizing are available directly; Customize adds reset and undo. */
+@media (min-width: 769px) {
+  .monitor-dashboard .panel-resize-handle { height: 14px; }
+  .monitor-dashboard .panel-col-resize-handle { top: 47px; bottom: 14px; width: 12px; }
+  .monitor-dashboard .panel-content { margin-bottom: 14px; margin-inline-end: 12px; }
+  .monitor-dashboard .panel:hover > :is(.panel-resize-handle, .panel-col-resize-handle),
+  .monitor-dashboard :is(.panel-resize-handle, .panel-col-resize-handle):focus-visible { background-color: var(--monitor-soft-accent); }
+}
 .monitor-dashboard .panel:not(.panel-expanded):not(.live-news-fullscreen) > .panel-header { cursor: grab; }
 .monitor-dashboard .panel:not(.panel-expanded):not(.live-news-fullscreen) > .panel-header:active { cursor: grabbing; }
 .monitor-dashboard .panel-move-btn { opacity: 1; visibility: visible; min-width: 30px; min-height: 30px; }
@@ -206,3 +212,9 @@ html.monitor-dashboard[data-theme='dark'] {
   .monitor-dashboard :is(.panel, .panel-header, .escalation-x-post, .map-width-resize-handle) { transition: none !important; }
   .monitor-dashboard .escalation-x-skeleton span { animation: none; }
 }
+
+/* Keep the compact token card readable; its extra details remain scrollable. */
+.monitor-dashboard .monitor-token-panel .monitor-market-panel { padding: 10px !important; }
+.monitor-dashboard .monitor-token-panel .monitor-market-top-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.monitor-dashboard .monitor-token-panel .monitor-market-bottom-grid { grid-template-columns: 1fr; }
+.monitor-dashboard .monitor-token-panel .monitor-market-intro { margin-bottom: 8px; }

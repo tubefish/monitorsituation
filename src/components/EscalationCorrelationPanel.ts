@@ -4,6 +4,7 @@ import { sanitizeUrl } from '@/utils/sanitize';
 import { formatXTime } from '@/services/x-intel';
 import {
   fetchEscalationXFeed,
+  X_FEED_POLL_INTERVAL_MS,
   type EscalationXAccount,
   type EscalationXFeed,
   type EscalationXPost,
@@ -48,27 +49,46 @@ export class EscalationCorrelationPanel extends Panel {
 
     this.updateButton = h('button', { type: 'button', className: 'monitor-feed-update' }) as HTMLButtonElement;
     this.updateButton.hidden = true;
-    this.updateButton.addEventListener('click', () => {
-      if (!this.pendingFeed) return;
-      const pending = this.pendingFeed;
-      this.pendingFeed = null;
-      this.updateButton.hidden = true;
-      this.renderFeed(pending.feeds, pending.failedCount);
-      this.content.scrollTop = 0;
+    this.updateButton.addEventListener('click', () => this.showPendingFeed(), { signal: this.signal });
+    this.content.addEventListener('scroll', () => {
+      if (this.canShowUpdates()) this.showPendingFeed();
+    }, { passive: true, signal: this.signal });
+    document.addEventListener('visibilitychange', () => {
+      if (this.isFeedVisible()) void this.loadCombinedFeed();
     }, { signal: this.signal });
     this.notice = h('div', { className: 'monitor-feed-notice', role: 'status' });
     this.notice.hidden = true;
     this.content.before(this.notice, this.updateButton);
     this.runWhenConnected(() => {
       void this.loadCombinedFeed();
-      // Match the existing five-minute client cache. Hidden tabs/panels do no work.
+      // Poll visible feeds once a minute; the shared CDN cache bounds X reads.
       this.pollTimer = setInterval(() => {
-        if (document.visibilityState === 'visible' && this.element.getClientRects().length > 0) void this.loadCombinedFeed();
-      }, 5 * 60_000);
+        if (this.isFeedVisible()) void this.loadCombinedFeed();
+      }, X_FEED_POLL_INTERVAL_MS);
     });
   }
 
-  private async loadCombinedFeed(): Promise<void> {
+  private isFeedVisible(): boolean {
+    const rect = this.element.getBoundingClientRect();
+    return document.visibilityState === 'visible' && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+  }
+
+  private canShowUpdates(): boolean {
+    const selection = window.getSelection();
+    const readingSelection = selection && !selection.isCollapsed && this.content.contains(selection.anchorNode);
+    return this.content.scrollTop < 40 && !this.content.contains(document.activeElement) && !readingSelection;
+  }
+
+  private showPendingFeed(): void {
+    if (!this.pendingFeed) return;
+    const pending = this.pendingFeed;
+    this.pendingFeed = null;
+    this.updateButton.hidden = true;
+    this.renderFeed(pending.feeds, pending.failedCount);
+    this.content.scrollTop = 0;
+  }
+
+  private async loadCombinedFeed(showLatest = false): Promise<void> {
     if (this.refreshing) return;
     this.refreshing = true;
     const generation = ++this.renderGeneration;
@@ -109,13 +129,18 @@ export class EscalationCorrelationPanel extends Panel {
       else {
         const shown = new Set(this.displayedFeeds.flatMap(feed => feed.posts.map(post => post.id)));
         const newCount = combined.flatMap(feed => feed.posts).filter(post => !shown.has(post.id)).length;
-        this.pendingFeed = { feeds: combined, failedCount };
+        if (newCount > 0 && (showLatest || this.canShowUpdates())) {
+          this.pendingFeed = { feeds: combined, failedCount };
+          this.showPendingFeed();
+          return;
+        }
+        this.pendingFeed = newCount > 0 ? { feeds: combined, failedCount } : null;
         this.updateButton.textContent = newCount ? `${newCount} new post${newCount === 1 ? '' : 's'} · Show updates` : 'Feed refreshed · Show latest';
         this.updateButton.hidden = newCount === 0;
         // Keep the current cards, focus, selection and scroll position intact.
         const oldHeader = this.content.querySelector('.escalation-x-account-bar');
         const restoreRefreshFocus = oldHeader?.contains(document.activeElement);
-        const header = this.buildCombinedHeader(feeds.length, failedCount, this.oldestFetchTime(feeds));
+        const header = this.buildCombinedHeader(feeds.length, failedCount, this.oldestFetchTime(combined));
         oldHeader?.replaceWith(header);
         if (restoreRefreshFocus) header.querySelector<HTMLButtonElement>('.monitor-feed-refresh')?.focus();
       }
@@ -170,11 +195,11 @@ export class EscalationCorrelationPanel extends Panel {
         loadedCount > 0
           ? h('span', { className: 'escalation-x-live' }, h('span', { className: 'escalation-x-live-dot' }), fetchedAt && Date.now() - Date.parse(fetchedAt) < 600_000 ? 'LIVE' : 'CACHED')
           : h('span', { className: 'escalation-x-updated' }, 'Loading feeds…'),
-        fetchedAt ? h('span', { className: 'escalation-x-updated' }, `Updated ${formatXTime(fetchedAt)} ago`) : null,
+        fetchedAt ? h('span', { className: 'escalation-x-updated', title: 'Checks automatically every minute while this panel is visible' }, `Updated ${formatXTime(fetchedAt)} ago · Auto 1m`) : null,
         failedCount > 0
           ? h('span', { className: 'escalation-x-updated' }, `${failedCount} source${failedCount === 1 ? '' : 's'} unavailable`)
           : null,
-        h('button', { type: 'button', className: 'monitor-feed-refresh', onClick: () => void this.loadCombinedFeed(), 'aria-label': 'Refresh X Tracker' }, 'Refresh'),
+        h('button', { type: 'button', className: 'monitor-feed-refresh', onClick: () => void this.loadCombinedFeed(true), 'aria-label': 'Refresh X Tracker' }, 'Refresh'),
       ),
     );
   }
@@ -241,7 +266,7 @@ export class EscalationCorrelationPanel extends Panel {
       this.notice.hidden = false;
       this.notice.replaceChildren(
         h('span', {}, 'Could not refresh. Showing previously loaded posts. '),
-        h('button', { type: 'button', className: 'monitor-feed-refresh', onClick: () => void this.loadCombinedFeed() }, 'Retry'),
+        h('button', { type: 'button', className: 'monitor-feed-refresh', onClick: () => void this.loadCombinedFeed(true) }, 'Retry'),
       );
       this.content.querySelector('.escalation-x-live')?.replaceChildren(document.createTextNode('OFFLINE'));
       return;
@@ -254,7 +279,7 @@ export class EscalationCorrelationPanel extends Panel {
       h('div', { className: 'escalation-x-error', role: 'status' },
         h('strong', {}, 'Feeds unavailable'),
         h('span', {}, message),
-        h('button', { className: 'escalation-x-retry', type: 'button', onClick: () => void this.loadCombinedFeed() }, 'Try again'),
+        h('button', { className: 'escalation-x-retry', type: 'button', onClick: () => void this.loadCombinedFeed(true) }, 'Try again'),
       ),
     );
   }

@@ -25,6 +25,7 @@ const FULL_PANELS: Record<string, PanelConfig> = {
   'live-news': { name: 'Live News', enabled: true, priority: 1 },
   'monitor-market': { name: '$MONITOR Live', enabled: true, priority: 1 },
   'market-heatmap': { name: 'Market Heatmap', enabled: true, priority: 1 },
+  'commodity-watch': { name: 'Commodities', enabled: true, priority: 1 },
   'threat-timeline': { name: 'Threat Timeline', enabled: true, priority: 1 },
   intel: { name: 'Intel Feed', enabled: true, priority: 1 },
   'fear-greed': { name: 'Fear & Greed', enabled: true, priority: 2 },
@@ -1530,7 +1531,7 @@ export const PANEL_CATEGORY_MAP: Record<string, { labelKey: string; panelKeys: s
   },
   marketsFinance: {
     labelKey: 'header.panelCatMarketsFinance',
-    panelKeys: ['commodities', 'energy-complex', 'energy-risk-overview', 'pipeline-status', 'storage-facility-map', 'oil-inventories', 'fuel-prices', 'chokepoint-strip', 'fuel-shortages', 'energy-disruptions', 'hormuz-tracker', 'energy-crisis', 'markets', 'monitor-market', 'market-heatmap', 'economic', 'global-procurement', 'trade-policy', 'sanctions-pressure', 'supply-chain', 'china-corridors', 'china-activity-nowcast', 'finance', 'polymarket', 'macro-signals', 'gulf-economies', 'etf-flows', 'stablecoins', 'crypto', 'heatmap', 'aaii-sentiment', 'cot-positioning', 'earnings-calendar', 'economic-calendar', 'fear-greed', 'fsi', 'macro-tiles', 'market-breadth', 'news-market-correlation', 'liquidity-shifts', 'national-debt', 'positioning-247', 'wsb-ticker-scanner', 'yield-curve', 'gold-intelligence', 'bigmac', 'fx', 'market-implications'],
+    panelKeys: ['commodities', 'energy-complex', 'energy-risk-overview', 'pipeline-status', 'storage-facility-map', 'oil-inventories', 'fuel-prices', 'chokepoint-strip', 'fuel-shortages', 'energy-disruptions', 'hormuz-tracker', 'energy-crisis', 'markets', 'monitor-market', 'market-heatmap', 'commodity-watch', 'economic', 'global-procurement', 'trade-policy', 'sanctions-pressure', 'supply-chain', 'china-corridors', 'china-activity-nowcast', 'finance', 'polymarket', 'macro-signals', 'gulf-economies', 'etf-flows', 'stablecoins', 'crypto', 'heatmap', 'aaii-sentiment', 'cot-positioning', 'earnings-calendar', 'economic-calendar', 'fear-greed', 'fsi', 'macro-tiles', 'market-breadth', 'news-market-correlation', 'liquidity-shifts', 'national-debt', 'positioning-247', 'wsb-ticker-scanner', 'yield-curve', 'gold-intelligence', 'bigmac', 'fx', 'market-implications'],
     variants: ['full', 'energy'],
   },
   topical: {

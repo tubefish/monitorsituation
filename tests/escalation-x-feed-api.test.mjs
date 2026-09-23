@@ -69,7 +69,7 @@ test('fetches and normalizes an allowlisted account with paid reads behind CDN c
   const body = await response.json();
 
   assert.equal(response.status, 200);
-  assert.match(response.headers.get('vercel-cdn-cache-control'), /s-maxage=300/);
+  assert.match(response.headers.get('vercel-cdn-cache-control'), /s-maxage=60/);
   assert.equal(calls.length, 2);
   assert.match(calls[0].url, /\/users\/by\/username\/monitoringmeme/);
   assert.match(calls[1].url, /\/users\/42\/tweets/);
