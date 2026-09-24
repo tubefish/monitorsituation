@@ -18,11 +18,4 @@ run('node', ['scripts/monitor-vite-prebuild.mjs']);
 run('npx', ['cross-env', 'VITE_VARIANT=full', 'vite', 'build']);
 run('node', ['scripts/monitor-postbuild.mjs']);
 
-if (process.env.VERCEL_GIT_COMMIT_REF === 'monitor-redesign') {
-  console.log('\n[monitor-vercel-build] Deploying Convex backend for monitor-redesign.');
-  run('npx', ['convex', 'deploy']);
-} else {
-  console.log('\n[monitor-vercel-build] Skipping Convex deploy outside monitor-redesign.');
-}
-
 console.log('\n[monitor-vercel-build] Build pipeline complete.');
