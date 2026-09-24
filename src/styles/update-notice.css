@@ -1,0 +1,79 @@
+/* Quiet update prompt; keep dashboard controls and mobile navigation clear. */
+.update-toast.monitor-update-notice {
+  box-sizing: border-box;
+  top: auto;
+  right: 16px;
+  bottom: 72px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  gap: 8px;
+  padding: 10px 10px 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg, var(--surface));
+  box-shadow: 0 4px 20px rgb(0 0 0 / 16%);
+  font-family: var(--monitor-reading-font, system-ui, sans-serif);
+  transform: translateY(8px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.monitor-update-notice.visible { transform: translateY(0); }
+.monitor-update-notice .update-toast-title {
+  font: 600 13px/1.4 var(--monitor-reading-font, system-ui, sans-serif);
+  letter-spacing: 0;
+  color: var(--text);
+}
+.monitor-update-notice .update-toast-detail {
+  margin-top: 2px;
+  font: 400 11px/1.4 var(--monitor-reading-font, system-ui, sans-serif);
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+.monitor-update-notice .update-toast-action {
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font: 600 12px/1 var(--monitor-reading-font, system-ui, sans-serif);
+  letter-spacing: 0;
+  transition: background 150ms ease;
+}
+.monitor-update-notice .update-toast-action:hover,
+.monitor-update-notice .update-toast-action:active {
+  background: var(--surface-hover);
+  filter: none;
+  transform: none;
+}
+.monitor-update-notice .update-toast-dismiss {
+  width: 32px;
+  height: 36px;
+  border-radius: 5px;
+  color: var(--text-secondary);
+  font: 400 18px/1 var(--monitor-reading-font, system-ui, sans-serif);
+}
+.monitor-update-notice .update-toast-dismiss:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.monitor-update-notice button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .update-toast.monitor-update-notice {
+    right: 12px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100vw - 24px);
+    padding: 8px 8px 8px 12px;
+    gap: 6px;
+  }
+  .monitor-update-notice .update-toast-action { min-height: 44px; padding-inline: 9px; }
+  .monitor-update-notice .update-toast-dismiss { width: 32px; height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .update-toast.monitor-update-notice { transition: none; transform: none; }
+}

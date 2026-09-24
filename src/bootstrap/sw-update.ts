@@ -88,7 +88,7 @@ function appendDebugLog(entry: Record<string, unknown>): void {
  * Wires up the SW update toast.
  *
  * On each controllerchange after the first (first = initial claim on a new session),
- * shows a dismissible "Update Available" toast.
+ * shows a dismissible "Refresh the situation" notice.
  *
  * Auto-reload on tab-hide requires the tab to have been visible for at least
  * VISIBLE_DWELL_MS continuously since the toast appeared. This prevents two failure modes:
@@ -155,21 +155,15 @@ export function installSwUpdateHandler(options: SwUpdateHandlerOptions = {}): vo
     doc.querySelector('.update-toast')?.remove();
 
     const toast = doc.createElement('div');
-    toast.className = 'update-toast';
+    toast.className = 'update-toast monitor-update-notice';
     setTrustedHtml(toast, trustedHtml(`
-      <div class="update-toast-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="23 4 23 10 17 10"/>
-          <path d="M20.49 15a9 9 0 1 1-.49-4.9L23 10"/>
-        </svg>
-      </div>
-      <div class="update-toast-body">
-        <div class="update-toast-title">Update Available</div>
+      <div class="update-toast-body" role="status">
+        <div class="update-toast-title">Refresh the situation</div>
         <div class="update-toast-detail">A new version is ready.</div>
       </div>
-      <button class="update-toast-action" data-action="reload">Reload</button>
-      <button class="update-toast-dismiss" data-action="dismiss" aria-label="Dismiss">\u00d7</button>
-    `, "legacy direct innerHTML migration"));
+      <button class="update-toast-action" type="button" data-action="reload">Refresh</button>
+      <button class="update-toast-dismiss" type="button" data-action="dismiss" aria-label="Dismiss update notice">\u00d7</button>
+    `, "static update notice"));
 
     let dismissed = false;
     let autoReloadAllowed = false;
