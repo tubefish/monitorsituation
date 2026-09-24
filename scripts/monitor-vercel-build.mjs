@@ -18,4 +18,11 @@ run('node', ['scripts/monitor-vite-prebuild.mjs']);
 run('npx', ['cross-env', 'VITE_VARIANT=full', 'vite', 'build']);
 run('node', ['scripts/monitor-postbuild.mjs']);
 
+if (process.env.VERCEL_GIT_COMMIT_REF === 'codex/user-monitoring-stations') {
+  console.log('\n[monitor-vercel-build] Deploying Convex backend for codex/user-monitoring-stations.');
+  run('npx', ['convex', 'deploy']);
+} else {
+  console.log('\n[monitor-vercel-build] Skipping Convex deploy outside codex/user-monitoring-stations.');
+}
+
 console.log('\n[monitor-vercel-build] Build pipeline complete.');
