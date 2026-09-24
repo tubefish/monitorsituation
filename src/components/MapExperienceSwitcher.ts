@@ -15,10 +15,12 @@ export interface LocationNewsItem {
 
 export class MapExperienceSwitcher {
   private readonly root = document.createElement('div');
+  private readonly overlayHost = document.createElement('div');
   private readonly flightStage = document.createElement('div');
   private readonly newsStage = document.createElement('aside');
   private readonly newsList = document.createElement('div');
   private readonly listeners = new AbortController();
+  private readonly resizeObserver: ResizeObserver | null;
   private readonly buttons = new Map<MapExperienceMode, HTMLButtonElement>();
   private frame: HTMLIFrameElement | null = null;
   private news: LocationNewsItem[] = [];
@@ -28,6 +30,9 @@ export class MapExperienceSwitcher {
     private readonly mapContainer: HTMLElement,
     private readonly onSelectLocation: (item: LocationNewsItem) => void,
   ) {
+    this.resizeObserver = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(() => this.syncOverlayBounds());
     this.root.className = 'map-experience-switcher';
     this.root.setAttribute('role', 'group');
     this.root.setAttribute('aria-label', 'Choose map view');
@@ -46,6 +51,9 @@ export class MapExperienceSwitcher {
       this.buttons.set(option.mode, button);
       this.root.append(button);
     }
+
+    this.overlayHost.className = 'map-experience-overlay-host';
+    this.overlayHost.setAttribute('aria-live', 'polite');
 
     this.flightStage.className = 'map-experience-stage map-experience-flights';
     this.flightStage.hidden = true;
@@ -72,8 +80,12 @@ export class MapExperienceSwitcher {
     this.newsList.className = 'map-experience-news-list';
     this.newsStage.append(newsHeader, this.newsList);
 
-    this.mapSection.append(this.root);
-    this.mapContainer.append(this.flightStage, this.newsStage);
+    this.overlayHost.append(this.flightStage, this.newsStage);
+    this.mapSection.append(this.overlayHost, this.root);
+    this.resizeObserver?.observe(this.mapSection);
+    this.resizeObserver?.observe(this.mapContainer);
+    window.addEventListener('resize', () => this.syncOverlayBounds(), { signal: this.listeners.signal });
+    this.syncOverlayBounds();
     this.renderNews();
     this.setMode(this.readStoredMode(), false);
   }
@@ -93,9 +105,9 @@ export class MapExperienceSwitcher {
 
   public destroy(): void {
     this.listeners.abort();
+    this.resizeObserver?.disconnect();
     this.root.remove();
-    this.flightStage.remove();
-    this.newsStage.remove();
+    this.overlayHost.remove();
     this.mapSection.classList.remove('map-experience-flights-active', 'map-experience-news-active');
   }
 
@@ -106,6 +118,13 @@ export class MapExperienceSwitcher {
     } catch {
       return 'situation';
     }
+  }
+
+  private syncOverlayBounds(): void {
+    this.overlayHost.style.top = `${this.mapContainer.offsetTop}px`;
+    this.overlayHost.style.left = `${this.mapContainer.offsetLeft}px`;
+    this.overlayHost.style.width = `${this.mapContainer.offsetWidth}px`;
+    this.overlayHost.style.height = `${this.mapContainer.offsetHeight}px`;
   }
 
   private setMode(mode: MapExperienceMode, persist = true): void {

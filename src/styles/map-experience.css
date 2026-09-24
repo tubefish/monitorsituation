@@ -30,7 +30,8 @@
 }
 .map-experience-switcher button:hover { color: var(--text); background: var(--surface-hover); }
 .map-experience-switcher button.active { color: var(--text); background: var(--surface); box-shadow: 0 1px 5px var(--shadow-color); }
-.map-experience-stage { position: absolute; inset: 0; z-index: 800; }
+.map-experience-overlay-host { position: absolute; z-index: 800; overflow: hidden; pointer-events: none; }
+.map-experience-stage { position: absolute; inset: 0; pointer-events: auto; }
 .map-experience-stage[hidden] { display: none; }
 .map-experience-flights { overflow: hidden; background: #1e1b1b; }
 .map-experience-flights iframe { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; border: 0; background: #1e1b1b; }
