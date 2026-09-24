@@ -13,6 +13,8 @@ test('production output is branded before JavaScript and preserves the app mount
   const dir = mkdtempSync(join(tmpdir(), 'monitor-boot-'));
   try {
     mkdirSync(join(dir, 'dist'));
+    mkdirSync(join(dir, 'dist/assets'));
+    writeFileSync(join(dir, 'dist/assets/shared-dashboard-test.css'), 'html.monitor-dashboard{--monitor-styles-ready:1}');
     // Exercise the attributed script emitted by Vite, not just source HTML.
     writeFileSync(join(dir, 'dist/dashboard.html'), readFileSync(new URL('../index.html', import.meta.url), 'utf8').replace('<script data-wm-map-prepaint>', '<script data-wm-map-prepaint="" nonce="wm-static-bootstrap">'));
     execFileSync(process.execPath, [fileURLToPath(new URL('../scripts/monitor-postbuild.mjs', import.meta.url))], { cwd: dir });
@@ -29,6 +31,7 @@ test('production output is branded before JavaScript and preserves the app mount
     assert.doesNotMatch(doc.body.textContent, /World Monitor|WorldMonitor|Dashboard shell loading/);
     assert.ok(doc.querySelector('#country-deep-dive-panel'));
     assert.ok(doc.querySelector('script[type="module"]'));
+    assert.equal(doc.querySelector('link[data-wm-deferred-style="dashboard"]').getAttribute('href'), '/assets/shared-dashboard-test.css', 'shared dashboard CSS must be linked before app initialization');
     assert.deepEqual([...doc.querySelectorAll('.monitor-boot-nav button')].map(button => button.dataset.mobileTab), ['map', 'today', 'markets', 'more']);
     assert.ok([...doc.querySelectorAll('.monitor-boot-nav button')].every(button => button.disabled));
 

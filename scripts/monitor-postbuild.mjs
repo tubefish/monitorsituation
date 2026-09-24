@@ -1,4 +1,4 @@
-import { readFile, writeFile, copyFile } from 'node:fs/promises';
+import { readFile, writeFile, copyFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { brotliCompressSync } from 'node:zlib';
 import { prepareMonitorBootShell } from './monitor-boot-shell.mjs';
@@ -163,6 +163,24 @@ async function prepareDashboard() {
 
   html = replaceStructuredData(html);
   html = prepareMonitorBootShell(html);
+
+  // Rollup can move the main stylesheet into a shared JS chunk (e.g. eonet).
+  // That chunk may load after renderLayout, which waits for applied CSS. Link
+  // the stylesheet explicitly so startup never depends on a later import.
+  const assets = await readdir(resolve(DIST_DIR, 'assets'));
+  const dashboardStyles = [];
+  for (const asset of assets.filter(name => name.endsWith('.css'))) {
+    const css = await readFile(resolve(DIST_DIR, 'assets', asset), 'utf8');
+    if (css.includes('--monitor-styles-ready:')) dashboardStyles.push(asset);
+  }
+  if (dashboardStyles.length !== 1) {
+    throw new Error(`[monitor-postbuild] Expected one dashboard stylesheet, found ${dashboardStyles.length}`);
+  }
+  const stylesheet = `/assets/${dashboardStyles[0]}`;
+  if (!html.includes(`href="${stylesheet}"`)) {
+    html = insertBeforeHeadClose(html,
+      `    <link rel="stylesheet" href="${stylesheet}" media="print" data-wm-deferred-style="dashboard">`);
+  }
 
   // Upstream Vite intentionally renames the dashboard entry to dashboard.html.
   // Keep that file for compatibility and also publish the same prepared document
