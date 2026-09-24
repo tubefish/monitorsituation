@@ -106,6 +106,15 @@ and runtime navigation share markup and reserve the same compact map height.
 Preview builds include `/mobile-check.html` for phone-width verification; the
 production build does not include this test page.
 
+The full dashboard map has three user-selected experiences. Situation retains
+the native DeckGL/SVG intelligence map. Flights presents a focused Wingbits
+launch card with MONITOR referral parameters; Wingbits disallows third-party
+framing, so its full live aircraft map opens in a separate tab without replacing
+or breaking the native map. Top News keeps the native map visible and lists the
+latest geolocated news clusters, focusing the map when a headline is selected.
+The selected experience is a local display preference and the Wingbits launch
+stays available between mode changes.
+
 ## 3. Frontend Architecture
 
 ### Entry and Initialization

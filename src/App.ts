@@ -1462,6 +1462,7 @@ export class App {
     // Build shared state object
     this.state = {
       map: null,
+      mapExperience: null,
       isMobile,
       isDesktopApp,
       container: el,

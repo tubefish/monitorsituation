@@ -2211,10 +2211,9 @@ const { inferGeoHubsFromTitle } = await import('@/services/geo-hub-index');
 const geoLocated = this.ctx.latestClusters.flatMap(c => {
   let lat = c.lat;
   let lon = c.lon;
+  const inferred = inferGeoHubsFromTitle(c.primaryTitle)[0];
 
   if (lat == null || lon == null) {
-    const inferred = inferGeoHubsFromTitle(c.primaryTitle)[0];
-
     if (inferred) {
       lat = inferred.hub.lat;
       lon = inferred.hub.lon;
@@ -2232,12 +2231,15 @@ const geoLocated = this.ctx.latestClusters.flatMap(c => {
     threatLevel: c.threat?.level ?? 'info',
     timestamp: c.lastUpdated,
     url: c.primaryLink,
+    location: inferred?.hub.name ?? 'Reported location',
   }];
 });
 
 if (geoLocated.length > 0) {
   this.ctx.map?.setNewsLocations(geoLocated);
-}    } catch (error) {
+}
+this.ctx.mapExperience?.setLocationNews(geoLocated);
+    } catch (error) {
       console.error('[App] Clustering failed, clusters unchanged:', error);
       this.callPanel('insights', 'updateInsights', []);
       if (isPanelInVariantDefaults('threat-timeline')) {
