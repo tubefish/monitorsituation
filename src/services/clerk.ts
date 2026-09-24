@@ -284,6 +284,18 @@ export async function initClerk(): Promise<void> {
           userButton: {
             action__manageAccount: 'Profile & security',
           },
+          signIn: {
+            start: {
+              title: 'Sign in to your Monitoring Station',
+              subtitle: 'Welcome back. Your saved setup is ready.',
+            },
+          },
+          signUp: {
+            start: {
+              title: 'Create your Monitoring Station',
+              subtitle: 'Save your dashboard and access it from anywhere.',
+            },
+          },
         },
         afterSignOutUrl: getAfterSignOutUrl(),
       } as Parameters<typeof clerk.load>[0]);
