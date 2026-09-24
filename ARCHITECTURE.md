@@ -98,6 +98,14 @@ RPC or bootstrap key. The native X Tracker checks visible feeds every minute
 through a shared 60-second CDN cache and automatically displays new posts when
 the reader is at the top; older posts remain stable while reading.
 
+The Markets destination replaces the DEX navigation link on mobile and in the
+footer. It creates TradingView's Advanced Chart only when opened; symbol search
+and market data stay inside the provider's iframe. The frame remains mounted
+when switching back to the map so the selected instrument survives. Mobile boot
+and runtime navigation share markup and reserve the same compact map height.
+Preview builds include `/mobile-check.html` for phone-width verification; the
+production build does not include this test page.
+
 ## 3. Frontend Architecture
 
 ### Entry and Initialization

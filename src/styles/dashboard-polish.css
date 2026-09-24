@@ -188,7 +188,8 @@ html.monitor-dashboard[data-theme='dark'] {
 .monitor-active-layers span { padding: 4px 6px; background: var(--panel-bg); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 4px; font: 10px var(--monitor-reading-font); }
 
 @media (max-width: 768px) {
-  .monitor-dashboard .header { min-height: 50px; padding: 6px 10px; }
+  .monitor-dashboard #app { height: 100dvh; min-height: 0; }
+  .monitor-dashboard .header { height: 58px; min-height: 58px; padding: 6px 10px; }
   .monitor-dashboard .header-right > #customizeLayoutBtn,
   .monitor-dashboard .header-right > #shareViewBtn { display: none !important; }
   .monitor-dashboard :is(.mobile-tab, .mobile-menu-item, .mobile-menu-close, .mobile-menu-footer-links a, .panel-expand-btn, .market-heatmap-tabs button) { min-height: 44px; min-width: 44px; }

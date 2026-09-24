@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, copyFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { brotliCompressSync } from 'node:zlib';
 import { prepareMonitorBootShell } from './monitor-boot-shell.mjs';
@@ -190,5 +190,10 @@ async function writeCrawlerFiles() {
 
 await prepareDashboard();
 await writeCrawlerFiles();
+
+// A same-origin phone viewport for preview verification, never production.
+if (process.env.VERCEL_ENV === 'preview') {
+  await copyFile(new URL('../tests/monitor-mobile-preview.html', import.meta.url), resolve(DIST_DIR, 'mobile-check.html'));
+}
 
 console.log('[monitor-postbuild] Prepared monitorsituation.xyz production output.');

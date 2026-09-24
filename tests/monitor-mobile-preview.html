@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MONITOR mobile verification</title>
+<style>
+  body{margin:0;background:#e9ebed;color:#20242a;font:13px system-ui}
+  header{display:flex;justify-content:center;gap:12px;align-items:center;padding:10px}
+  button,select{font:inherit;padding:8px}
+  main{display:flex;justify-content:center}
+  iframe{border:1px solid #bfc5ca;border-radius:12px;width:390px;height:844px;background:white}
+  output{display:block;text-align:center;margin:0 0 8px;font:11px monospace}
+</style>
+<header><strong>Mobile preview</strong><select aria-label="Phone size"><option value="390,844">390 × 844</option><option value="320,667">320 × 667</option><option value="430,932">430 × 932</option><option value="744,390">744 × 390 landscape</option></select><button type="button">Reload</button></header>
+<output aria-live="polite">Waiting for first render…</output>
+<main><iframe title="Mobile dashboard" src="/"></iframe></main>
+<script>
+  const frame=document.querySelector('iframe');
+  const output=document.querySelector('output');
+  let samples=[];
+  let previous='';
+  function observe(){
+    const doc=frame.contentDocument;
+    const boot=doc?.querySelector('.monitor-boot');
+    const map=doc?.querySelector(boot?'.skeleton-map':'#mapSection');
+    const header=doc?.querySelector(boot?'.skeleton-header':'.header');
+    if(map&&header){
+      const bounds=map.getBoundingClientRect();
+      const sample=`${boot?'boot':'app'} header=${Math.round(header.getBoundingClientRect().height)} map=${Math.round(bounds.height)} top=${Math.round(bounds.top)} width=${doc.documentElement.scrollWidth}`;
+      if(sample!==previous){samples.push(sample);samples=samples.slice(-4);output.textContent=samples.join(' → ');previous=sample;}
+    }
+    requestAnimationFrame(observe);
+  }
+  requestAnimationFrame(observe);
+  document.querySelector('button').onclick=()=>{samples=[];previous='';frame.contentWindow.location.reload();};
+  document.querySelector('select').onchange=(event)=>{
+    const [width,height]=event.target.value.split(',');
+    frame.style.width=`${width}px`;frame.style.height=`${height}px`;
+    samples=[];previous='';frame.contentWindow.location.reload();
+  };
+</script>
+</html>

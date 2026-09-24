@@ -39,6 +39,14 @@
  */
 @layer base {
   @media (max-width: 768px) {
+    /* Match the boot shell from the first styled frame. Layered !important
+       beats the upstream full-height rule; late unlayered injection did not. */
+    .monitor-dashboard #mapSection.map-section:not(.collapsed):not(.live-news-fullscreen) {
+      height: clamp(320px, 62svh, 560px) !important;
+      min-height: 0 !important;
+      max-height: 560px !important;
+      flex: 0 0 auto;
+    }
     /* The bottom Map/Today navigation owns map visibility on mobile. Keep the
        legacy map header and Show/Hide button in the DOM for its existing
        collapse-state wiring, but remove the entire white header strip from
@@ -135,17 +143,6 @@
     stroke-linejoin: round;
   }
 
-  /* Use the uploaded DEX eagle mark in place of the legacy triangle.
-     The PNG is used as an alpha mask so the icon follows currentColor in
-     both light and dark themes instead of keeping a black square background. */
-  #mobileTabBar .mobile-tab[data-mobile-tab="alerts"] .mobile-tab-icon {
-    width: 20px;
-    height: 21px;
-    font-size: 0;
-    background-color: currentColor;
-    -webkit-mask: url('/icons/dex-eagle-mask.png') center / contain no-repeat;
-    mask: url('/icons/dex-eagle-mask.png') center / contain no-repeat;
-  }
 }
 
 /* $MONITOR does not expose Palantir in the public reference links. */
