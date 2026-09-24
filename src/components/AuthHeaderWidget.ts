@@ -22,6 +22,19 @@ export class AuthHeaderWidget {
     this.container = document.createElement('div');
     this.container.className = 'auth-header-widget';
 
+    // The MONITOR shell currently omits the upstream authWidgetMount node even
+    // though EventHandlerManager still initializes this widget and header.css
+    // still styles the mount. Recreate the mount when needed so the existing
+    // Clerk account controls can be exercised safely on preview builds.
+    if (!document.getElementById('authWidgetMount')) {
+      const headerRight = document.querySelector<HTMLElement>('.header-right');
+      if (headerRight) {
+        const mount = document.createElement('div');
+        mount.id = 'authWidgetMount';
+        headerRight.appendChild(mount);
+      }
+    }
+
     this.unsubscribeAuth = subscribeAuthState((state: AuthSession) => {
       if (state.isPending) {
         this.renderPending();
