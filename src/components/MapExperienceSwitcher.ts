@@ -1,0 +1,179 @@
+const WINGBITS_URL = 'https://wingbits.com/map?utm_source=MTS&utm_medium=referral&utm_campaign=MTS-map&lat=29.76460&lon=-95.36570&zoom=4.0';
+const STORAGE_KEY = 'monitor-map-experience-v1';
+
+export type MapExperienceMode = 'situation' | 'flights' | 'news';
+
+export interface LocationNewsItem {
+  lat: number;
+  lon: number;
+  title: string;
+  location: string;
+  threatLevel: string;
+  timestamp?: Date;
+  url?: string;
+}
+
+export class MapExperienceSwitcher {
+  private readonly root = document.createElement('div');
+  private readonly flightStage = document.createElement('div');
+  private readonly newsStage = document.createElement('aside');
+  private readonly newsList = document.createElement('div');
+  private readonly listeners = new AbortController();
+  private readonly buttons = new Map<MapExperienceMode, HTMLButtonElement>();
+  private frame: HTMLIFrameElement | null = null;
+  private news: LocationNewsItem[] = [];
+
+  constructor(
+    private readonly mapSection: HTMLElement,
+    private readonly mapContainer: HTMLElement,
+    private readonly onSelectLocation: (item: LocationNewsItem) => void,
+  ) {
+    this.root.className = 'map-experience-switcher';
+    this.root.setAttribute('role', 'group');
+    this.root.setAttribute('aria-label', 'Choose map view');
+
+    const options: Array<{ mode: MapExperienceMode; label: string; icon: string }> = [
+      { mode: 'situation', label: 'Situation', icon: '◎' },
+      { mode: 'flights', label: 'Flights', icon: '✈' },
+      { mode: 'news', label: 'Top news', icon: '▤' },
+    ];
+    for (const option of options) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.mapExperience = option.mode;
+      button.innerHTML = `<span aria-hidden="true">${option.icon}</span><span>${option.label}</span>`;
+      button.addEventListener('click', () => this.setMode(option.mode), { signal: this.listeners.signal });
+      this.buttons.set(option.mode, button);
+      this.root.append(button);
+    }
+
+    this.flightStage.className = 'map-experience-stage map-experience-flights';
+    this.flightStage.hidden = true;
+    const flightLoading = document.createElement('div');
+    flightLoading.className = 'map-experience-loading';
+    flightLoading.textContent = 'Connecting to live air traffic…';
+    const flightLink = document.createElement('a');
+    flightLink.className = 'map-experience-attribution';
+    flightLink.href = WINGBITS_URL;
+    flightLink.target = '_blank';
+    flightLink.rel = 'noopener noreferrer';
+    flightLink.textContent = 'Open Wingbits ↗';
+    this.flightStage.append(flightLoading, flightLink);
+
+    this.newsStage.className = 'map-experience-stage map-experience-news';
+    this.newsStage.hidden = true;
+    this.newsStage.setAttribute('aria-label', 'Top news by location');
+    const newsHeader = document.createElement('header');
+    const newsTitle = document.createElement('strong');
+    newsTitle.textContent = 'Top news by location';
+    const newsHint = document.createElement('span');
+    newsHint.textContent = 'Select a story to focus the map';
+    newsHeader.append(newsTitle, newsHint);
+    this.newsList.className = 'map-experience-news-list';
+    this.newsStage.append(newsHeader, this.newsList);
+
+    this.mapSection.append(this.root);
+    this.mapContainer.append(this.flightStage, this.newsStage);
+    this.renderNews();
+    this.setMode(this.readStoredMode(), false);
+  }
+
+  public setLocationNews(items: LocationNewsItem[]): void {
+    const seen = new Set<string>();
+    this.news = [...items]
+      .sort((a, b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0))
+      .filter(item => {
+        if (seen.has(item.title)) return false;
+        seen.add(item.title);
+        return true;
+      })
+      .slice(0, 20);
+    this.renderNews();
+  }
+
+  public destroy(): void {
+    this.listeners.abort();
+    this.root.remove();
+    this.flightStage.remove();
+    this.newsStage.remove();
+    this.mapSection.classList.remove('map-experience-flights-active', 'map-experience-news-active');
+  }
+
+  private readStoredMode(): MapExperienceMode {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored === 'flights' || stored === 'news' ? stored : 'situation';
+    } catch {
+      return 'situation';
+    }
+  }
+
+  private setMode(mode: MapExperienceMode, persist = true): void {
+    if (mode === 'flights') this.mountWingbits();
+    this.flightStage.hidden = mode !== 'flights';
+    this.newsStage.hidden = mode !== 'news';
+    this.mapSection.classList.toggle('map-experience-flights-active', mode === 'flights');
+    this.mapSection.classList.toggle('map-experience-news-active', mode === 'news');
+    for (const [key, button] of this.buttons) {
+      const active = key === mode;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    }
+    if (persist) {
+      try { localStorage.setItem(STORAGE_KEY, mode); } catch { /* optional preference */ }
+    }
+    if (mode !== 'flights') window.dispatchEvent(new Event('resize'));
+  }
+
+  private mountWingbits(): void {
+    if (this.frame) return;
+    const frame = document.createElement('iframe');
+    frame.title = 'Wingbits live flight tracking map';
+    frame.src = WINGBITS_URL;
+    frame.loading = 'eager';
+    frame.referrerPolicy = 'strict-origin-when-cross-origin';
+    frame.allow = 'fullscreen';
+    frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox');
+    frame.addEventListener('load', () => this.flightStage.classList.add('is-loaded'), {
+      once: true,
+      signal: this.listeners.signal,
+    });
+    this.frame = frame;
+    this.flightStage.prepend(frame);
+  }
+
+  private renderNews(): void {
+    if (this.news.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'map-experience-news-empty';
+      empty.textContent = 'Location headlines are loading…';
+      this.newsList.replaceChildren(empty);
+      return;
+    }
+    const cards = this.news.slice(0, 12).map(item => {
+      const article = document.createElement('article');
+      const focus = document.createElement('button');
+      focus.type = 'button';
+      focus.className = 'map-experience-news-focus';
+      const meta = document.createElement('span');
+      meta.className = `map-experience-news-meta threat-${item.threatLevel}`;
+      meta.textContent = item.location;
+      const title = document.createElement('strong');
+      title.textContent = item.title;
+      focus.append(meta, title);
+      focus.addEventListener('click', () => this.onSelectLocation(item), { signal: this.listeners.signal });
+      article.append(focus);
+      if (item.url) {
+        const link = document.createElement('a');
+        link.href = item.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.setAttribute('aria-label', `Open story: ${item.title}`);
+        link.textContent = '↗';
+        article.append(link);
+      }
+      return article;
+    });
+    this.newsList.replaceChildren(...cards);
+  }
+}

@@ -32,6 +32,7 @@ import type { TheaterPostureSummary } from '@/services/military-surge';
 import type { NewsPanel } from '@/components/NewsPanel';
 import type { AviationCommandBar } from '@/components/AviationCommandBar';
 import { MobilePanelNav } from '@/components/MobilePanelNav';
+import { MapExperienceSwitcher } from '@/components/MapExperienceSwitcher';
 import { debounce, loadFromStorage, saveToStorage } from '@/utils';
 import { escapeHtml } from '@/utils/sanitize';
 import {
@@ -791,6 +792,8 @@ export class PanelLayoutManager implements AppModule {
     this.mobilePanelNav?.destroy();
     this.mobilePanelNav = null;
     this.mobileMapCollapseBtn = null;
+    this.ctx.mapExperience?.destroy();
+    this.ctx.mapExperience = null;
     this.panelTabBar?.destroy();
     this.panelTabBar = null;
     // Clean up happy variant panels
@@ -3280,6 +3283,16 @@ export class PanelLayoutManager implements AppModule {
     }, preferGlobe, {
       isFreeTierFallbackActive: this.callbacks.isFreeTierFallbackActive,
     });
+    if (SITE_VARIANT === 'full') {
+      const mapSection = document.getElementById('mapSection');
+      if (mapSection) {
+        this.ctx.mapExperience = new MapExperienceSwitcher(
+          mapSection,
+          mapContainer,
+          item => this.ctx.map?.setCenter(item.lat, item.lon, 5),
+        );
+      }
+    }
 
     const eagerSupplyChainPanel = this.ctx.panels['supply-chain'] as SupplyChainPanel | undefined;
     if (eagerSupplyChainPanel) {
