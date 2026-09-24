@@ -12,37 +12,9 @@ import {
   type OverlayId,
 } from '@/utils/overlay-history';
 import { reconcileOverlayForTab } from '@/app/mobile-overlay-reconcile';
+import { MarketExplorer } from '@/components/MarketExplorer';
 
-const MONITOR_DEX_URL = 'https://dexscreener.com/robinhood/0xcfa7bb34e23a7022c3de3e1618e1ff29cde8f16a76c341eca19d16f928968a3d?utm_source=worldmonitor&utm_medium=referral&utm_campaign=monitor-market';
 const MONITOR_CONTRACT_ADDRESS = '0x1a911bb954dAA9CB38513423075bE74450351e18';
-
-const MOBILE_MAP_GLOBE_ICON = `
-  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="12" cy="12" r="9"></circle>
-    <path d="M3 12h18"></path>
-    <path d="M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9"></path>
-    <path d="M12 3c-2.6 2.5-4 5.6-4 9s1.4 6.5 4 9"></path>
-  </svg>
-`;
-
-const MOBILE_TODAY_SUNRISE_ICON = `
-  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="currentColor">
-    <path d="M4 21a8 8 0 0 1 16 0H4Z"></path>
-    <path d="M12 1l1.25 5h-2.5L12 1Z"></path>
-    <path d="M4.1 4.1 8.7 7 7 8.7 4.1 4.1Z"></path>
-    <path d="m1 11.7 5.4-1.1-.45 2.4L1 11.7Z"></path>
-    <path d="m19.9 4.1-4.6 2.9L17 8.7l2.9-4.6Z"></path>
-    <path d="m23 11.7-5.4-1.1.45 2.4L23 11.7Z"></path>
-  </svg>
-`;
-
-const MOBILE_MORE_MENU_ICON = `
-  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-    <path d="M4 6h16"></path>
-    <path d="M4 12h16"></path>
-    <path d="M4 18h16"></path>
-  </svg>
-`;
 
 type MobilePrimaryNavCallbacks = {
   openSearch(options: { replaceOverlayId?: OverlayId; historyPending: true }): void;
@@ -62,6 +34,8 @@ export class MobilePrimaryNav {
   private unsubscribeHistory: (() => void) | null = null;
   private activeTab = 'map';
   private lastContentTab = 'map';
+  private marketExplorer: MarketExplorer | null = null;
+  private beforeMarketsTab = 'map';
 
   constructor(
     private readonly ctx: AppContext,
@@ -69,7 +43,6 @@ export class MobilePrimaryNav {
   ) {}
 
   init(): void {
-    this.installCompactMapStyle();
     this.setupTabBar();
     this.setupMenu();
     this.unsubscribeHistory = overlayHistory.subscribe((top) => {
@@ -124,6 +97,8 @@ export class MobilePrimaryNav {
   }
 
   destroy(): void {
+    this.marketExplorer?.destroy();
+    this.marketExplorer = null;
     this.listeners.abort();
     this.unsubscribeAuth?.();
     this.unsubscribeAuth = null;
@@ -143,71 +118,19 @@ export class MobilePrimaryNav {
     this.regionTrap = null;
   }
 
-  private installCompactMapStyle(): void {
-    if (document.getElementById('monitor-mobile-map-size')) return;
-
-    const style = document.createElement('style');
-    style.id = 'monitor-mobile-map-size';
-    style.textContent = `
-      @media (max-width: 768px) {
-        #mapSection.map-section:not(.collapsed):not(.live-news-fullscreen) {
-          height: clamp(420px, 62dvh, 560px) !important;
-          min-height: 0 !important;
-          max-height: 560px !important;
-        }
-
-        /* $MONITOR mobile panel footprints. Desktop retains each component's
-           natural 3-row default; these overrides only apply below 768px. */
-        #panelsGrid > .panel[data-panel="live-news"]:not(.panel-collapsed) {
-          grid-row: span 2 !important;
-          min-height: var(--dashboard-first-grid-reservation) !important;
-        }
-
-        #panelsGrid > .panel[data-panel="monitor-market"]:not(.panel-collapsed) {
-          grid-row: span 4 !important;
-          min-height: calc(
-            var(--dashboard-panel-row-min) * 4 +
-            var(--dashboard-grid-gap) * 3
-          ) !important;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
   private setupTabBar(): void {
     const tabBar = document.getElementById('mobileTabBar');
     if (!tabBar) return;
 
-    // $MONITOR mobile opens map-first: Map occupies slot one, Today slot two.
-    const mapButton = tabBar.querySelector<HTMLButtonElement>('[data-mobile-tab="map"]');
-    const todayButton = tabBar.querySelector<HTMLButtonElement>('[data-mobile-tab="today"]');
-    const dexButton = tabBar.querySelector<HTMLButtonElement>('[data-mobile-tab="alerts"]');
-    const moreButton = tabBar.querySelector<HTMLButtonElement>('[data-mobile-tab="more"]');
-    if (mapButton) tabBar.prepend(mapButton);
-    if (mapButton && todayButton) mapButton.after(todayButton);
-
-    // The shared shell reserves five grid tracks, but $MONITOR hides Search.
-    // Replace that template with four equal tracks so each visible control
-    // occupies exactly one quarter of the available tab-bar width.
-    tabBar.style.gridTemplateColumns = 'repeat(4, minmax(0, 1fr))';
-    [mapButton, todayButton, dexButton, moreButton].forEach((button) => {
-      if (!button) return;
-      button.style.width = '100%';
-      button.style.minWidth = '0';
-    });
-
-    this.setTabIcon(mapButton, MOBILE_MAP_GLOBE_ICON);
-    this.setTabIcon(todayButton, MOBILE_TODAY_SUNRISE_ICON);
-    this.setTabLabel(dexButton, 'DEX');
-    if (dexButton) dexButton.setAttribute('aria-label', 'Open DEX on Dexscreener');
-    this.setTabIcon(moreButton, MOBILE_MORE_MENU_ICON);
-
     this.setActive('map');
-    this.expandMap();
-    // On the globe renderer, lower logical zoom values are farther away.
-    // Zoom 1 maps to the standard global-view altitude (~1.8).
-    this.ctx.map?.setZoom(1);
+    // The shell already has the final map state, size, and zoom. Do not
+    // expand or fly the map after first paint — that shifts the whole feed.
+    document.querySelectorAll<HTMLButtonElement>('[data-open-markets]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const result = this.reconcileOverlayForTab('markets');
+        if (result !== null) this.openMarkets();
+      }, { signal: this.listeners.signal });
+    });
 
     tabBar.addEventListener('click', (event) => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-mobile-tab]');
@@ -218,24 +141,18 @@ export class MobilePrimaryNav {
         this.alertScrollFrame = null;
       }
 
-      // $MONITOR uses the former Alerts slot as a direct external DEX link.
-      // Handle it before overlay reconciliation so opening the DEX cannot alter
-      // whichever Map/Today state the user is currently viewing.
-      if (tab === 'alerts') {
-        window.open(MONITOR_DEX_URL, '_blank', 'noopener,noreferrer');
-        return;
-      }
-
       const replaceOverlayId = this.reconcileOverlayForTab(tab);
       if (replaceOverlayId === null) return;
 
       switch (tab) {
         case 'today':
+          this.closeMarkets();
           this.exitMap();
           this.collapseMap();
           this.scrollToLiveNews();
           break;
         case 'map': {
+          this.closeMarkets();
           // Keep the bottom Map tab on the normal mobile map path. The old
           // implementation expanded the map and then immediately clicked the
           // separate fullscreen control, which could race the collapse/resize
@@ -262,6 +179,9 @@ export class MobilePrimaryNav {
           });
           break;
         }
+        case 'markets':
+          this.openMarkets();
+          break;
         case 'more':
           this.exitMap();
           this.openMenu(replaceOverlayId);
@@ -270,31 +190,30 @@ export class MobilePrimaryNav {
           return;
       }
 
-      if (tab === 'map' || tab === 'today') {
+      if (tab === 'map' || tab === 'today' || tab === 'markets') {
         this.lastContentTab = tab;
       }
       this.setActive(tab);
     }, { signal: this.listeners.signal });
   }
 
-  private setTabIcon(button: HTMLButtonElement | null, svg: string): void {
-    const icon = button?.querySelector<HTMLElement>('.mobile-tab-icon');
-    if (icon) icon.innerHTML = svg;
+  private openMarkets(): void {
+    this.exitMap();
+    if (this.lastContentTab !== 'markets') this.beforeMarketsTab = this.lastContentTab;
+    this.marketExplorer ??= new MarketExplorer(() => {
+      this.closeMarkets();
+      this.lastContentTab = this.beforeMarketsTab;
+      this.setActive(this.beforeMarketsTab);
+      const selector = this.ctx.isMobile ? `[data-mobile-tab="${this.beforeMarketsTab}"]` : '.site-footer [data-open-markets]';
+      document.querySelector<HTMLButtonElement>(selector)?.focus();
+    });
+    this.marketExplorer.open();
+    this.lastContentTab = 'markets';
+    this.setActive('markets');
   }
 
-  private setTabLabel(button: HTMLButtonElement | null, text: string): void {
-    if (!button) return;
-    const label = Array.from(button.querySelectorAll<HTMLElement>('span'))
-      .find((span) => !span.classList.contains('mobile-tab-icon'));
-    if (label) {
-      label.textContent = text;
-      return;
-    }
-
-    // Fallback for shells where the label is a direct text node rather than a span.
-    const textNode = Array.from(button.childNodes)
-      .find((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
-    if (textNode) textNode.textContent = text;
+  private closeMarkets(): void {
+    this.marketExplorer?.close();
   }
 
   private setupMenu(): void {
@@ -452,7 +371,7 @@ export class MobilePrimaryNav {
       dismiss: (id) => overlayHistory.dismiss(id),
       settingsHasPendingChanges: () => this.ctx.unifiedSettings?.hasPendingChanges() ?? false,
       closeSettings: () => this.ctx.unifiedSettings?.close(),
-      setActive: (nextTab) => this.setActive(nextTab),
+      setActive: (nextTab) => this.setActive(nextTab === 'today' ? this.lastContentTab : nextTab),
     });
   }
 

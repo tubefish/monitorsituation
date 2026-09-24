@@ -13,7 +13,8 @@ test('production output is branded before JavaScript and preserves the app mount
   const dir = mkdtempSync(join(tmpdir(), 'monitor-boot-'));
   try {
     mkdirSync(join(dir, 'dist'));
-    writeFileSync(join(dir, 'dist/dashboard.html'), readFileSync(new URL('../index.html', import.meta.url)));
+    // Exercise the attributed script emitted by Vite, not just source HTML.
+    writeFileSync(join(dir, 'dist/dashboard.html'), readFileSync(new URL('../index.html', import.meta.url), 'utf8').replace('<script data-wm-map-prepaint>', '<script data-wm-map-prepaint="" nonce="wm-static-bootstrap">'));
     execFileSync(process.execPath, [fileURLToPath(new URL('../scripts/monitor-postbuild.mjs', import.meta.url))], { cwd: dir });
     const html = readFileSync(join(dir, 'dist/index.html'), 'utf8');
     assert.equal(html, readFileSync(join(dir, 'dist/dashboard.html'), 'utf8'));
@@ -28,6 +29,14 @@ test('production output is branded before JavaScript and preserves the app mount
     assert.doesNotMatch(doc.body.textContent, /World Monitor|WorldMonitor|Dashboard shell loading/);
     assert.ok(doc.querySelector('#country-deep-dive-panel'));
     assert.ok(doc.querySelector('script[type="module"]'));
+    assert.deepEqual([...doc.querySelectorAll('.monitor-boot-nav button')].map(button => button.dataset.mobileTab), ['map', 'today', 'markets', 'more']);
+    assert.ok([...doc.querySelectorAll('.monitor-boot-nav button')].every(button => button.disabled));
+
+    const mapScript = html.match(/<script data-wm-map-prepaint[^>]*>([\s\S]*?)<\/script>/)[1];
+    assert.equal(doc.querySelector('script[data-wm-map-prepaint]').getAttribute('nonce'), 'wm-static-bootstrap');
+    const classes = new Set(['wm-map-collapsed']);
+    vm.runInNewContext(mapScript, { document: { documentElement: { classList: { remove: name => classes.delete(name) } } } });
+    assert.equal(classes.has('wm-map-collapsed'), false, 'map-first boot must not collapse before the app expands it');
 
     const script = html.match(/<script data-wm-prepaint>([\s\S]*?)<\/script>/)[1];
     for (const preference of ['dark', 'light', null, 'invalid', 'blocked']) {
