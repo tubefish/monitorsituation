@@ -1,6 +1,7 @@
 import { installDashboardLayoutEditor } from './dashboard-layout-editor';
 import { MONITOR_DEFAULT_PANEL_ORDER } from '@/config/monitor-defaults';
 import { MONITOR_MOBILE_NAV } from '@/config/monitor-mobile-nav';
+import { waitForDashboardStyles } from '@/utils/dashboard-styles-ready';
 import { movePanelToKeyboardZone } from '@/app/panel-keyboard-reorder';
 import type { AppContext, AppModule } from '@/app/app-context';
 import { normalizeExclusiveChoropleths } from '@/components/resilience-choropleth-utils';
@@ -937,6 +938,8 @@ export class PanelLayoutManager implements AppModule {
   private cleanupLayoutEditor: (() => void) | null = null;
 
   async renderLayout(): Promise<void> {
+    if (SITE_VARIANT === 'full') await waitForDashboardStyles();
+    if (this.ctx.isDestroyed) return;
     document.documentElement.classList.toggle('monitor-dashboard', SITE_VARIANT === 'full');
     // #5159: the collapsed-map cohort's #mapSection must be CREATED with
     // .collapsed — main.css sets the expanded mobile height with !important
@@ -1100,6 +1103,7 @@ export class PanelLayoutManager implements AppModule {
           <div class="map-bottom-grid" id="mapBottomGrid"></div>
         </div>
         <div class="map-width-resize-handle" id="mapWidthResizeHandle" title="Drag to widen the map or panels"></div>
+        ${SITE_VARIANT === 'full' && this.ctx.isMobile ? '<div id="mobilePanelNavSlot" class="monitor-mobile-panel-nav-slot" aria-hidden="true"></div>' : ''}
         <div class="panels-grid" id="panelsGrid" role="tabpanel" aria-label="Dashboard panels"></div>
       </main>
       <nav class="mobile-tab-bar" id="mobileTabBar" aria-label="Primary">
@@ -1944,7 +1948,9 @@ export class PanelLayoutManager implements AppModule {
     const grid = document.getElementById('panelsGrid');
     if (!grid) return;
     this.mobilePanelNav = new MobilePanelNav(() => this.ctx.panelSettings);
-    grid.before(this.mobilePanelNav.getElement());
+    const reserved = document.getElementById('mobilePanelNavSlot');
+    if (reserved) reserved.replaceWith(this.mobilePanelNav.getElement());
+    else grid.before(this.mobilePanelNav.getElement());
     this.mobilePanelNav.refresh();
   }
 

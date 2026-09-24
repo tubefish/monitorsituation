@@ -189,6 +189,7 @@ html.monitor-dashboard[data-theme='dark'] {
 
 @media (max-width: 768px) {
   .monitor-dashboard #app { height: 100dvh; min-height: 0; }
+  .monitor-mobile-panel-nav-slot { flex: 0 0 49px; }
   .monitor-dashboard .header { height: 58px; min-height: 58px; padding: 6px 10px; }
   .monitor-dashboard .header-right > #customizeLayoutBtn,
   .monitor-dashboard .header-right > #shareViewBtn { display: none !important; }
