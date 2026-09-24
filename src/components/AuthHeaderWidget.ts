@@ -26,6 +26,7 @@ export class AuthHeaderWidget {
     // though EventHandlerManager still initializes this widget and header.css
     // still styles the mount. Recreate the mount when needed so the existing
     // Clerk account controls can be exercised safely on preview builds.
+    // Preview deployments must provide VITE_CLERK_PUBLISHABLE_KEY for Clerk UI.
     if (!document.getElementById('authWidgetMount')) {
       const headerRight = document.querySelector<HTMLElement>('.header-right');
       if (headerRight) {
