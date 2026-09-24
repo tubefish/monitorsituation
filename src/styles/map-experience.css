@@ -33,10 +33,13 @@
 .map-experience-overlay-host { position: absolute; z-index: 800; overflow: hidden; pointer-events: none; }
 .map-experience-stage { position: absolute; inset: 0; pointer-events: auto; }
 .map-experience-stage[hidden] { display: none; }
-.map-experience-flights { overflow: hidden; background: #1e1b1b; }
-.map-experience-flights iframe { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; border: 0; background: #1e1b1b; }
-.map-experience-loading { position: absolute; inset: 0; display: grid; place-items: center; color: #acafae; font: 12px var(--monitor-reading-font, system-ui); }
-.map-experience-attribution { position: absolute; right: 12px; bottom: 12px; z-index: 3; padding: 7px 9px; border: 1px solid #51443c; border-radius: 7px; background: rgba(30,27,27,.88); color: #ff8b49; font: 600 11px var(--monitor-reading-font, system-ui); text-decoration: none; }
+.map-experience-flights { inset: 12px auto auto 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 9px; width: min(340px, calc(100% - 24px)); padding: 16px; border: 1px solid color-mix(in srgb, #ff7a32 38%, var(--border)); border-radius: 12px; background: color-mix(in srgb, var(--panel-bg) 94%, transparent); box-shadow: 0 12px 30px color-mix(in srgb, #000 26%, transparent); color: var(--text); backdrop-filter: blur(16px); }
+.map-experience-flights > strong { font: 650 16px/1.2 var(--monitor-reading-font, system-ui); }
+.map-experience-flights > p { margin: 0; color: var(--text-secondary); font: 12px/1.45 var(--monitor-reading-font, system-ui); }
+.map-experience-flight-eyebrow { color: #ff8b49; font: 750 10px/1 var(--monitor-reading-font, system-ui); letter-spacing: .09em; }
+.map-experience-flight-features { color: var(--text-dim); font: 600 10px/1.2 var(--monitor-reading-font, system-ui); text-transform: uppercase; letter-spacing: .045em; }
+.map-experience-flight-link { display: inline-flex; min-height: 36px; align-items: center; margin-top: 3px; padding: 8px 11px; border: 1px solid #6d452d; border-radius: 8px; background: #2b211c; color: #ff9a61; font: 700 11px var(--monitor-reading-font, system-ui); text-decoration: none; }
+.map-experience-flight-link:hover { background: #38271f; color: #ffb184; }
 .map-experience-news { inset: 12px 12px 12px auto; width: min(390px, calc(100% - 24px)); overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--panel-bg) 94%, transparent); box-shadow: 0 12px 30px color-mix(in srgb, #000 26%, transparent); backdrop-filter: blur(16px); }
 .map-experience-news > header { display: flex; flex-direction: column; gap: 3px; padding: 14px; border-bottom: 1px solid var(--border); }
 .map-experience-news > header strong { color: var(--text); font: 650 14px var(--monitor-reading-font, system-ui); }
@@ -54,12 +57,12 @@
 .map-experience-news-list article > a:hover { color: var(--monitor-accent); background: var(--surface-hover); }
 .map-experience-news-empty { padding: 18px 10px; color: var(--text-dim); font: 12px var(--monitor-reading-font, system-ui); }
 .map-experience-flights-active .monitor-layer-controls,
-.map-experience-flights-active .map-controls { visibility: hidden; }
+.map-experience-flights-active .map-controls { opacity: .35; }
 
 @media (max-width: 768px) {
   .map-experience-switcher { top: 10px; width: calc(100% - 20px); }
   .map-section > .panel-header + .map-container + .map-experience-switcher { top: 10px; }
   .map-experience-switcher button { flex: 1; min-height: 40px; padding-inline: 7px; }
   .map-experience-news { inset: 60px 10px 10px; width: auto; }
-  .map-experience-attribution { bottom: 8px; }
+  .map-experience-flights { inset: 60px 10px auto; width: auto; }
 }

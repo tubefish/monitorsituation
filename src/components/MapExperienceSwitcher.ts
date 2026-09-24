@@ -22,7 +22,6 @@ export class MapExperienceSwitcher {
   private readonly listeners = new AbortController();
   private readonly resizeObserver: ResizeObserver | null;
   private readonly buttons = new Map<MapExperienceMode, HTMLButtonElement>();
-  private frame: HTMLIFrameElement | null = null;
   private news: LocationNewsItem[] = [];
 
   constructor(
@@ -57,16 +56,24 @@ export class MapExperienceSwitcher {
 
     this.flightStage.className = 'map-experience-stage map-experience-flights';
     this.flightStage.hidden = true;
-    const flightLoading = document.createElement('div');
-    flightLoading.className = 'map-experience-loading';
-    flightLoading.textContent = 'Connecting to live air traffic…';
+    this.flightStage.setAttribute('aria-label', 'Wingbits live flight map');
+    const flightEyebrow = document.createElement('span');
+    flightEyebrow.className = 'map-experience-flight-eyebrow';
+    flightEyebrow.textContent = 'WINGBITS · LIVE';
+    const flightTitle = document.createElement('strong');
+    flightTitle.textContent = 'Follow live air traffic';
+    const flightCopy = document.createElement('p');
+    flightCopy.textContent = 'Open the full Wingbits map for live aircraft, flight details, weather, and receiver coverage.';
+    const flightFeatures = document.createElement('span');
+    flightFeatures.className = 'map-experience-flight-features';
+    flightFeatures.textContent = 'Aircraft · Weather · Stations';
     const flightLink = document.createElement('a');
-    flightLink.className = 'map-experience-attribution';
+    flightLink.className = 'map-experience-flight-link';
     flightLink.href = WINGBITS_URL;
     flightLink.target = '_blank';
     flightLink.rel = 'noopener noreferrer';
-    flightLink.textContent = 'Open Wingbits ↗';
-    this.flightStage.append(flightLoading, flightLink);
+    flightLink.textContent = 'Open live flight map ↗';
+    this.flightStage.append(flightEyebrow, flightTitle, flightCopy, flightFeatures, flightLink);
 
     this.newsStage.className = 'map-experience-stage map-experience-news';
     this.newsStage.hidden = true;
@@ -128,7 +135,6 @@ export class MapExperienceSwitcher {
   }
 
   private setMode(mode: MapExperienceMode, persist = true): void {
-    if (mode === 'flights') this.mountWingbits();
     this.flightStage.hidden = mode !== 'flights';
     this.newsStage.hidden = mode !== 'news';
     this.mapSection.classList.toggle('map-experience-flights-active', mode === 'flights');
@@ -142,23 +148,6 @@ export class MapExperienceSwitcher {
       try { localStorage.setItem(STORAGE_KEY, mode); } catch { /* optional preference */ }
     }
     if (mode !== 'flights') window.dispatchEvent(new Event('resize'));
-  }
-
-  private mountWingbits(): void {
-    if (this.frame) return;
-    const frame = document.createElement('iframe');
-    frame.title = 'Wingbits live flight tracking map';
-    frame.src = WINGBITS_URL;
-    frame.loading = 'eager';
-    frame.referrerPolicy = 'strict-origin-when-cross-origin';
-    frame.allow = 'fullscreen';
-    frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox');
-    frame.addEventListener('load', () => this.flightStage.classList.add('is-loaded'), {
-      once: true,
-      signal: this.listeners.signal,
-    });
-    this.frame = frame;
-    this.flightStage.prepend(frame);
   }
 
   private renderNews(): void {
