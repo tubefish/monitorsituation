@@ -938,9 +938,9 @@ export class PanelLayoutManager implements AppModule {
   private cleanupLayoutEditor: (() => void) | null = null;
 
   async renderLayout(): Promise<void> {
+    document.documentElement.classList.toggle('monitor-dashboard', SITE_VARIANT === 'full');
     if (SITE_VARIANT === 'full') await waitForDashboardStyles();
     if (this.ctx.isDestroyed) return;
-    document.documentElement.classList.toggle('monitor-dashboard', SITE_VARIANT === 'full');
     // #5159: the collapsed-map cohort's #mapSection must be CREATED with
     // .collapsed — main.css sets the expanded mobile height with !important
     // inside a cascade layer, and layered !important beats any unlayered

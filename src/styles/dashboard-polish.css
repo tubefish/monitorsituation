@@ -1,5 +1,6 @@
 /* MONITOR working surface: quiet chrome, readable stories, explicit editing. */
 html.monitor-dashboard {
+  --monitor-styles-ready: 1;
   --monitor-reading-font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --monitor-accent: #167047;
   --monitor-soft-accent: #eaf5ee;
