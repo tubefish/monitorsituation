@@ -1,5 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { brotliCompressSync } from 'node:zlib';
+import { prepareMonitorBootShell } from './monitor-boot-shell.mjs';
 
 const DIST_DIR = resolve(process.cwd(), 'dist');
 const DASHBOARD_FILE = resolve(DIST_DIR, 'dashboard.html');
@@ -160,13 +162,19 @@ async function prepareDashboard() {
   html = html.replaceAll('https://www.worldmonitor.app/favico/og-image.png', OG_IMAGE);
 
   html = replaceStructuredData(html);
+  html = prepareMonitorBootShell(html);
 
   // Upstream Vite intentionally renames the dashboard entry to dashboard.html.
   // Keep that file for compatibility and also publish the same prepared document
   // as index.html so Vercel can serve the $MONITOR dashboard directly at `/`.
+  // Vite precompresses before this step; refresh those copies with the same
+  // branded document so a static server cannot serve the old boot screen.
+  const compressed = brotliCompressSync(Buffer.from(html));
   await Promise.all([
     writeFile(DASHBOARD_FILE, html, 'utf8'),
     writeFile(INDEX_FILE, html, 'utf8'),
+    writeFile(`${DASHBOARD_FILE}.br`, compressed),
+    writeFile(`${INDEX_FILE}.br`, compressed),
   ]);
 }
 
