@@ -45,6 +45,7 @@ api/*.json
 !api/health.js
 !api/rss-proxy.js
 !api/wm-session.js
+!api/user-prefs.ts
 
 api/aviation/
 api/batch/
