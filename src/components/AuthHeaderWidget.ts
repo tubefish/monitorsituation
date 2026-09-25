@@ -7,7 +7,9 @@ const CLERK_ACCOUNT_BACKDROP_STYLE_ID = 'monitor-clerk-account-backdrop';
 
 /**
  * Keep Clerk's Account/Profile & Security backdrop aligned with the MONITOR
- * shell while Clerk's own appearance follows the active site theme.
+ * shell, and bind Clerk's live CSS variables to the site's data-theme value.
+ * Unlike Clerk's mount-time appearance object, these variables update while
+ * the profile modal is already open, so no hard refresh is required.
  */
 function ensureClerkAccountBackdrop(): void {
   if (typeof document === 'undefined' || document.getElementById(CLERK_ACCOUNT_BACKDROP_STYLE_ID)) return;
@@ -20,6 +22,38 @@ function ensureClerkAccountBackdrop(): void {
       backdrop-filter: blur(5px);
       -webkit-backdrop-filter: blur(5px);
     }
+
+    html[data-theme='dark'] :where(.cl-userProfile-root, .cl-userProfile-root *) {
+      --clerk-color-background: #0f0f0f !important;
+      --clerk-color-input-background: #141414 !important;
+      --clerk-color-input: #141414 !important;
+      --clerk-color-input-text: #e8e8e8 !important;
+      --clerk-color-input-foreground: #e8e8e8 !important;
+      --clerk-color-text: #e8e8e8 !important;
+      --clerk-color-foreground: #e8e8e8 !important;
+      --clerk-color-text-secondary: #aaaaaa !important;
+      --clerk-color-muted-foreground: #aaaaaa !important;
+      --clerk-color-primary: #44ff88 !important;
+      --clerk-color-primary-foreground: #000000 !important;
+      --clerk-color-neutral: #e8e8e8 !important;
+      --clerk-color-danger: #ff4444 !important;
+    }
+
+    html[data-theme='light'] :where(.cl-userProfile-root, .cl-userProfile-root *) {
+      --clerk-color-background: #ffffff !important;
+      --clerk-color-input-background: #f8f9fa !important;
+      --clerk-color-input: #f8f9fa !important;
+      --clerk-color-input-text: #1a1a1a !important;
+      --clerk-color-input-foreground: #1a1a1a !important;
+      --clerk-color-text: #1a1a1a !important;
+      --clerk-color-foreground: #1a1a1a !important;
+      --clerk-color-text-secondary: #555555 !important;
+      --clerk-color-muted-foreground: #555555 !important;
+      --clerk-color-primary: #16a34a !important;
+      --clerk-color-primary-foreground: #ffffff !important;
+      --clerk-color-neutral: #1a1a1a !important;
+      --clerk-color-danger: #dc2626 !important;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -28,8 +62,6 @@ export class AuthHeaderWidget {
   private container: HTMLElement;
   private unsubscribeAuth: (() => void) | null = null;
   private unmountUserButton: (() => void) | null = null;
-  private themeObserver: MutationObserver | null = null;
-  private currentAuthState: AuthSession | null = null;
   private onSignInClick?: () => void;
   private onSettingsClick?: () => void;
   private onBillingClick?: () => void;
@@ -60,29 +92,7 @@ export class AuthHeaderWidget {
       }
     }
 
-    // Clerk's sign-in/sign-up surfaces receive a fresh appearance object each
-    // time they open, but the UserButton (which owns Profile & Security) is
-    // mounted once. Re-mount it when data-theme changes so its account panel
-    // always receives the current light/dark appearance from getAppearance().
-    if (typeof MutationObserver !== 'undefined') {
-      this.themeObserver = new MutationObserver((mutations) => {
-        const themeChanged = mutations.some(
-          (mutation) => mutation.type === 'attributes' && mutation.attributeName === 'data-theme',
-        );
-        if (!themeChanged) return;
-
-        const state = this.currentAuthState;
-        if (!state || state.isPending || !state.user) return;
-        this.render(state);
-      });
-      this.themeObserver.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['data-theme'],
-      });
-    }
-
     this.unsubscribeAuth = subscribeAuthState((state: AuthSession) => {
-      this.currentAuthState = state;
       if (state.isPending) {
         this.renderPending();
         return;
@@ -98,9 +108,6 @@ export class AuthHeaderWidget {
   public destroy(): void {
     this.unmountUserButton?.();
     this.unmountUserButton = null;
-    this.themeObserver?.disconnect();
-    this.themeObserver = null;
-    this.currentAuthState = null;
     if (this.unsubscribeAuth) {
       this.unsubscribeAuth();
       this.unsubscribeAuth = null;
