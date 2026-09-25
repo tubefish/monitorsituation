@@ -1,4 +1,4 @@
-import type { Geometry } from 'geojson';
+import type { Geometry, Position } from 'geojson';
 import { getCountriesGeoJson } from '@/services/country-geometry';
 import {
   GLOBE_TEXTURE_URLS,
@@ -6,13 +6,6 @@ import {
   subscribeGlobeTextureChange,
   type GlobeTexture,
 } from '@/services/globe-render-settings';
-
-type TacticalCountryDatum = {
-  _wmTacticalCountry: true;
-  code: string;
-  name: string;
-  geometry: Geometry;
-};
 
 type GlobeMaterialRuntime = {
   color?: { set: (color: string) => void };
@@ -24,15 +17,11 @@ type GlobeMaterialRuntime = {
 type GlobeRuntime = {
   globeImageUrl?: (url: string) => unknown;
   globeMaterial?: () => GlobeMaterialRuntime;
-  polygonsData?: (data?: unknown[]) => unknown;
-  polygonGeoJsonGeometry?: (accessor?: unknown) => unknown;
-  polygonCapColor?: (accessor?: unknown) => unknown;
-  polygonSideColor?: (accessor?: unknown) => unknown;
-  polygonStrokeColor?: (accessor?: unknown) => unknown;
-  polygonAltitude?: (accessor?: unknown) => unknown;
-  polygonLabel?: (accessor?: unknown) => unknown;
-  polygonCapCurvatureResolution?: (accessor?: unknown) => unknown;
 };
+
+const TACTICAL_TEXTURE_WIDTH = 2048;
+const TACTICAL_TEXTURE_HEIGHT = 1024;
+const MAX_POINTS_PER_RING = 700;
 
 function readFeatureCode(properties: Record<string, unknown> | null | undefined): string | null {
   if (!properties) return null;
@@ -42,38 +31,117 @@ function readFeatureCode(properties: Record<string, unknown> | null | undefined)
   return /^[A-Z]{2}$/.test(code) ? code : null;
 }
 
-function readFeatureName(properties: Record<string, unknown> | null | undefined): string | null {
-  if (!properties) return null;
-  const raw = properties.name ?? properties.NAME ?? properties.admin;
-  return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
-}
-
-function resolveAccessor(accessor: unknown, datum: unknown): unknown {
-  if (typeof accessor === 'function') {
-    return (accessor as (value: unknown) => unknown)(datum);
-  }
-  if (typeof accessor === 'string' && datum && typeof datum === 'object') {
-    return (datum as Record<string, unknown>)[accessor];
-  }
-  return accessor;
-}
-
 function tacticalCountryColor(code: string): string {
-  const shades = ['#263a4b', '#2b4052', '#304658'];
+  const shades = ['#263b4d', '#2b4154', '#30485b'];
   let hash = 0;
-  for (let i = 0; i < code.length; i += 1) hash = ((hash << 5) - hash) + code.charCodeAt(i);
-  return shades[Math.abs(hash) % shades.length] ?? '#263a4b';
+  for (let i = 0; i < code.length; i += 1) {
+    hash = ((hash << 5) - hash) + code.charCodeAt(i);
+  }
+  return shades[Math.abs(hash) % shades.length] ?? '#263b4d';
+}
+
+function projectedPoint(
+  point: Position,
+  previousLng: number | null,
+  wrapOffset: number,
+): { x: number; y: number; lng: number; wrapOffset: number } | null {
+  const rawLng = Number(point[0]);
+  const lat = Number(point[1]);
+  if (!Number.isFinite(rawLng) || !Number.isFinite(lat)) return null;
+
+  let nextOffset = wrapOffset;
+  if (previousLng !== null) {
+    while ((rawLng + nextOffset) - previousLng > 180) nextOffset -= 360;
+    while ((rawLng + nextOffset) - previousLng < -180) nextOffset += 360;
+  }
+
+  const lng = rawLng + nextOffset;
+  return {
+    x: ((lng + 180) / 360) * TACTICAL_TEXTURE_WIDTH,
+    y: ((90 - lat) / 180) * TACTICAL_TEXTURE_HEIGHT,
+    lng,
+    wrapOffset: nextOffset,
+  };
+}
+
+function traceRing(
+  ctx: CanvasRenderingContext2D,
+  ring: Position[],
+  xShift: number,
+): void {
+  if (ring.length < 3) return;
+
+  const step = Math.max(1, Math.floor(ring.length / MAX_POINTS_PER_RING));
+  let previousLng: number | null = null;
+  let wrapOffset = 0;
+  let started = false;
+
+  for (let i = 0; i < ring.length; i += step) {
+    const point = ring[i];
+    if (!point) continue;
+    const projected = projectedPoint(point, previousLng, wrapOffset);
+    if (!projected) continue;
+    previousLng = projected.lng;
+    wrapOffset = projected.wrapOffset;
+    const x = projected.x + xShift;
+    if (!started) {
+      ctx.moveTo(x, projected.y);
+      started = true;
+    } else {
+      ctx.lineTo(x, projected.y);
+    }
+  }
+
+  const last = ring[ring.length - 1];
+  if (last) {
+    const projected = projectedPoint(last, previousLng, wrapOffset);
+    if (projected) ctx.lineTo(projected.x + xShift, projected.y);
+  }
+
+  if (started) ctx.closePath();
+}
+
+function drawPolygon(
+  ctx: CanvasRenderingContext2D,
+  rings: Position[][],
+  fill: string,
+): void {
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = 'rgba(112, 178, 210, 0.18)';
+  ctx.lineWidth = 0.8;
+
+  for (const shift of [-TACTICAL_TEXTURE_WIDTH, 0, TACTICAL_TEXTURE_WIDTH]) {
+    ctx.beginPath();
+    for (const ring of rings) traceRing(ctx, ring, shift);
+    ctx.fill('evenodd');
+    ctx.stroke();
+  }
+}
+
+function drawGeometry(
+  ctx: CanvasRenderingContext2D,
+  geometry: Geometry,
+  fill: string,
+): void {
+  if (geometry.type === 'Polygon') {
+    drawPolygon(ctx, geometry.coordinates, fill);
+    return;
+  }
+  if (geometry.type === 'MultiPolygon') {
+    for (const polygon of geometry.coordinates) {
+      drawPolygon(ctx, polygon, fill);
+    }
+  }
 }
 
 /**
- * Replaces the dark-satellite look of Tactical mode with a flat intelligence-map
- * treatment: solid navy ocean plus subtly varied slate country fills. Existing
- * conflict polygons and all other operational overlays remain above this layer.
+ * Generates Tactical as a single equirectangular texture instead of hundreds
+ * of live 3D country meshes. This keeps the flat intelligence-map appearance
+ * while avoiding the large geometry/tessellation cost of globe.gl polygons.
  */
 export class TacticalCountryFill {
-  private countries: TacticalCountryDatum[] = [];
   private unsubscribeTexture: (() => void) | null = null;
-  private restorePolygonHooks: (() => void) | null = null;
+  private tacticalTextureUrl: string | null = null;
 
   public constructor(
     private readonly globe: GlobeRuntime,
@@ -82,23 +150,31 @@ export class TacticalCountryFill {
 
   public async init(): Promise<void> {
     const countries = await getCountriesGeoJson();
-    if (!countries) return;
+    if (countries && typeof document !== 'undefined') {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = TACTICAL_TEXTURE_WIDTH;
+        canvas.height = TACTICAL_TEXTURE_HEIGHT;
+        const ctx = canvas.getContext('2d', { alpha: false });
+        if (ctx) {
+          ctx.fillStyle = '#071726';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    this.countries = countries.features.flatMap((feature) => {
-      if (!feature.geometry) return [];
-      const properties = (feature.properties ?? null) as Record<string, unknown> | null;
-      const code = readFeatureCode(properties);
-      const name = readFeatureName(properties);
-      if (!code || !name) return [];
-      return [{
-        _wmTacticalCountry: true as const,
-        code,
-        name,
-        geometry: feature.geometry,
-      }];
-    });
+          for (const feature of countries.features) {
+            if (!feature.geometry) continue;
+            const properties = (feature.properties ?? null) as Record<string, unknown> | null;
+            const code = readFeatureCode(properties);
+            if (!code) continue;
+            drawGeometry(ctx, feature.geometry, tacticalCountryColor(code));
+          }
 
-    this.installPolygonOverlay();
+          this.tacticalTextureUrl = canvas.toDataURL('image/png');
+        }
+      } catch (error) {
+        console.warn('[TacticalCountryFill] Failed to generate tactical texture:', error);
+      }
+    }
+
     this.applyMode(getGlobeTexture());
     this.unsubscribeTexture = subscribeGlobeTextureChange((texture) => this.applyMode(texture));
   }
@@ -107,114 +183,30 @@ export class TacticalCountryFill {
     try {
       this.wakeGlobe();
     } catch {
-      // Never let a presentation-only refresh block the rest of the globe.
+      // Presentation-only updates should never block the rest of the globe.
     }
-  }
-
-  private installPolygonOverlay(): void {
-    const globe = this.globe;
-    if (
-      typeof globe.polygonsData !== 'function'
-      || typeof globe.polygonGeoJsonGeometry !== 'function'
-      || typeof globe.polygonCapColor !== 'function'
-      || typeof globe.polygonSideColor !== 'function'
-      || typeof globe.polygonStrokeColor !== 'function'
-      || typeof globe.polygonAltitude !== 'function'
-    ) return;
-
-    const originalDataMethod = globe.polygonsData;
-    const originalData = originalDataMethod.bind(globe);
-    const originalGeometry = globe.polygonGeoJsonGeometry();
-    const originalCapColor = globe.polygonCapColor();
-    const originalSideColor = globe.polygonSideColor();
-    const originalStrokeColor = globe.polygonStrokeColor();
-    const originalAltitude = globe.polygonAltitude();
-    const originalLabel = globe.polygonLabel?.();
-    const originalCurvature = globe.polygonCapCurvatureResolution?.();
-
-    const isTacticalCountry = (datum: unknown): datum is TacticalCountryDatum => (
-      Boolean(datum && typeof datum === 'object' && '_wmTacticalCountry' in datum)
-    );
-
-    const withCountries = (data: unknown[]): unknown[] => {
-      const clean = data.filter((item) => !isTacticalCountry(item));
-      return getGlobeTexture() === 'topographic' ? [...clean, ...this.countries] : clean;
-    };
-
-    globe.polygonGeoJsonGeometry((datum: unknown) => (
-      isTacticalCountry(datum) ? datum.geometry : resolveAccessor(originalGeometry, datum)
-    ));
-    globe.polygonCapColor((datum: unknown) => (
-      isTacticalCountry(datum) ? tacticalCountryColor(datum.code) : resolveAccessor(originalCapColor, datum)
-    ));
-    globe.polygonSideColor((datum: unknown) => (
-      isTacticalCountry(datum) ? tacticalCountryColor(datum.code) : resolveAccessor(originalSideColor, datum)
-    ));
-    globe.polygonStrokeColor((datum: unknown) => (
-      isTacticalCountry(datum) ? 'transparent' : resolveAccessor(originalStrokeColor, datum)
-    ));
-    globe.polygonAltitude((datum: unknown) => (
-      isTacticalCountry(datum) ? 0.0015 : resolveAccessor(originalAltitude, datum)
-    ));
-    if (typeof globe.polygonLabel === 'function') {
-      globe.polygonLabel((datum: unknown) => (
-        isTacticalCountry(datum) ? '' : resolveAccessor(originalLabel, datum)
-      ));
-    }
-    if (typeof globe.polygonCapCurvatureResolution === 'function') {
-      globe.polygonCapCurvatureResolution((datum: unknown) => (
-        isTacticalCountry(datum) ? 0.55 : resolveAccessor(originalCurvature, datum)
-      ));
-    }
-
-    globe.polygonsData = ((data?: unknown[]) => {
-      if (data === undefined) return originalData();
-      return originalData(withCountries(Array.isArray(data) ? data : []));
-    }) as typeof globe.polygonsData;
-
-    const current = originalData();
-    originalData(withCountries(Array.isArray(current) ? current : []));
-
-    this.restorePolygonHooks = () => {
-      globe.polygonsData = originalDataMethod;
-      globe.polygonGeoJsonGeometry?.(originalGeometry);
-      globe.polygonCapColor?.(originalCapColor);
-      globe.polygonSideColor?.(originalSideColor);
-      globe.polygonStrokeColor?.(originalStrokeColor);
-      globe.polygonAltitude?.(originalAltitude);
-      if (typeof globe.polygonLabel === 'function') globe.polygonLabel(originalLabel);
-      if (typeof globe.polygonCapCurvatureResolution === 'function') {
-        globe.polygonCapCurvatureResolution(originalCurvature);
-      }
-    };
   }
 
   private applyMode(texture: GlobeTexture): void {
     const tactical = texture === 'topographic';
-
-    // A falsy globe image produces a plain sphere. That lets the polygon layer
-    // define the land instead of showing the topographic/satellite photograph.
-    this.globe.globeImageUrl?.(tactical ? '' : GLOBE_TEXTURE_URLS['blue-marble']);
+    const tacticalUrl = this.tacticalTextureUrl ?? GLOBE_TEXTURE_URLS.topographic;
+    this.globe.globeImageUrl?.(tactical ? tacticalUrl : GLOBE_TEXTURE_URLS['blue-marble']);
 
     const material = this.globe.globeMaterial?.();
-    if (material?.color?.set) material.color.set(tactical ? '#081826' : '#ffffff');
-    if (material?.emissive?.set) material.emissive.set(tactical ? '#061521' : '#000000');
+    if (material?.color?.set) material.color.set('#ffffff');
+    if (material?.emissive?.set) {
+      material.emissive.set(tactical ? '#06131f' : '#000000');
+    }
     if (typeof material?.emissiveIntensity === 'number') {
-      material.emissiveIntensity = tactical ? 0.32 : 0;
+      material.emissiveIntensity = tactical ? 0.10 : 0;
     }
     if (material) material.needsUpdate = true;
-
-    if (typeof this.globe.polygonsData === 'function') {
-      const current = this.globe.polygonsData();
-      this.globe.polygonsData(Array.isArray(current) ? current : []);
-    }
     this.safeWake();
   }
 
   public destroy(): void {
     this.unsubscribeTexture?.();
     this.unsubscribeTexture = null;
-    this.restorePolygonHooks?.();
-    this.restorePolygonHooks = null;
+    this.tacticalTextureUrl = null;
   }
 }
