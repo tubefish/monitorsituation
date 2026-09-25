@@ -372,6 +372,20 @@ export class Panel {
     this.syncKeyboardColResizeAria();
   }
 
+  /** Apply an account's downloaded dimensions to an already mounted panel. */
+  public restoreSavedDimensions(): void {
+    if (this.isResizing || this.isColResizing) return;
+    const saved = loadPanelSpans()[this.panelId];
+    const span = typeof saved === 'number' && Number.isInteger(saved) && saved >= 1 && saved <= 4
+      ? saved
+      : this.defaultRowSpan;
+    this.element.classList.remove('resized');
+    setSpanClass(this.element, span);
+    this.restoreSavedColSpan();
+    this.syncKeyboardRowResizeAria();
+    this.syncKeyboardColResizeAria();
+  }
+
   private reconcileColSpanAfterAttach(attempts = 3): void {
     if (this.colSpanReconcileRaf !== null) {
       cancelAnimationFrame(this.colSpanReconcileRaf);

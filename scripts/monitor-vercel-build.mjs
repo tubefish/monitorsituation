@@ -12,6 +12,7 @@ function run(command, args) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+run('node', ['scripts/monitor-account-preflight.mjs']);
 run('npm', ['run', 'security:vite-env-secrets', '--', '--strict-local']);
 run('npx', ['tsc', '--noEmit', '--noUnusedLocals', 'false']);
 run('node', ['scripts/monitor-vite-prebuild.mjs']);

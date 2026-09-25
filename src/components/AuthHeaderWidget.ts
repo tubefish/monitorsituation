@@ -65,32 +65,21 @@ export class AuthHeaderWidget {
   private onSignInClick?: () => void;
   private onSettingsClick?: () => void;
   private onBillingClick?: () => void;
+  private onSignUpClick?: () => void;
 
   constructor(
     onSignInClick?: () => void,
     onSettingsClick?: () => void,
     onBillingClick?: () => void,
+    onSignUpClick?: () => void,
   ) {
     this.onSignInClick = onSignInClick;
     this.onSettingsClick = onSettingsClick;
     this.onBillingClick = onBillingClick;
+    this.onSignUpClick = onSignUpClick;
     this.container = document.createElement('div');
     this.container.className = 'auth-header-widget';
     ensureClerkAccountBackdrop();
-
-    // The MONITOR shell currently omits the upstream authWidgetMount node even
-    // though EventHandlerManager still initializes this widget and header.css
-    // still styles the mount. Recreate the mount when needed so the existing
-    // Clerk account controls can be exercised safely on preview builds.
-    // Preview deployments must provide VITE_CLERK_PUBLISHABLE_KEY for Clerk UI.
-    if (!document.getElementById('authWidgetMount')) {
-      const headerRight = document.querySelector<HTMLElement>('.header-right');
-      if (headerRight) {
-        const mount = document.createElement('div');
-        mount.id = 'authWidgetMount';
-        headerRight.appendChild(mount);
-      }
-    }
 
     this.unsubscribeAuth = subscribeAuthState((state: AuthSession) => {
       if (state.isPending) {
@@ -159,7 +148,10 @@ export class AuthHeaderWidget {
     const signUpLink = document.createElement('button');
     signUpLink.className = 'auth-signup-link';
     signUpLink.textContent = t('auth.createAccount');
-    signUpLink.addEventListener('click', () => openSignUp());
+    signUpLink.addEventListener('click', () => {
+      if (this.onSignUpClick) this.onSignUpClick();
+      else openSignUp();
+    });
     this.container.appendChild(signUpLink);
   }
 

@@ -62,7 +62,18 @@ export class MobilePrimaryNav {
     fallback?.addEventListener('click', openAuth, { signal: this.listeners.signal });
     if (!mobileMount) return;
 
-    this.authWidget = new AuthHeaderWidget(openAuth);
+    this.authWidget = new AuthHeaderWidget(
+      openAuth,
+      () => {
+        this.closeMenu();
+        this.ctx.unifiedSettings?.open('settings');
+      },
+      undefined,
+      () => {
+        this.closeMenu();
+        modal.openSignUp();
+      },
+    );
     mobileMount.appendChild(this.authWidget.getElement());
     const renderPending = (pending: boolean) => {
       mobileMount.hidden = pending;
