@@ -17,6 +17,11 @@ function ensureClerkAccountBackdrop(): void {
   const style = document.createElement('style');
   style.id = CLERK_ACCOUNT_BACKDROP_STYLE_ID;
   style.textContent = `
+    /* Account dialogs must cover the mobile tab bar (10003) and update notice (10004). */
+    .cl-modalBackdrop {
+      z-index: 11000 !important;
+    }
+
     .cl-modalBackdrop:has(.cl-userProfile-root) {
       background: rgba(34, 36, 39, 0.72) !important;
       backdrop-filter: blur(5px);
