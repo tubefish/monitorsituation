@@ -119,7 +119,7 @@ export class GlobeMap extends GlobeMapCore {
           this.globePresentation = new GlobePresentation(
             runtime.container,
             runtime.globe as any,
-            runtime.wakeGlobe,
+            () => runtime.wakeGlobe(),
           );
           await this.globePresentation.init();
         }
