@@ -65,6 +65,7 @@ export interface IntelligenceCache {
 
 export interface AppContext {
   map: import('@/components').MapContainer | null;
+  mapExperience: import('@/components/MapExperienceSwitcher').MapExperienceSwitcher | null;
   readonly isMobile: boolean;
   readonly isDesktopApp: boolean;
   readonly container: HTMLElement;

@@ -1,5 +1,7 @@
 import { installDashboardLayoutEditor } from './dashboard-layout-editor';
 import { MONITOR_DEFAULT_PANEL_ORDER } from '@/config/monitor-defaults';
+import { MONITOR_MOBILE_NAV } from '@/config/monitor-mobile-nav';
+import { waitForDashboardStyles } from '@/utils/dashboard-styles-ready';
 import { movePanelToKeyboardZone } from '@/app/panel-keyboard-reorder';
 import type { AppContext, AppModule } from '@/app/app-context';
 import { normalizeExclusiveChoropleths } from '@/components/resilience-choropleth-utils';
@@ -30,6 +32,7 @@ import type { TheaterPostureSummary } from '@/services/military-surge';
 import type { NewsPanel } from '@/components/NewsPanel';
 import type { AviationCommandBar } from '@/components/AviationCommandBar';
 import { MobilePanelNav } from '@/components/MobilePanelNav';
+import { MapExperienceSwitcher } from '@/components/MapExperienceSwitcher';
 import { debounce, loadFromStorage, saveToStorage } from '@/utils';
 import { escapeHtml } from '@/utils/sanitize';
 import {
@@ -218,7 +221,6 @@ const CW_PRO_GATE_TAB_RECOVERY_KEY = 'worldmonitor-cw-pro-gate-tab-recovery-v1';
 
 const DASHBOARD_REFERENCE_LINKS = [
   { label: 'X', url: 'https://x.com/monitoringmeme' },
-  { label: 'Dexscreener', url: 'https://dexscreener.com/robinhood/0xcfa7bb34e23a7022c3de3e1618e1ff29cde8f16a76c341eca19d16f928968a3d' },
   { label: 'GitHub', url: 'https://github.com/tubefish/monitorsituation' },
   { label: 'Palantir', url: 'https://www.palantir.com/' },
 ] as const;
@@ -790,6 +792,8 @@ export class PanelLayoutManager implements AppModule {
     this.mobilePanelNav?.destroy();
     this.mobilePanelNav = null;
     this.mobileMapCollapseBtn = null;
+    this.ctx.mapExperience?.destroy();
+    this.ctx.mapExperience = null;
     this.panelTabBar?.destroy();
     this.panelTabBar = null;
     // Clean up happy variant panels
@@ -928,6 +932,9 @@ export class PanelLayoutManager implements AppModule {
    *  first-time mobile visitors default to the collapsed, feed-first Today
    *  state. Wire format stays 'true'/'false' (JSON booleans). */
   private static isMobileMapCollapsedPreferred(): boolean {
+    // MONITOR's Map tab is the landing view. Seed that state on the very first
+    // render, rather than opening a persisted Today layout and expanding later.
+    if (SITE_VARIANT === 'full') return false;
     return loadFromStorage<boolean>('mobile-map-collapsed', true) === true;
   }
 
@@ -935,6 +942,8 @@ export class PanelLayoutManager implements AppModule {
 
   async renderLayout(): Promise<void> {
     document.documentElement.classList.toggle('monitor-dashboard', SITE_VARIANT === 'full');
+    if (SITE_VARIANT === 'full') await waitForDashboardStyles();
+    if (this.ctx.isDestroyed) return;
     // #5159: the collapsed-map cohort's #mapSection must be CREATED with
     // .collapsed — main.css sets the expanded mobile height with !important
     // inside a cascade layer, and layered !important beats any unlayered
@@ -970,7 +979,7 @@ export class PanelLayoutManager implements AppModule {
       <a href="#main" class="skip-link">Skip to main content</a>
       <div class="header" role="banner">
         <div class="header-left">
-          <span class="logo">$MONITOR</span><span class="logo-mobile">$Monitor</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
+          <span class="logo">$MONITOR</span><span class="logo-mobile">$MONITOR</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
           <a href="https://x.com/monitoringmeme" target="_blank" rel="noopener noreferrer" class="credit-link">
             <svg class="x-logo" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
             <span class="credit-text">@monitoringmeme</span>
@@ -1058,6 +1067,7 @@ export class PanelLayoutManager implements AppModule {
         <div class="mobile-menu-divider"></div>
         ${SITE_VARIANT === 'full' ? '<button type="button" id="mobileCustomizeLayoutBtn" class="mobile-menu-item" aria-pressed="false">Customize layout</button><button type="button" id="mobileShareViewBtn" class="mobile-menu-item">Share this view</button>' : ''}
         <div class="mobile-menu-footer-links">
+          <button type="button" class="site-footer-markets" data-open-markets>Markets</button>
           ${referenceLinksHtml}
         </div>
       </nav>
@@ -1096,9 +1106,11 @@ export class PanelLayoutManager implements AppModule {
           <div class="map-bottom-grid" id="mapBottomGrid"></div>
         </div>
         <div class="map-width-resize-handle" id="mapWidthResizeHandle" title="Drag to widen the map or panels"></div>
+        ${SITE_VARIANT === 'full' && this.ctx.isMobile ? '<div id="mobilePanelNavSlot" class="monitor-mobile-panel-nav-slot" aria-hidden="true"></div>' : ''}
         <div class="panels-grid" id="panelsGrid" role="tabpanel" aria-label="Dashboard panels"></div>
       </main>
       <nav class="mobile-tab-bar" id="mobileTabBar" aria-label="Primary">
+        ${SITE_VARIANT === 'full' ? MONITOR_MOBILE_NAV : `
         <button class="mobile-tab active" type="button" data-mobile-tab="today" aria-current="page">
           <span class="mobile-tab-icon" aria-hidden="true">◉</span><span>Today</span>
         </button>
@@ -1114,6 +1126,7 @@ export class PanelLayoutManager implements AppModule {
         <button class="mobile-tab" type="button" data-mobile-tab="more">
           <span class="mobile-tab-icon" aria-hidden="true">•••</span><span>More</span>
         </button>
+        `}
       </nav>
       <footer class="site-footer">
         <div class="site-footer-brand">
@@ -1123,6 +1136,7 @@ export class PanelLayoutManager implements AppModule {
           </div>
         </div>
         <nav aria-label="$MONITOR references">
+          <button type="button" class="site-footer-markets" data-open-markets>Markets</button>
           ${referenceLinksHtml}
         </nav>
         <span class="site-footer-copy">&copy; ${new Date().getFullYear()} $MONITOR</span>
@@ -1937,7 +1951,9 @@ export class PanelLayoutManager implements AppModule {
     const grid = document.getElementById('panelsGrid');
     if (!grid) return;
     this.mobilePanelNav = new MobilePanelNav(() => this.ctx.panelSettings);
-    grid.before(this.mobilePanelNav.getElement());
+    const reserved = document.getElementById('mobilePanelNavSlot');
+    if (reserved) reserved.replaceWith(this.mobilePanelNav.getElement());
+    else grid.before(this.mobilePanelNav.getElement());
     this.mobilePanelNav.refresh();
   }
 
@@ -3259,7 +3275,7 @@ export class PanelLayoutManager implements AppModule {
     if (this.ctx.isDestroyed) return;
     markLcpDebug('wm:map:container-construct');
     this.ctx.map = new MapContainer(mapContainer, {
-      zoom: this.ctx.isMobile ? 2.5 : 1.0,
+      zoom: SITE_VARIANT === 'full' ? 1.0 : this.ctx.isMobile ? 2.5 : 1.0,
       pan: { x: 0, y: 0 },
       view: this.ctx.isMobile ? this.ctx.resolvedLocation : 'global',
       layers: this.ctx.mapLayers,
@@ -3267,6 +3283,16 @@ export class PanelLayoutManager implements AppModule {
     }, preferGlobe, {
       isFreeTierFallbackActive: this.callbacks.isFreeTierFallbackActive,
     });
+    if (SITE_VARIANT === 'full') {
+      const mapSection = document.getElementById('mapSection');
+      if (mapSection) {
+        this.ctx.mapExperience = new MapExperienceSwitcher(
+          mapSection,
+          mapContainer,
+          item => this.ctx.map?.setCenter(item.lat, item.lon, 5),
+        );
+      }
+    }
 
     const eagerSupplyChainPanel = this.ctx.panels['supply-chain'] as SupplyChainPanel | undefined;
     if (eagerSupplyChainPanel) {
