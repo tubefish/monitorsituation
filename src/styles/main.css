@@ -14811,6 +14811,11 @@ a.prediction-link:hover {
     gap: 0;
   }
 
+  #authWidgetMount .auth-header-username {
+    margin-right: 8px;
+    max-width: 72px;
+  }
+
   #authWidgetMount .auth-signin-btn {
     min-height: 44px;
     padding: 0 12px;
@@ -24527,6 +24532,16 @@ body.map-width-resizing {
   align-items: center;
   position: relative;
   gap: 8px;
+}
+
+.auth-header-username {
+  color: var(--text);
+  font-size: calc(13px * var(--wm-panel-effective-scale, 1));
+  font-weight: 600;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .auth-signup-link {

@@ -10,6 +10,7 @@ import {
 export interface AuthUser {
   id: string;
   name: string;
+  username?: string | null;
   email: string;
   image?: string | null;
   role: 'free' | 'pro';
@@ -34,6 +35,7 @@ function snapshotSession(): AuthSession {
     user: {
       id: cu.id,
       name: cu.name,
+      username: cu.username,
       email: cu.email,
       image: cu.image,
       role: cu.plan,

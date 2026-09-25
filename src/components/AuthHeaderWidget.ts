@@ -69,7 +69,7 @@ export class AuthHeaderWidget {
       this.renderSignedOut();
       return;
     }
-    this.renderSignedIn();
+    this.renderSignedIn(state.user);
   }
 
   private renderPending(): void {
@@ -107,7 +107,13 @@ export class AuthHeaderWidget {
     this.container.appendChild(signUpLink);
   }
 
-  private renderSignedIn(): void {
+  private renderSignedIn(user: NonNullable<AuthSession['user']>): void {
+    const username = document.createElement('span');
+    username.className = 'auth-header-username';
+    username.textContent = user.username?.trim() || user.name;
+    username.title = username.textContent;
+    this.container.appendChild(username);
+
     const userBtnEl = document.createElement('div');
     userBtnEl.className = 'auth-clerk-user-button';
     this.container.appendChild(userBtnEl);
