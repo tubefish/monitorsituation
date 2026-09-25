@@ -673,10 +673,10 @@ export class GlobePresentation {
   }
 
   private countryBorderStroke(): number {
-    // globe.gl fat paths use angular degrees for width. Around .3 degrees
-    // renders close to the 1.5–2px borders in the supplied reference at the
-    // normal global camera distance, while staying smooth as the globe zooms.
-    return getGlobeTexture() === 'topographic' ? 0.36 : 0.30;
+    // globe.gl fat paths measure width in angular degrees. This intentionally
+    // doubles the previous border width so borders stay visually solid while
+    // the globe is moving or the camera is zoomed closer.
+    return getGlobeTexture() === 'topographic' ? 0.72 : 0.60;
   }
 
   private countryLabelColor(): string {
