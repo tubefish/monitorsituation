@@ -4,6 +4,7 @@ export type GlobeTexture = 'topographic' | 'blue-marble';
 const STORAGE_KEY = 'wm-globe-render-scale';
 const EVENT_NAME = 'wm-globe-render-scale-changed';
 
+const TEXTURE_STORAGE_KEY = 'wm-globe-texture';
 const TEXTURE_EVENT_NAME = 'wm-globe-texture-changed';
 
 export const GLOBE_RENDER_SCALE_OPTIONS: {
@@ -74,8 +75,8 @@ export function resolvePerformanceProfile(scale: GlobeRenderScale): GlobePerform
 }
 
 export const GLOBE_TEXTURE_OPTIONS: { value: GlobeTexture; label: string }[] = [
-  { value: 'topographic', label: 'Topographic' },
-  { value: 'blue-marble', label: 'Blue Marble (NASA)' },
+  { value: 'blue-marble', label: 'Satellite' },
+  { value: 'topographic', label: 'Tactical' },
 ];
 
 export const GLOBE_TEXTURE_URLS: Record<GlobeTexture, string> = {
@@ -84,11 +85,24 @@ export const GLOBE_TEXTURE_URLS: Record<GlobeTexture, string> = {
 };
 
 export function getGlobeTexture(): GlobeTexture {
+  try {
+    const raw = localStorage.getItem(TEXTURE_STORAGE_KEY);
+    if (raw === 'blue-marble' || raw === 'topographic') return raw;
+  } catch {
+    // ignore
+  }
+  // Satellite is the $MONITOR default. Site light/dark mode never changes it.
   return 'blue-marble';
 }
 
 export function setGlobeTexture(texture: GlobeTexture): void {
-  window.dispatchEvent(new CustomEvent(TEXTURE_EVENT_NAME, { detail: { texture } }));
+  const safeTexture: GlobeTexture = texture === 'topographic' ? 'topographic' : 'blue-marble';
+  try {
+    localStorage.setItem(TEXTURE_STORAGE_KEY, safeTexture);
+  } catch {
+    // ignore
+  }
+  window.dispatchEvent(new CustomEvent(TEXTURE_EVENT_NAME, { detail: { texture: safeTexture } }));
 }
 
 export function subscribeGlobeTextureChange(cb: (texture: GlobeTexture) => void): () => void {

@@ -3,6 +3,7 @@ import type { MapLayers } from '@/types';
 import type { MapContainerState, MapView } from './MapContainer';
 import { GlobeMap as GlobeMapCore } from './GlobeMapCore';
 import type { GlobeMapOptions } from './GlobeMapCore';
+import { GlobePresentation } from './GlobePresentation';
 
 export type { GlobeMapOptions } from './GlobeMapCore';
 
@@ -88,6 +89,7 @@ export class GlobeMap extends GlobeMapCore {
   private readonly mobileBootStartedAt = Date.now();
   private mobileBootCenterHandled = false;
   private themeObserver: MutationObserver | null = null;
+  private globePresentation: GlobePresentation | null = null;
 
   public constructor(
     container: HTMLElement,
@@ -108,9 +110,19 @@ export class GlobeMap extends GlobeMapCore {
     // the site's existing [data-theme="light"] toggle. Apply the desktop camera
     // offset at the same point so the first ready frame is already centered.
     void this.whenReady()
-      .then(() => {
+      .then(async () => {
         this.syncThemeSurround();
         this.applyDesktopGlobeOffset();
+
+        const runtime = this as unknown as GlobeRuntime;
+        if (runtime.globe) {
+          this.globePresentation = new GlobePresentation(
+            runtime.container,
+            runtime.globe as any,
+            runtime.wakeGlobe,
+          );
+          await this.globePresentation.init();
+        }
       })
       .catch(() => undefined);
 
@@ -262,6 +274,8 @@ export class GlobeMap extends GlobeMapCore {
   }
 
   public override destroy(): void {
+    this.globePresentation?.destroy();
+    this.globePresentation = null;
     this.themeObserver?.disconnect();
     this.themeObserver = null;
     super.destroy();
