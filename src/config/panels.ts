@@ -1,5 +1,6 @@
 import type { PanelConfig, MapLayers, DataSourceId } from '@/types';
 import { SITE_VARIANT } from './variant';
+import { FREE_ONLY_SITE } from './free-site';
 // boundary-ignore: isDesktopRuntime is a pure env probe with no service dependencies
 import { isDesktopRuntime } from '@/services/runtime';
 // boundary-ignore: getSecretState is a pure env/keychain probe with no service dependencies
@@ -1237,6 +1238,11 @@ export function getEffectivePanelConfig(key: string, variant: string): PanelConf
   return { ...base, ...override };
 }
 
+/** Hide paid-only panels without deleting a user's saved panel preferences. */
+export function isHiddenPaidPanel(key: string, variant: string): boolean {
+  return FREE_ONLY_SITE && getEffectivePanelConfig(key, variant).premium === 'locked';
+}
+
 /**
  * Build the same canonical panel-settings seed App uses on a first visit:
  * every panel is addressable, while only the selected variant's enabled
@@ -1270,8 +1276,8 @@ export function isPanelInVariantDefaults(key: string): boolean {
   return SITE_VARIANT_DEFAULTS.has(key);
 }
 
-export const FREE_MAX_PANELS = 40;
-export const FREE_MAX_SOURCES = 80;
+export const FREE_MAX_PANELS = FREE_ONLY_SITE ? 10_000 : 40;
+export const FREE_MAX_SOURCES = FREE_ONLY_SITE ? 10_000 : 80;
 
 export function isFreePanelCapCounted(key: string): boolean {
   return key !== 'map' && !key.startsWith('cw-');
@@ -1303,6 +1309,7 @@ export function restoreFreeMapPanelAccess(
  * Mirrors the entitlement checks in panel-layout.ts (single source of truth).
  */
 export function isPanelEntitled(key: string, config: PanelConfig, isPro = false): boolean {
+  if (isHiddenPaidPanel(key, SITE_VARIANT)) return false;
   if (!config.premium) return true;
   // Dodo entitlements unlock all premium panels
   if (isEntitled()) return true;
@@ -1649,7 +1656,7 @@ export function getVariantPanelCategories(
 ): VariantPanelCategory[] {
   return Object.entries(PANEL_CATEGORY_MAP)
     .filter(([, def]) => !def.variants || def.variants.includes(variant))
-    .filter(([, def]) => def.panelKeys.some((pk) => panelSettings[pk]?.enabled))
+    .filter(([, def]) => def.panelKeys.some((pk) => panelSettings[pk]?.enabled && !isHiddenPaidPanel(pk, variant)))
     .map(([key, def]) => ({ key, labelKey: def.labelKey, panelKeys: def.panelKeys }));
 }
 
@@ -1661,6 +1668,7 @@ export function getProPanelKeys(
   panelSettings: Record<string, PanelConfig>,
   variant: string,
 ): string[] {
+  if (FREE_ONLY_SITE) return [];
   return Object.keys(panelSettings).filter((key) =>
     panelSettings[key]?.enabled && Boolean(getEffectivePanelConfig(key, variant).premium),
   );

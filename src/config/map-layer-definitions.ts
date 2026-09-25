@@ -1,6 +1,7 @@
 import type { MapLayers } from '@/types';
 // boundary-ignore: isDesktopRuntime is a pure env probe with no service dependencies
 import { isDesktopRuntime } from '@/services/runtime';
+import { FREE_ONLY_SITE } from './free-site';
 
 /**
  * The three concrete map renderers a layer can be painted by. This is the
@@ -407,7 +408,8 @@ const IRAN_ATTACKS_ENABLED = typeof window !== 'undefined' && import.meta.env.VI
 
 /** True when a layer is feature-sunset and must not appear in any picker. */
 export function isSunsetLayer(key: keyof MapLayers): boolean {
-  return !IRAN_ATTACKS_ENABLED && key === 'iranAttacks';
+  return (!IRAN_ATTACKS_ENABLED && key === 'iranAttacks')
+    || (FREE_ONLY_SITE && LAYER_REGISTRY[key]?.premium === 'locked');
 }
 
 export function getOrderedLayerKeys(variant: MapVariant): Array<keyof MapLayers> {

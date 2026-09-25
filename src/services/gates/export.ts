@@ -15,6 +15,7 @@
  */
 
 import type { AuthSession } from '../auth-state';
+import { FREE_ONLY_SITE } from '@/config/free-site';
 import { getSubscription } from '../billing';
 import { deriveBillingUxState } from '../billing-state';
 import { getEntitlementState } from '../entitlements';
@@ -89,5 +90,6 @@ export function evaluateAvailableExportFormats(authState: AuthSession): DataExpo
  * never asks a caller to remove tabs that already exist (KTD8).
  */
 export function evaluateTabCap(authState: AuthSession, currentTabCount: number): TabCapVerdict {
+  if (FREE_ONLY_SITE) return { allowed: true, cap: null, pendingActivation: false };
   return resolveTabCap(readExportGateInputs(authState), currentTabCount);
 }

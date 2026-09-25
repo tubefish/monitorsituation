@@ -47,6 +47,8 @@ import {
   enforceFreePanelLimit,
 } from '@/config';
 import { BETA_MODE } from '@/config/beta';
+import { FREE_ONLY_SITE } from '@/config/free-site';
+import { isHiddenPaidPanel } from '@/config/panels';
 import { NQ_PULSE_DISCLOSURE } from '@/config/nq-context';
 import { t } from '@/services/i18n';
 import { getCurrentTheme } from '@/utils';
@@ -2154,7 +2156,8 @@ export class PanelLayoutManager implements AppModule {
   }
 
   private shouldCreatePanel(key: string): boolean {
-    return hasPanelSettingEntry(this.ctx.panelSettings, key);
+    return hasPanelSettingEntry(this.ctx.panelSettings, key)
+      && !isHiddenPaidPanel(key, SITE_VARIANT);
   }
 
   private static readonly NEWS_PANEL_TOOLTIPS: Record<string, string> = {
@@ -3243,7 +3246,7 @@ export class PanelLayoutManager implements AppModule {
     const proBlocks = [proBlock, mcpBlock];
     const applyProBlockGating = (isPro: boolean) => {
       for (const block of proBlocks) {
-        block.style.display = isPro ? '' : 'none';
+        block.style.display = FREE_ONLY_SITE ? 'none' : isPro ? '' : 'none';
       }
     };
     const reapply = () => applyProBlockGating(hasPremiumAccess(getAuthState()));

@@ -20,6 +20,7 @@ import {
   FREE_MAX_SOURCES,
   countFreePanelCapUsage,
   isFreePanelCapCounted,
+  isHiddenPaidPanel,
   isPanelEntitled,
   userSetPanelEnabled,
 } from '@/config/panels';
@@ -381,6 +382,7 @@ export class EventHandlerManager implements AppModule {
    * monitor compatibility and entitlements on enable.
    */
   enablePanelById(panelId: string, options?: { trackAnalytics?: boolean }): boolean {
+    if (isHiddenPaidPanel(panelId, SITE_VARIANT)) return false;
     const config = this.ctx.panelSettings[panelId];
     if (!config) return false;
     if (config.enabled) return true;
@@ -2105,13 +2107,10 @@ export class EventHandlerManager implements AppModule {
     const modal = new AuthLauncher();
     this.ctx.authModal = modal;
 
-    // The standalone gear remains available to every user. Signed-in users
-    // also get explicit Settings and Plan & billing destinations inside the
-    // avatar menu, keeping account and subscription actions in one place.
+    // Account preferences remain available without a billing destination.
     const widget = new AuthHeaderWidget(
       () => modal.open(),
       () => this.ctx.unifiedSettings?.open('settings'),
-      () => this.ctx.unifiedSettings?.open('billing'),
     );
     this.ctx.authHeaderWidget = widget;
     const mount = document.getElementById('authWidgetMount');
