@@ -11,6 +11,8 @@ import {
 
 const TOGGLE_TOP_PX = 8;
 const TOGGLE_RIGHT_PX = 54;
+const BORDER_ALTITUDE = 0.009;
+const LABEL_ALTITUDE = 0.018;
 
 const FAR_LABEL_CODES = new Set([
   'US', 'CA', 'MX', 'BR', 'AR',
@@ -32,26 +34,29 @@ const LABEL_CENTER_OVERRIDES: Record<string, { lat: number; lng: number }> = {
   JP: { lat: 37.5, lng: 138.0 },
 };
 
-type CountryBoundaryDatum = {
-  _wmCountryBoundary: true;
-  code: string;
+type CountryBorderPath = {
+  _wmCountryBorder: true;
+  id: string;
   name: string;
-  geometry: Geometry;
+  points: number[][];
 };
 
 type CountryLabelDatum = {
+  _wmCountryLabel: true;
   code: string;
   text: string;
-  lat: number;
-  lng: number;
+  _lat: number;
+  _lng: number;
   rank: 0 | 1 | 2;
-  size: number;
+  fontPx: number;
 };
 
 type GlobeMaterialRuntime = {
   color?: { set: (color: string) => void };
   emissive?: { set: (color: string) => void };
   emissiveIntensity?: number;
+  opacity?: number;
+  transparent?: boolean;
   needsUpdate?: boolean;
 };
 
@@ -61,27 +66,29 @@ type GlobeControlsRuntime = {
 };
 
 type GlobeRuntime = {
-  globeImageUrl: (url: string) => unknown;
   globeMaterial?: () => GlobeMaterialRuntime;
   atmosphereColor?: (color: string) => unknown;
   atmosphereAltitude?: (altitude: number) => unknown;
   pointOfView?: () => { lat: number; lng: number; altitude: number };
   controls?: () => GlobeControlsRuntime;
-  polygonsData?: (data?: unknown[]) => unknown;
-  polygonGeoJsonGeometry?: (accessor?: unknown) => unknown;
-  polygonCapColor?: (accessor?: unknown) => unknown;
-  polygonSideColor?: (accessor?: unknown) => unknown;
-  polygonStrokeColor?: (accessor?: unknown) => unknown;
-  polygonAltitude?: (accessor?: unknown) => unknown;
-  labelsData?: (data: unknown[]) => unknown;
-  labelLat?: (accessor: unknown) => unknown;
-  labelLng?: (accessor: unknown) => unknown;
-  labelText?: (accessor: unknown) => unknown;
-  labelColor?: (accessor: unknown) => unknown;
-  labelAltitude?: (accessor: unknown) => unknown;
-  labelSize?: (accessor: unknown) => unknown;
-  labelIncludeDot?: (include: boolean) => unknown;
-  labelResolution?: (resolution: number) => unknown;
+
+  pathsData?: (data?: unknown[]) => unknown;
+  pathPoints?: (accessor?: unknown) => unknown;
+  pathPointLat?: (accessor?: unknown) => unknown;
+  pathPointLng?: (accessor?: unknown) => unknown;
+  pathPointAlt?: (accessor?: unknown) => unknown;
+  pathColor?: (accessor?: unknown) => unknown;
+  pathStroke?: (accessor?: unknown) => unknown;
+  pathDashLength?: (accessor?: unknown) => unknown;
+  pathDashGap?: (accessor?: unknown) => unknown;
+  pathDashAnimateTime?: (accessor?: unknown) => unknown;
+  pathLabel?: (accessor?: unknown) => unknown;
+
+  htmlElementsData?: (data?: unknown[]) => unknown;
+  htmlLat?: (accessor?: unknown) => unknown;
+  htmlLng?: (accessor?: unknown) => unknown;
+  htmlAltitude?: (accessor?: unknown) => unknown;
+  htmlElement?: (accessor?: unknown) => unknown;
 };
 
 function readFeatureCode(properties: Record<string, unknown> | null | undefined): string | null {
@@ -157,6 +164,30 @@ function geometryLabelCenter(geometry: Geometry): { lat: number; lng: number; ar
   };
 }
 
+function geometryBorderRings(geometry: Geometry): number[][][] {
+  const polygons = geometry.type === 'Polygon'
+    ? [geometry.coordinates]
+    : geometry.type === 'MultiPolygon'
+      ? geometry.coordinates
+      : [];
+
+  const rings: number[][][] = [];
+  for (const polygon of polygons) {
+    const outer = polygon[0];
+    if (!Array.isArray(outer) || outer.length < 3) continue;
+    const points = outer
+      .map((point) => {
+        if (!Array.isArray(point) || point.length < 2) return null;
+        const lng = Number(point[0]);
+        const lat = Number(point[1]);
+        return Number.isFinite(lng) && Number.isFinite(lat) ? [lng, lat] : null;
+      })
+      .filter((point): point is number[] => point !== null);
+    if (points.length >= 3) rings.push(points);
+  }
+  return rings;
+}
+
 function resolveAccessor(accessor: unknown, datum: unknown): unknown {
   if (typeof accessor === 'function') {
     return (accessor as (value: unknown) => unknown)(datum);
@@ -167,21 +198,30 @@ function resolveAccessor(accessor: unknown, datum: unknown): unknown {
   return accessor;
 }
 
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 /**
  * $MONITOR globe presentation layer.
  *
- * This stays deliberately separate from GlobeMapCore's operational overlays:
- * it only owns the base Earth skin, country outlines/labels, and the
- * Satellite/Tactical selector. Existing markers, conflict polygons, paths,
- * hit-testing, camera state, and site light/dark mode remain independent.
+ * Owns only the Earth presentation: Satellite/Tactical skin selection,
+ * readable country labels, and country borders. Operational markers, paths,
+ * conflicts, camera state and site light/dark mode remain independent.
  */
 export class GlobePresentation {
   private toggle: HTMLElement | null = null;
   private unsubscribeTexture: (() => void) | null = null;
   private controlsLabelHandler: (() => void) | null = null;
-  private restorePolygonDataMethod: (() => void) | null = null;
-  private countryBoundaries: CountryBoundaryDatum[] = [];
-  private countryLabels: CountryLabelDatum[] = [];
+  private restorePathsDataMethod: (() => void) | null = null;
+  private restoreHtmlDataMethod: (() => void) | null = null;
+  private countryBorders: CountryBorderPath[] = [];
+  private countryLabels: Omit<CountryLabelDatum, 'fontPx'>[] = [];
+  private visibleLabels: CountryLabelDatum[] = [];
+  private transitionGeneration = 0;
+  private transitionFrame: number | null = null;
 
   public constructor(
     private readonly container: HTMLElement,
@@ -190,6 +230,7 @@ export class GlobePresentation {
   ) {}
 
   public async init(): Promise<void> {
+    this.preloadTextures();
     this.installToggle();
     await this.installCountryPresentation();
     this.applySkin(getGlobeTexture());
@@ -197,6 +238,17 @@ export class GlobePresentation {
     this.unsubscribeTexture = subscribeGlobeTextureChange((texture) => {
       this.applySkin(texture);
       this.updateToggle(texture);
+      this.refreshCountryBorders();
+      this.updateCountryLabels();
+    });
+  }
+
+  private preloadTextures(): void {
+    if (typeof Image === 'undefined') return;
+    Object.values(GLOBE_TEXTURE_URLS).forEach((url) => {
+      const image = new Image();
+      image.decoding = 'async';
+      image.src = url;
     });
   }
 
@@ -210,7 +262,7 @@ export class GlobePresentation {
       position: 'absolute',
       top: `${TOGGLE_TOP_PX}px`,
       right: `${TOGGLE_RIGHT_PX}px`,
-      zIndex: '12',
+      zIndex: '60',
       display: 'inline-flex',
       alignItems: 'center',
       padding: '2px',
@@ -230,7 +282,9 @@ export class GlobePresentation {
       button.dataset.globeTexture = texture;
       button.textContent = label;
       button.title = `${label} globe`;
-      button.addEventListener('click', () => setGlobeTexture(texture));
+      button.addEventListener('click', () => {
+        void this.transitionToTexture(texture);
+      });
       Object.assign(button.style, {
         appearance: 'none',
         border: '0',
@@ -244,7 +298,17 @@ export class GlobePresentation {
         fontWeight: '600',
         letterSpacing: '0.02em',
         lineHeight: '1.1',
+        transition: 'background 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
       });
+      button.addEventListener('pointerdown', () => {
+        button.style.transform = 'scale(0.97)';
+      });
+      const release = () => {
+        button.style.transform = 'scale(1)';
+      };
+      button.addEventListener('pointerup', release);
+      button.addEventListener('pointercancel', release);
+      button.addEventListener('pointerleave', release);
       return button;
     };
 
@@ -270,12 +334,89 @@ export class GlobePresentation {
     });
   }
 
+  private async transitionToTexture(texture: GlobeTexture): Promise<void> {
+    if (texture === getGlobeTexture()) return;
+
+    const material = this.globe.globeMaterial?.();
+    if (!material || prefersReducedMotion() || typeof requestAnimationFrame !== 'function') {
+      setGlobeTexture(texture);
+      return;
+    }
+
+    const generation = ++this.transitionGeneration;
+    if (this.transitionFrame !== null) {
+      cancelAnimationFrame(this.transitionFrame);
+      this.transitionFrame = null;
+    }
+
+    const startOpacity = typeof material.opacity === 'number' ? material.opacity : 1;
+    material.transparent = true;
+    material.opacity = startOpacity;
+    material.needsUpdate = true;
+    this.wakeGlobe();
+
+    await this.animateMaterialOpacity(material, startOpacity, 0.38, 150, generation);
+    if (generation !== this.transitionGeneration) return;
+
+    // The core globe subscription owns the texture swap. We trigger it only
+    // after the Earth has dimmed so the change reads as a smooth transition
+    // instead of a hard visual cut.
+    setGlobeTexture(texture);
+
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 45);
+    });
+    if (generation !== this.transitionGeneration) return;
+
+    await this.animateMaterialOpacity(material, 0.38, 1, 220, generation);
+    if (generation !== this.transitionGeneration) return;
+
+    material.opacity = 1;
+    material.transparent = false;
+    material.needsUpdate = true;
+    this.transitionFrame = null;
+    this.wakeGlobe();
+  }
+
+  private animateMaterialOpacity(
+    material: GlobeMaterialRuntime,
+    from: number,
+    to: number,
+    durationMs: number,
+    generation: number,
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      const startedAt = performance.now();
+      const tick = (now: number) => {
+        if (generation !== this.transitionGeneration) {
+          resolve();
+          return;
+        }
+        const progress = Math.min(1, Math.max(0, (now - startedAt) / durationMs));
+        const eased = progress < 0.5
+          ? 2 * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        material.opacity = from + (to - from) * eased;
+        material.needsUpdate = true;
+        this.wakeGlobe();
+
+        if (progress >= 1) {
+          this.transitionFrame = null;
+          resolve();
+          return;
+        }
+        this.transitionFrame = requestAnimationFrame(tick);
+      };
+      this.transitionFrame = requestAnimationFrame(tick);
+    });
+  }
+
   private async installCountryPresentation(): Promise<void> {
     const countries = await getCountriesGeoJson();
     if (!countries) return;
 
-    const boundaries: CountryBoundaryDatum[] = [];
-    const labels: CountryLabelDatum[] = [];
+    const borders: CountryBorderPath[] = [];
+    const labels: Omit<CountryLabelDatum, 'fontPx'>[] = [];
 
     for (const feature of countries.features) {
       if (!feature.geometry) continue;
@@ -284,11 +425,13 @@ export class GlobePresentation {
       const name = readFeatureName(properties);
       if (!code || !name) continue;
 
-      boundaries.push({
-        _wmCountryBoundary: true,
-        code,
-        name,
-        geometry: feature.geometry,
+      geometryBorderRings(feature.geometry).forEach((points, index) => {
+        borders.push({
+          _wmCountryBorder: true,
+          id: `wm-country-${code}-${index}`,
+          name,
+          points,
+        });
       });
 
       const center = geometryLabelCenter(feature.geometry);
@@ -301,16 +444,16 @@ export class GlobePresentation {
           : 2;
 
       labels.push({
+        _wmCountryLabel: true,
         code,
         text: name.toUpperCase(),
-        lat: override?.lat ?? center.lat,
-        lng: override?.lng ?? center.lng,
+        _lat: override?.lat ?? center.lat,
+        _lng: override?.lng ?? center.lng,
         rank,
-        size: rank === 0 ? 0.62 : rank === 1 ? 0.50 : 0.40,
       });
     }
 
-    this.countryBoundaries = boundaries;
+    this.countryBorders = borders;
     this.countryLabels = labels;
 
     this.installCountryBorders();
@@ -321,84 +464,136 @@ export class GlobePresentation {
   private installCountryBorders(): void {
     const globe = this.globe;
     if (
-      typeof globe.polygonsData !== 'function'
-      || typeof globe.polygonGeoJsonGeometry !== 'function'
-      || typeof globe.polygonCapColor !== 'function'
-      || typeof globe.polygonSideColor !== 'function'
-      || typeof globe.polygonStrokeColor !== 'function'
-      || typeof globe.polygonAltitude !== 'function'
+      typeof globe.pathsData !== 'function'
+      || typeof globe.pathPoints !== 'function'
+      || typeof globe.pathPointAlt !== 'function'
+      || typeof globe.pathColor !== 'function'
+      || typeof globe.pathStroke !== 'function'
+      || typeof globe.pathDashLength !== 'function'
+      || typeof globe.pathDashGap !== 'function'
+      || typeof globe.pathDashAnimateTime !== 'function'
     ) {
       return;
     }
 
-    const originalPolygonsDataMethod = globe.polygonsData;
-    const originalPolygonsData = originalPolygonsDataMethod.bind(globe);
-    const originalGeometry = globe.polygonGeoJsonGeometry();
-    const originalCapColor = globe.polygonCapColor();
-    const originalSideColor = globe.polygonSideColor();
-    const originalStrokeColor = globe.polygonStrokeColor();
-    const originalAltitude = globe.polygonAltitude();
+    const originalPathsDataMethod = globe.pathsData;
+    const originalPathsData = originalPathsDataMethod.bind(globe);
+    const originalPoints = globe.pathPoints();
+    const originalPointAlt = globe.pathPointAlt();
+    const originalColor = globe.pathColor();
+    const originalStroke = globe.pathStroke();
+    const originalDashLength = globe.pathDashLength();
+    const originalDashGap = globe.pathDashGap();
+    const originalDashAnimateTime = globe.pathDashAnimateTime();
+    const originalLabel = globe.pathLabel?.();
 
-    const isCountryBoundary = (datum: unknown): datum is CountryBoundaryDatum => (
-      Boolean(datum && typeof datum === 'object' && '_wmCountryBoundary' in datum)
+    const isCountryBorder = (datum: unknown): datum is CountryBorderPath => (
+      Boolean(datum && typeof datum === 'object' && '_wmCountryBorder' in datum)
     );
 
     const withBorders = (data: unknown[]): unknown[] => [
-      ...data.filter((item) => !isCountryBoundary(item)),
-      ...this.countryBoundaries,
+      ...data.filter((item) => !isCountryBorder(item)),
+      ...this.countryBorders,
     ];
 
-    globe.polygonGeoJsonGeometry((datum: unknown) => (
-      isCountryBoundary(datum) ? datum.geometry : resolveAccessor(originalGeometry, datum)
+    globe.pathPoints((datum: unknown) => (
+      isCountryBorder(datum) ? datum.points : resolveAccessor(originalPoints, datum)
     ));
-    globe.polygonCapColor((datum: unknown) => (
-      isCountryBoundary(datum) ? 'rgba(0,0,0,0)' : resolveAccessor(originalCapColor, datum)
+    globe.pathPointAlt((point: unknown, index?: number, path?: unknown) => {
+      if (isCountryBorder(path)) return BORDER_ALTITUDE;
+      if (typeof originalPointAlt === 'function') {
+        return (originalPointAlt as (p: unknown, i?: number, d?: unknown) => unknown)(point, index, path);
+      }
+      return originalPointAlt;
+    });
+    globe.pathColor((datum: unknown) => (
+      isCountryBorder(datum) ? this.countryBorderColor() : resolveAccessor(originalColor, datum)
     ));
-    globe.polygonSideColor((datum: unknown) => (
-      isCountryBoundary(datum) ? 'rgba(0,0,0,0)' : resolveAccessor(originalSideColor, datum)
+    globe.pathStroke((datum: unknown) => (
+      isCountryBorder(datum) ? this.countryBorderStroke() : resolveAccessor(originalStroke, datum)
     ));
-    globe.polygonStrokeColor((datum: unknown) => (
-      isCountryBoundary(datum) ? this.countryBorderColor() : resolveAccessor(originalStrokeColor, datum)
+    globe.pathDashLength((datum: unknown) => (
+      isCountryBorder(datum) ? 1 : resolveAccessor(originalDashLength, datum)
     ));
-    globe.polygonAltitude((datum: unknown) => (
-      isCountryBoundary(datum) ? 0.0025 : resolveAccessor(originalAltitude, datum)
+    globe.pathDashGap((datum: unknown) => (
+      isCountryBorder(datum) ? 0 : resolveAccessor(originalDashGap, datum)
     ));
+    globe.pathDashAnimateTime((datum: unknown) => (
+      isCountryBorder(datum) ? 0 : resolveAccessor(originalDashAnimateTime, datum)
+    ));
+    if (typeof globe.pathLabel === 'function') {
+      globe.pathLabel((datum: unknown) => (
+        isCountryBorder(datum) ? '' : resolveAccessor(originalLabel, datum)
+      ));
+    }
 
-    globe.polygonsData = ((data?: unknown[]) => {
-      if (data === undefined) return originalPolygonsData();
-      return originalPolygonsData(withBorders(Array.isArray(data) ? data : []));
-    }) as typeof globe.polygonsData;
+    globe.pathsData = ((data?: unknown[]) => {
+      if (data === undefined) return originalPathsData();
+      return originalPathsData(withBorders(Array.isArray(data) ? data : []));
+    }) as typeof globe.pathsData;
 
-    const current = originalPolygonsData();
-    originalPolygonsData(withBorders(Array.isArray(current) ? current : []));
+    const current = originalPathsData();
+    originalPathsData(withBorders(Array.isArray(current) ? current : []));
 
-    this.restorePolygonDataMethod = () => {
-      globe.polygonsData = originalPolygonsDataMethod;
+    this.restorePathsDataMethod = () => {
+      globe.pathsData = originalPathsDataMethod;
     };
+  }
+
+  private refreshCountryBorders(): void {
+    if (typeof this.globe.pathsData !== 'function') return;
+    const current = this.globe.pathsData();
+    this.globe.pathsData(Array.isArray(current) ? current : []);
+    this.wakeGlobe();
   }
 
   private installCountryLabels(): void {
     const globe = this.globe;
     if (
-      typeof globe.labelsData !== 'function'
-      || typeof globe.labelLat !== 'function'
-      || typeof globe.labelLng !== 'function'
-      || typeof globe.labelText !== 'function'
-      || typeof globe.labelColor !== 'function'
-      || typeof globe.labelAltitude !== 'function'
-      || typeof globe.labelSize !== 'function'
+      typeof globe.htmlElementsData !== 'function'
+      || typeof globe.htmlLat !== 'function'
+      || typeof globe.htmlLng !== 'function'
+      || typeof globe.htmlAltitude !== 'function'
+      || typeof globe.htmlElement !== 'function'
     ) {
       return;
     }
 
-    globe.labelLat('lat');
-    globe.labelLng('lng');
-    globe.labelText('text');
-    globe.labelColor(() => this.countryLabelColor());
-    globe.labelAltitude(0.006);
-    globe.labelSize('size');
-    globe.labelIncludeDot?.(false);
-    globe.labelResolution?.(2);
+    const originalHtmlDataMethod = globe.htmlElementsData;
+    const originalHtmlData = originalHtmlDataMethod.bind(globe);
+    const originalLat = globe.htmlLat();
+    const originalLng = globe.htmlLng();
+    const originalAltitude = globe.htmlAltitude();
+    const originalElement = globe.htmlElement();
+
+    const isCountryLabel = (datum: unknown): datum is CountryLabelDatum => (
+      Boolean(datum && typeof datum === 'object' && '_wmCountryLabel' in datum)
+    );
+
+    const withLabels = (data: unknown[]): unknown[] => [
+      ...data.filter((item) => !isCountryLabel(item)),
+      ...this.visibleLabels,
+    ];
+
+    globe.htmlLat((datum: unknown) => (
+      isCountryLabel(datum) ? datum._lat : resolveAccessor(originalLat, datum)
+    ));
+    globe.htmlLng((datum: unknown) => (
+      isCountryLabel(datum) ? datum._lng : resolveAccessor(originalLng, datum)
+    ));
+    globe.htmlAltitude((datum: unknown) => (
+      isCountryLabel(datum) ? LABEL_ALTITUDE : resolveAccessor(originalAltitude, datum)
+    ));
+    globe.htmlElement((datum: unknown) => {
+      if (isCountryLabel(datum)) return this.buildCountryLabelElement(datum);
+      return resolveAccessor(originalElement, datum);
+    });
+
+    globe.htmlElementsData = ((data?: unknown[]) => {
+      if (data === undefined) return originalHtmlData();
+      return originalHtmlData(withLabels(Array.isArray(data) ? data : []));
+    }) as typeof globe.htmlElementsData;
+
     this.updateCountryLabels();
 
     const controls = globe.controls?.();
@@ -406,28 +601,80 @@ export class GlobePresentation {
       this.controlsLabelHandler = () => this.updateCountryLabels();
       controls.addEventListener('end', this.controlsLabelHandler);
     }
+
+    this.restoreHtmlDataMethod = () => {
+      globe.htmlElementsData = originalHtmlDataMethod;
+    };
   }
 
-  private countryBorderColor(): string {
-    return getGlobeTexture() === 'topographic'
-      ? 'rgba(120, 214, 255, 0.92)'
-      : 'rgba(255, 255, 255, 0.76)';
-  }
+  private buildCountryLabelElement(label: CountryLabelDatum): HTMLElement {
+    const el = document.createElement('div');
+    el.style.pointerEvents = 'none';
+    el.style.userSelect = 'none';
+    el.style.zIndex = '50';
+    el.style.whiteSpace = 'nowrap';
 
-  private countryLabelColor(): string {
-    return getGlobeTexture() === 'topographic' ? '#d9f4ff' : '#ffffff';
+    const text = document.createElement('span');
+    text.textContent = label.text;
+    Object.assign(text.style, {
+      display: 'block',
+      color: this.countryLabelColor(),
+      fontFamily: 'inherit',
+      fontSize: `${label.fontPx}px`,
+      fontWeight: '800',
+      letterSpacing: '0.035em',
+      lineHeight: '1',
+      whiteSpace: 'nowrap',
+      WebkitTextStroke: '0.45px rgba(0, 0, 0, 0.94)',
+      textShadow: [
+        '-1px -1px 0 rgba(0,0,0,0.95)',
+        '1px -1px 0 rgba(0,0,0,0.95)',
+        '-1px 1px 0 rgba(0,0,0,0.95)',
+        '1px 1px 0 rgba(0,0,0,0.95)',
+        '0 2px 4px rgba(0,0,0,0.9)',
+      ].join(','),
+      opacity: '0.98',
+    });
+
+    el.appendChild(text);
+    return el;
   }
 
   private updateCountryLabels(): void {
-    if (typeof this.globe.labelsData !== 'function') return;
+    if (typeof this.globe.htmlElementsData !== 'function') return;
+
     const altitude = this.globe.pointOfView?.().altitude ?? 1.8;
     const maxRank = altitude <= 0.72 ? 2 : altitude <= 1.25 ? 1 : 0;
-    this.globe.labelsData(this.countryLabels.filter((label) => label.rank <= maxRank));
+
+    const fontFor = (rank: 0 | 1 | 2): number => {
+      if (altitude <= 0.72) return rank === 0 ? 16 : rank === 1 ? 14 : 12;
+      if (altitude <= 1.25) return rank === 0 ? 14 : 12;
+      return 12;
+    };
+
+    this.visibleLabels = this.countryLabels
+      .filter((label) => label.rank <= maxRank)
+      .map((label) => ({ ...label, fontPx: fontFor(label.rank) }));
+
+    const current = this.globe.htmlElementsData();
+    this.globe.htmlElementsData(Array.isArray(current) ? current : []);
+    this.wakeGlobe();
+  }
+
+  private countryBorderColor(): string {
+    return getGlobeTexture() === 'topographic' ? '#57d2ff' : '#e9f3f8';
+  }
+
+  private countryBorderStroke(): number {
+    return getGlobeTexture() === 'topographic' ? 0.16 : 0.13;
+  }
+
+  private countryLabelColor(): string {
+    return getGlobeTexture() === 'topographic' ? '#e6f7ff' : '#ffffff';
   }
 
   private applySkin(texture: GlobeTexture): void {
     this.wakeGlobe();
-    this.globe.globeImageUrl(GLOBE_TEXTURE_URLS[texture]);
 
     const material = this.globe.globeMaterial?.();
     if (material?.color?.set) {
@@ -443,21 +690,22 @@ export class GlobePresentation {
 
     this.globe.atmosphereColor?.(texture === 'topographic' ? '#55b9ec' : '#69bfff');
     this.globe.atmosphereAltitude?.(texture === 'topographic' ? 0.13 : 0.15);
-
-    // Border and label accessors read the selected texture dynamically.
-    // Refreshing label data triggers a clean repaint without touching any
-    // operational marker or polygon state.
-    this.globe.labelColor?.(() => this.countryLabelColor());
-    this.updateCountryLabels();
   }
 
   public destroy(): void {
+    this.transitionGeneration += 1;
+    if (this.transitionFrame !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.transitionFrame);
+      this.transitionFrame = null;
+    }
     if (this.controlsLabelHandler) {
       this.globe.controls?.()?.removeEventListener?.('end', this.controlsLabelHandler);
       this.controlsLabelHandler = null;
     }
-    this.restorePolygonDataMethod?.();
-    this.restorePolygonDataMethod = null;
+    this.restorePathsDataMethod?.();
+    this.restorePathsDataMethod = null;
+    this.restoreHtmlDataMethod?.();
+    this.restoreHtmlDataMethod = null;
     this.unsubscribeTexture?.();
     this.unsubscribeTexture = null;
     this.toggle?.remove();
