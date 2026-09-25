@@ -221,3 +221,10 @@ html.monitor-dashboard[data-theme='dark'] {
 .monitor-dashboard .monitor-token-panel .monitor-market-top-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .monitor-dashboard .monitor-token-panel .monitor-market-bottom-grid { grid-template-columns: 1fr; }
 .monitor-dashboard .monitor-token-panel .monitor-market-intro { margin-bottom: 8px; }
+
+/* Match the account modal's dimmed treatment without changing other modals. */
+.monitor-dashboard #unifiedSettingsModal.modal-overlay {
+  background: rgba(34, 36, 39, 0.72);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
