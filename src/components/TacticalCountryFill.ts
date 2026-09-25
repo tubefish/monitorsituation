@@ -62,7 +62,7 @@ function tacticalCountryColor(code: string): string {
   const shades = ['#263a4b', '#2b4052', '#304658'];
   let hash = 0;
   for (let i = 0; i < code.length; i += 1) hash = ((hash << 5) - hash) + code.charCodeAt(i);
-  return shades[Math.abs(hash) % shades.length];
+  return shades[Math.abs(hash) % shades.length] ?? '#263a4b';
 }
 
 /**
