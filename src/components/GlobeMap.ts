@@ -4,6 +4,7 @@ import type { MapContainerState, MapView } from './MapContainer';
 import { GlobeMap as GlobeMapCore } from './GlobeMapCore';
 import type { GlobeMapOptions } from './GlobeMapCore';
 import { GlobePresentation } from './GlobePresentation';
+import { TacticalCountryFill } from './TacticalCountryFill';
 
 export type { GlobeMapOptions } from './GlobeMapCore';
 
@@ -90,6 +91,7 @@ export class GlobeMap extends GlobeMapCore {
   private mobileBootCenterHandled = false;
   private themeObserver: MutationObserver | null = null;
   private globePresentation: GlobePresentation | null = null;
+  private tacticalCountryFill: TacticalCountryFill | null = null;
 
   public constructor(
     container: HTMLElement,
@@ -122,6 +124,12 @@ export class GlobeMap extends GlobeMapCore {
             () => runtime.wakeGlobe(),
           );
           await this.globePresentation.init();
+
+          this.tacticalCountryFill = new TacticalCountryFill(
+            runtime.globe as any,
+            () => runtime.wakeGlobe(),
+          );
+          await this.tacticalCountryFill.init();
         }
       })
       .catch(() => undefined);
@@ -274,6 +282,8 @@ export class GlobeMap extends GlobeMapCore {
   }
 
   public override destroy(): void {
+    this.tacticalCountryFill?.destroy();
+    this.tacticalCountryFill = null;
     this.globePresentation?.destroy();
     this.globePresentation = null;
     this.themeObserver?.disconnect();
