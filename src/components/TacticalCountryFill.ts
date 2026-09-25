@@ -169,6 +169,12 @@ export class TacticalCountryFill {
           }
 
           this.tacticalTextureUrl = canvas.toDataURL('image/png');
+
+          // GlobeMapCore and GlobePresentation both resolve Tactical through
+          // GLOBE_TEXTURE_URLS.topographic. Point that shared source at the
+          // generated flat-fill map so no later subscriber can replace it with
+          // the old photographic topographic texture.
+          GLOBE_TEXTURE_URLS.topographic = this.tacticalTextureUrl;
         }
       } catch (error) {
         console.warn('[TacticalCountryFill] Failed to generate tactical texture:', error);
