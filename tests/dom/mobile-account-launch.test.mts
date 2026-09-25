@@ -23,6 +23,7 @@ vi.mock('@/services/clerk', () => ({
   openSignUp: vi.fn(),
 }));
 import { MobilePrimaryNav } from '@/app/mobile-primary-nav';
+import { overlayHistory } from '@/utils/overlay-history';
 
 let nav: MobilePrimaryNav;
 const open = vi.fn();
@@ -41,6 +42,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   nav.destroy();
+  overlayHistory.reset();
+  vi.useRealTimers();
   document.body.replaceChildren();
   document.body.style.overflow = '';
 });
@@ -67,4 +70,30 @@ it('keeps sign-in reachable while the account SDK loads', () => {
   expect(document.getElementById('mobileAuthFallback')?.hidden).toBe(false);
   document.getElementById('mobileAuthFallback')!.click();
   expect(open).toHaveBeenCalledOnce();
+});
+
+it.each([
+  ['.auth-signin-btn', open],
+  ['.auth-signup-link', openSignUp],
+] as const)('waits for every Back listener before opening %s', (selector, launch) => {
+  vi.useFakeTimers();
+  vi.spyOn(window.history, 'back').mockImplementation(() => {});
+  overlayHistory.open('menu', () => nav.closeMenu('history'));
+  document.querySelector<HTMLButtonElement>(selector)!.click();
+  expect(launch).not.toHaveBeenCalled();
+  window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+  expect(launch).not.toHaveBeenCalled();
+  vi.runAllTimers();
+  expect(launch).toHaveBeenCalledOnce();
+});
+
+it('cancels a queued account launch when navigation is destroyed', () => {
+  vi.useFakeTimers();
+  vi.spyOn(window.history, 'back').mockImplementation(() => {});
+  overlayHistory.open('menu', () => nav.closeMenu('history'));
+  document.querySelector<HTMLButtonElement>('.auth-signin-btn')!.click();
+  nav.destroy();
+  window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+  vi.runAllTimers();
+  expect(open).not.toHaveBeenCalled();
 });

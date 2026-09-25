@@ -10,6 +10,7 @@ import {
   overlayHistory,
   type OverlayCloseOrigin,
   type OverlayId,
+  type OverlayOpenHandle,
 } from '@/utils/overlay-history';
 import { reconcileOverlayForTab } from '@/app/mobile-overlay-reconcile';
 import { MarketExplorer } from '@/components/MarketExplorer';
@@ -30,6 +31,7 @@ export class MobilePrimaryNav {
   private regionOpenFrame: number | null = null;
   private alertScrollFrame: number | null = null;
   private authWidget: AuthHeaderWidget | null = null;
+  private pendingAccountOpen: OverlayOpenHandle | null = null;
   private unsubscribeAuth: (() => void) | null = null;
   private unsubscribeHistory: (() => void) | null = null;
   private activeTab = 'map';
@@ -55,24 +57,15 @@ export class MobilePrimaryNav {
   setupAuth(modal: AuthLauncher): void {
     const mobileMount = document.getElementById('mobileAuthWidgetMount');
     const fallback = document.getElementById('mobileAuthFallback') as HTMLButtonElement | null;
-    const openAuth = () => {
-      this.closeMenu();
-      modal.open();
-    };
+    const openAuth = () => this.openAccountSurface(() => modal.open());
     fallback?.addEventListener('click', openAuth, { signal: this.listeners.signal });
     if (!mobileMount) return;
 
     this.authWidget = new AuthHeaderWidget(
       openAuth,
-      () => {
-        this.closeMenu();
-        this.ctx.unifiedSettings?.open('settings');
-      },
+      () => this.openAccountSurface(() => this.ctx.unifiedSettings?.open('settings')),
       undefined,
-      () => {
-        this.closeMenu();
-        modal.openSignUp();
-      },
+      () => this.openAccountSurface(() => modal.openSignUp()),
     );
     mobileMount.appendChild(this.authWidget.getElement());
     const renderPending = (pending: boolean) => {
@@ -81,6 +74,14 @@ export class MobilePrimaryNav {
     };
     renderPending(getAuthState().isPending);
     this.unsubscribeAuth = subscribeAuthState((state) => renderPending(state.isPending));
+  }
+
+  private openAccountSurface(open: () => void): void {
+    this.pendingAccountOpen?.cancel();
+    this.closeMenu();
+    this.pendingAccountOpen = overlayHistory.afterPendingClose(() => {
+      if (!this.listeners.signal.aborted) open();
+    });
   }
 
   updateThemeItem(): void {
@@ -108,6 +109,8 @@ export class MobilePrimaryNav {
   }
 
   destroy(): void {
+    this.pendingAccountOpen?.cancel();
+    this.pendingAccountOpen = null;
     this.marketExplorer?.destroy();
     this.marketExplorer = null;
     this.listeners.abort();
