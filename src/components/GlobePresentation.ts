@@ -673,10 +673,10 @@ export class GlobePresentation {
   }
 
   private countryBorderStroke(): number {
-    // globe.gl fat paths measure width in angular degrees. This intentionally
-    // doubles the previous border width so borders stay visually solid while
-    // the globe is moving or the camera is zoomed closer.
-    return getGlobeTexture() === 'topographic' ? 0.72 : 0.60;
+    // One more A/B step: double the fat-path diameter again. If this still
+    // breaks at the coastline, the next fix should target path tessellation /
+    // render depth rather than stacking or shared borders.
+    return getGlobeTexture() === 'topographic' ? 1.44 : 1.20;
   }
 
   private countryLabelColor(): string {
