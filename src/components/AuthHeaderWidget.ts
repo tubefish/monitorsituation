@@ -6,9 +6,8 @@ import { setTrustedHtml, trustedHtml } from '@/utils/dom-utils';
 const CLERK_ACCOUNT_BACKDROP_STYLE_ID = 'monitor-clerk-account-backdrop';
 
 /**
- * Clerk owns the Account/Profile & Security panel and should keep its default
- * light styling. Only tint the area surrounding that panel so the modal sits
- * naturally on top of the MONITOR interface.
+ * Keep Clerk's Account/Profile & Security backdrop aligned with the MONITOR
+ * shell while Clerk's own appearance follows the active site theme.
  */
 function ensureClerkAccountBackdrop(): void {
   if (typeof document === 'undefined' || document.getElementById(CLERK_ACCOUNT_BACKDROP_STYLE_ID)) return;
@@ -29,6 +28,8 @@ export class AuthHeaderWidget {
   private container: HTMLElement;
   private unsubscribeAuth: (() => void) | null = null;
   private unmountUserButton: (() => void) | null = null;
+  private themeObserver: MutationObserver | null = null;
+  private currentAuthState: AuthSession | null = null;
   private onSignInClick?: () => void;
   private onSettingsClick?: () => void;
   private onBillingClick?: () => void;
@@ -59,7 +60,29 @@ export class AuthHeaderWidget {
       }
     }
 
+    // Clerk's sign-in/sign-up surfaces receive a fresh appearance object each
+    // time they open, but the UserButton (which owns Profile & Security) is
+    // mounted once. Re-mount it when data-theme changes so its account panel
+    // always receives the current light/dark appearance from getAppearance().
+    if (typeof MutationObserver !== 'undefined') {
+      this.themeObserver = new MutationObserver((mutations) => {
+        const themeChanged = mutations.some(
+          (mutation) => mutation.type === 'attributes' && mutation.attributeName === 'data-theme',
+        );
+        if (!themeChanged) return;
+
+        const state = this.currentAuthState;
+        if (!state || state.isPending || !state.user) return;
+        this.render(state);
+      });
+      this.themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme'],
+      });
+    }
+
     this.unsubscribeAuth = subscribeAuthState((state: AuthSession) => {
+      this.currentAuthState = state;
       if (state.isPending) {
         this.renderPending();
         return;
@@ -75,6 +98,9 @@ export class AuthHeaderWidget {
   public destroy(): void {
     this.unmountUserButton?.();
     this.unmountUserButton = null;
+    this.themeObserver?.disconnect();
+    this.themeObserver = null;
+    this.currentAuthState = null;
     if (this.unsubscribeAuth) {
       this.unsubscribeAuth();
       this.unsubscribeAuth = null;
