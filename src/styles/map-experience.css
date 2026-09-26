@@ -13,7 +13,7 @@
   box-shadow: 0 8px 24px color-mix(in srgb, #000 22%, transparent);
   backdrop-filter: blur(14px);
 }
-.map-section > .panel-header + .map-container + .map-experience-switcher { top: 44px; }
+.map-section > .panel-header + .map-container + .map-experience-switcher { top: 36px; }
 .map-experience-switcher button {
   display: inline-flex;
   align-items: center;
