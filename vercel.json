@@ -22,6 +22,12 @@
       "permanent": true
     }
   ],
+  "rewrites": [
+    {
+      "source": "/privacy",
+      "destination": "/privacy.html"
+    }
+  ],
   "headers": [
     {
       "source": "/",
