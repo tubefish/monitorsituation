@@ -40,11 +40,12 @@ function anchor(href: string, label: string, className: string): string {
 
 /**
  * Footer row for the Settings modal. Keep this intentionally minimal for
- * $MONITOR: only the project's X account is exposed here.
+ * $MONITOR: the project's X account plus the public privacy policy.
  */
-export function legalLinksHtml(_origin: string): string {
+export function legalLinksHtml(origin: string): string {
   const xLink = anchor('https://x.com/monitoringmeme', 'X', 'legal-links-item');
-  return `<nav aria-label="Social" class="legal-links-row">${xLink}</nav>`;
+  const privacyLink = anchor(absoluteLegalUrl('/privacy', origin), 'Privacy', 'legal-links-item');
+  return `<nav aria-label="Links" class="legal-links-row">${xLink}${privacyLink}</nav>`;
 }
 
 /**
