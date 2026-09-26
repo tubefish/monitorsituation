@@ -1,12 +1,14 @@
 import { ALL_PANELS } from '@/config/panels';
 
 // Panels that remain implemented in the product but should not be exposed in
-// Settings -> Panels. Keep this list label-based so it continues to work when
-// panel keys are reorganized; ALL_PANELS resolves the labels to stable keys.
+// Settings -> Panels. Keep both canonical and UI-facing names here because a
+// few panels use different labels between the config and the settings screen.
 const HIDDEN_SETTINGS_PANEL_NAMES = new Set([
+  'National Debt Clock',
   'Global Debt Clock',
   'X News Accounts',
   'Telegram Intel',
+  'Cross-Source Signal Aggregator',
   'Cross-Source Signals',
   'Radiation Watch',
   'Thermal Escalation',
@@ -34,12 +36,15 @@ const HIDDEN_SETTINGS_PANEL_NAMES = new Set([
   'NQ Pulse',
   'NQ Catalysts',
   'Economic Calendar',
+  'CFTC Cot Positioning',
   'COT Positioning',
   'Earnings Calendar',
+  'Yield Curve & Rates',
   'Yield Curve',
   'Financial Stress Indicator',
   'Financial Stress',
   'Macro Indicators',
+  'AAII Investor Sentiment',
   'AAII Sentiment',
   'Market Breadth',
   'ALT Tokens',
@@ -70,6 +75,7 @@ const HIDDEN_SETTINGS_PANEL_NAMES = new Set([
   'Airline Intelligence',
   'Macro Stress',
   'Gulf Economies',
+  'Sanctions & Designations',
   'Sanctions Pressure',
   'BTC Regime',
   'China Activity Nowcast',
@@ -88,6 +94,7 @@ const HIDDEN_SETTINGS_PANEL_NAMES = new Set([
   '24/7 Positioning',
   'Liquidity Shifts',
   'AI Insights',
+  'Global Giving benchmarks',
   'Global Giving',
   'Renewable Energy',
   'Consumer Prices',
@@ -101,6 +108,16 @@ const HIDDEN_SETTINGS_PANEL_KEYS = new Set(
     .map(([key]) => key),
 );
 
+function shouldHidePanelItem(item: HTMLElement): boolean {
+  const key = item.dataset.panel;
+  if (key && HIDDEN_SETTINGS_PANEL_KEYS.has(key)) return true;
+
+  // Fall back to the exact rendered label. This catches variant/local config
+  // naming differences without hiding unrelated panels through fuzzy matches.
+  const label = item.querySelector<HTMLElement>('.panel-toggle-label')?.textContent?.trim();
+  return Boolean(label && HIDDEN_SETTINGS_PANEL_NAMES.has(label));
+}
+
 function hideConfiguredPanelItems(root: Element): void {
   const candidates: HTMLElement[] = [];
 
@@ -113,9 +130,12 @@ function hideConfiguredPanelItems(root: Element): void {
   });
 
   for (const item of candidates) {
-    const key = item.dataset.panel;
-    if (!key || !HIDDEN_SETTINGS_PANEL_KEYS.has(key)) continue;
-    item.closest<HTMLElement>('.panel-settings-item')?.setAttribute('hidden', '');
+    if (!shouldHidePanelItem(item)) continue;
+
+    // Remove the complete settings row instead of relying on the HTML `hidden`
+    // attribute. The settings stylesheet gives these rows an explicit display
+    // value, which can override `hidden` and make the row visible again.
+    item.closest<HTMLElement>('.panel-settings-item')?.remove();
   }
 }
 
