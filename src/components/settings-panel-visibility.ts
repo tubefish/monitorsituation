@@ -108,6 +108,18 @@ const HIDDEN_SETTINGS_PANEL_KEYS = new Set(
     .map(([key]) => key),
 );
 
+const HIDDEN_SETTINGS_SECTIONS = new Set([
+  'Intelligence',
+  'Analysis Frameworks',
+  'Data & Community',
+]);
+
+const HIDDEN_DISPLAY_CONTROL_IDS = [
+  'us-map-provider',
+  'us-map-theme',
+  'us-globe-visual-preset',
+] as const;
+
 function shouldHidePanelItem(item: HTMLElement): boolean {
   const key = item.dataset.panel;
   if (key && HIDDEN_SETTINGS_PANEL_KEYS.has(key)) return true;
@@ -139,15 +151,48 @@ function hideConfiguredPanelItems(root: Element): void {
   }
 }
 
+function removePreferenceControl(container: Element, id: string): void {
+  const control = container.querySelector<HTMLElement>(`#${id}`);
+  if (!control) return;
+
+  const labelledBy = control.getAttribute('aria-labelledby');
+  if (labelledBy) {
+    const label = container.querySelector<HTMLElement>(`#${labelledBy}`);
+    label?.closest<HTMLElement>('.ai-flow-toggle-row')?.remove();
+  }
+
+  control.remove();
+}
+
+function hideConfiguredPreferenceItems(root: Element): void {
+  // Whole Settings groups.
+  root.querySelectorAll<HTMLDetailsElement>('.wm-pref-group').forEach((group) => {
+    const summary = group.querySelector<HTMLElement>(':scope > summary')?.textContent?.trim();
+    if (summary && HIDDEN_SETTINGS_SECTIONS.has(summary)) {
+      group.remove();
+    }
+  });
+
+  // Display-group controls that should no longer be user-selectable.
+  for (const id of HIDDEN_DISPLAY_CONTROL_IDS) {
+    removePreferenceControl(root, id);
+  }
+}
+
+function applySettingsVisibility(root: Element): void {
+  hideConfiguredPanelItems(root);
+  hideConfiguredPreferenceItems(root);
+}
+
 function installSettingsPanelVisibilityGuard(): void {
   if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
 
-  hideConfiguredPanelItems(document.documentElement);
+  applySettingsVisibility(document.documentElement);
 
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       mutation.addedNodes.forEach((node) => {
-        if (node instanceof Element) hideConfiguredPanelItems(node);
+        if (node instanceof Element) applySettingsVisibility(node);
       });
     }
   });
