@@ -3,6 +3,7 @@ import type { MapView } from '@/components/MapContainer';
 import type { AuthLauncher } from '@/components/AuthLauncher';
 import { AuthHeaderWidget } from '@/components/AuthHeaderWidget';
 import { getAuthState, subscribeAuthState } from '@/services/auth-state';
+import { openUserProfile } from '@/services/clerk';
 import { track, trackMapViewChange, trackThemeChanged } from '@/services/analytics';
 import { getCurrentTheme, setTheme } from '@/utils';
 import { createFocusTrap, type FocusTrap } from '@/utils/focus-trap';
@@ -66,6 +67,7 @@ export class MobilePrimaryNav {
       () => this.openAccountSurface(() => this.ctx.unifiedSettings?.open('settings')),
       undefined,
       () => this.openAccountSurface(() => modal.openSignUp()),
+      () => this.openAccountSurface(openUserProfile),
     );
     mobileMount.appendChild(this.authWidget.getElement());
     const renderPending = (pending: boolean) => {

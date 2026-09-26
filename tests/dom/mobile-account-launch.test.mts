@@ -8,6 +8,7 @@ const auth = vi.hoisted(() => ({
   state: { user: null, isPending: false } as AuthSession,
   listeners: new Set<(state: AuthSession) => void>(),
   mountUserButton: vi.fn(() => vi.fn()),
+  openUserProfile: vi.fn(),
 }));
 vi.mock('@/services/auth-state', () => ({
   getAuthState: () => auth.state,
@@ -21,6 +22,7 @@ vi.mock('@/services/clerk', () => ({
   mountUserButton: auth.mountUserButton,
   openSignIn: vi.fn(),
   openSignUp: vi.fn(),
+  openUserProfile: auth.openUserProfile,
 }));
 import { MobilePrimaryNav } from '@/app/mobile-primary-nav';
 import { overlayHistory } from '@/utils/overlay-history';
@@ -33,6 +35,7 @@ beforeEach(() => {
   auth.state = { user: null, isPending: false };
   open.mockReset();
   openSignUp.mockReset();
+  auth.openUserProfile.mockReset();
   document.body.innerHTML = '<div id="mobileMenuOverlay" class="open"></div><div id="mobileMenu" class="open"><div id="mobileAuthWidgetMount" hidden></div><button id="mobileAuthFallback">Sign In</button></div>';
   document.body.style.overflow = 'hidden';
   nav = new MobilePrimaryNav({} as AppContext, {
@@ -96,4 +99,22 @@ it('cancels a queued account launch when navigation is destroyed', () => {
   window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
   vi.runAllTimers();
   expect(open).not.toHaveBeenCalled();
+});
+
+it('closes the mobile drawer and waits for Back before opening username settings', () => {
+  vi.useFakeTimers();
+  vi.spyOn(window.history, 'back').mockImplementation(() => {});
+  auth.state = {
+    user: { id: 'existing_user', name: 'Private Person', username: null, email: 'private@example.test', role: 'free' },
+    isPending: false,
+  };
+  auth.listeners.forEach(callback => callback(auth.state));
+  overlayHistory.open('menu', () => nav.closeMenu('history'));
+  document.querySelector<HTMLButtonElement>('.auth-choose-username')!.click();
+  expect(document.getElementById('mobileMenu')?.classList.contains('open')).toBe(false);
+  expect(auth.openUserProfile).not.toHaveBeenCalled();
+  window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+  expect(auth.openUserProfile).not.toHaveBeenCalled();
+  vi.runAllTimers();
+  expect(auth.openUserProfile).toHaveBeenCalledOnce();
 });

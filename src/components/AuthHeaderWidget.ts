@@ -1,5 +1,5 @@
 import { subscribeAuthState, type AuthSession } from '@/services/auth-state';
-import { mountUserButton, openSignIn, openSignUp } from '@/services/clerk';
+import { mountUserButton, openSignIn, openSignUp, openUserProfile } from '@/services/clerk';
 import { t } from '@/services/i18n';
 import { setTrustedHtml, trustedHtml } from '@/utils/dom-utils';
 
@@ -71,17 +71,20 @@ export class AuthHeaderWidget {
   private onSettingsClick?: () => void;
   private onBillingClick?: () => void;
   private onSignUpClick?: () => void;
+  private onProfileClick?: () => void;
 
   constructor(
     onSignInClick?: () => void,
     onSettingsClick?: () => void,
     onBillingClick?: () => void,
     onSignUpClick?: () => void,
+    onProfileClick?: () => void,
   ) {
     this.onSignInClick = onSignInClick;
     this.onSettingsClick = onSettingsClick;
     this.onBillingClick = onBillingClick;
     this.onSignUpClick = onSignUpClick;
+    this.onProfileClick = onProfileClick;
     this.container = document.createElement('div');
     this.container.className = 'auth-header-widget';
     ensureClerkAccountBackdrop();
@@ -161,11 +164,24 @@ export class AuthHeaderWidget {
   }
 
   private renderSignedIn(user: NonNullable<AuthSession['user']>): void {
-    const username = document.createElement('span');
-    username.className = 'auth-header-username';
-    username.textContent = user.username?.trim() || user.name;
-    username.title = username.textContent;
-    this.container.appendChild(username);
+    const handle = user.username?.trim();
+    if (handle) {
+      const username = document.createElement('span');
+      username.className = 'auth-header-username';
+      username.textContent = handle;
+      username.title = handle;
+      this.container.appendChild(username);
+    } else {
+      const chooseUsername = document.createElement('button');
+      chooseUsername.type = 'button';
+      chooseUsername.className = 'auth-signup-link auth-choose-username';
+      chooseUsername.textContent = 'Choose username';
+      chooseUsername.addEventListener('click', () => {
+        if (this.onProfileClick) this.onProfileClick();
+        else openUserProfile();
+      });
+      this.container.appendChild(chooseUsername);
+    }
 
     const userBtnEl = document.createElement('div');
     userBtnEl.className = 'auth-clerk-user-button';

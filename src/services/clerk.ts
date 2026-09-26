@@ -461,10 +461,12 @@ function openLoadedClerkSignIn(): void {
   clerkInstance?.openSignIn({ appearance: getAppearance() });
 }
 
-function openClerkSurface(action: 'open-sign-in' | 'open-sign-up'): void {
+function openClerkSurface(action: 'open-sign-in' | 'open-sign-up' | 'open-user-profile'): void {
   const open = action === 'open-sign-in'
     ? openLoadedClerkSignIn
-    : () => clerkInstance?.openSignUp({ appearance: getAppearance() });
+    : action === 'open-sign-up'
+      ? () => clerkInstance?.openSignUp({ appearance: getAppearance() })
+      : () => clerkInstance?.openUserProfile({ appearance: getAppearance() });
   // Distinct reasons so Sentry can tell the "components not attached" race
   // (the surface open threw) apart from a "Clerk bundle never loaded" failure
   // (initClerk rejected: dynamic-import 4xx/5xx, transient network) — querying
@@ -488,6 +490,11 @@ function openClerkSurface(action: 'open-sign-in' | 'open-sign-up'): void {
 /** Open the Clerk sign-in modal. */
 export function openSignIn(): void {
   openClerkSurface('open-sign-in');
+}
+
+/** Open account settings, where Clerk validates and saves a unique username. */
+export function openUserProfile(): void {
+  openClerkSurface('open-user-profile');
 }
 
 export function isClerkReady(): boolean {
@@ -1021,10 +1028,13 @@ export function getCurrentClerkUser(): { id: string; name: string; username: str
   const user = clerkInstance?.user;
   if (!user) return null;
   const plan = (user.publicMetadata as Record<string, unknown>)?.plan;
+  const username = user.username?.trim() || null;
   return {
     id: user.id,
-    name: user.fullName ?? user.firstName ?? 'User',
-    username: user.username ?? null,
+    // Keep the compatibility field pseudonymous, including older accounts and
+    // social sign-ins that have not chosen a username yet.
+    name: username ?? 'Account',
+    username,
     email: user.primaryEmailAddress?.emailAddress ?? '',
     image: user.imageUrl ?? null,
     plan: plan === 'pro' ? 'pro' : 'free',
