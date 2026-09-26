@@ -962,6 +962,16 @@ export default defineSchema({
     .index("by_normalizedEmail", ["normalizedEmail"])
     .index("by_localePrimary", ["localePrimary"]),
 
+  chatMessages: defineTable({
+    userId: v.string(),
+    displayName: v.string(),
+    avatarUrl: v.optional(v.string()),
+    body: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_created", ["createdAt"])
+    .index("by_user_created", ["userId", "createdAt"]),
+
   webhookEvents: defineTable({
     webhookId: v.string(),
     eventType: v.string(),
