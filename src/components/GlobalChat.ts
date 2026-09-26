@@ -51,6 +51,8 @@ export class GlobalChat {
   private done = true;
   private loadingOlder = false;
   private active = false;
+  private authUserId: string | null = null;
+  private authPending: boolean | null = null;
   private generation = 0;
   private sending = false;
   private replyTarget: Message | null = null;
@@ -152,7 +154,7 @@ export class GlobalChat {
     if (this.active === active) return;
     this.active = active;
     this.element.hidden = !active;
-    this.authChanged(getAuthState());
+    this.authChanged(getAuthState(), true);
   }
 
   public destroy(): void {
@@ -167,7 +169,13 @@ export class GlobalChat {
     this.element.remove();
   }
 
-  private authChanged(state: AuthSession): void {
+  private authChanged(state: AuthSession, force = false): void {
+    const userId = state.user?.id ?? null;
+    // Clerk also emits for session and profile updates. Keep the active chat
+    // subscription and its messages when the signed-in identity is unchanged.
+    if (!force && this.active && this.authUserId === userId && this.authPending === state.isPending) return;
+    this.authUserId = userId;
+    this.authPending = state.isPending;
     this.generation++;
     this.stopUpdates?.();
     this.stopUpdates = null;
@@ -205,7 +213,7 @@ export class GlobalChat {
     }
     this.input.value = '';
     this.counter.textContent = '0/500';
-    this.authChanged(getAuthState());
+    this.authChanged(getAuthState(), true);
   }
 
   private async startCount(generation: number): Promise<void> {
