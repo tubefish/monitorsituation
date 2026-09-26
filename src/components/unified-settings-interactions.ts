@@ -1,4 +1,5 @@
 import type { UnifiedSettingsTabId } from '@/components/settings-types';
+import '@/components/settings-panel-visibility';
 
 type SettingsTabControl = Pick<HTMLElement, 'classList' | 'dataset' | 'setAttribute'>;
 type SettingsTabPanel = Pick<HTMLElement, 'classList' | 'dataset'>;
