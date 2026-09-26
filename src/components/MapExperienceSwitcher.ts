@@ -1,7 +1,9 @@
+import { GlobalChat } from './GlobalChat';
+
 const WINGBITS_URL = 'https://wingbits.com/map?utm_source=MTS&utm_medium=referral&utm_campaign=MTS-map&lat=29.76460&lon=-95.36570&zoom=4.0';
 const STORAGE_KEY = 'monitor-map-experience-v1';
 
-export type MapExperienceMode = 'situation' | 'flights' | 'news';
+export type MapExperienceMode = 'situation' | 'flights' | 'news' | 'chat';
 
 export interface LocationNewsItem {
   lat: number;
@@ -19,6 +21,7 @@ export class MapExperienceSwitcher {
   private readonly flightStage = document.createElement('div');
   private readonly newsStage = document.createElement('aside');
   private readonly newsList = document.createElement('div');
+  private readonly chat = new GlobalChat(() => this.setMode('situation'));
   private readonly listeners = new AbortController();
   private readonly resizeObserver: ResizeObserver | null;
   private readonly buttons = new Map<MapExperienceMode, HTMLButtonElement>();
@@ -40,6 +43,7 @@ export class MapExperienceSwitcher {
       { mode: 'situation', label: 'Situation', icon: '◎' },
       { mode: 'flights', label: 'Flights', icon: '✈' },
       { mode: 'news', label: 'Top news', icon: '▤' },
+      { mode: 'chat', label: 'Chat', icon: '◉' },
     ];
     for (const option of options) {
       const button = document.createElement('button');
@@ -87,7 +91,7 @@ export class MapExperienceSwitcher {
     this.newsList.className = 'map-experience-news-list';
     this.newsStage.append(newsHeader, this.newsList);
 
-    this.overlayHost.append(this.flightStage, this.newsStage);
+    this.overlayHost.append(this.flightStage, this.newsStage, this.chat.element);
     this.mapSection.append(this.overlayHost, this.root);
     this.resizeObserver?.observe(this.mapSection);
     this.resizeObserver?.observe(this.mapContainer);
@@ -113,15 +117,16 @@ export class MapExperienceSwitcher {
   public destroy(): void {
     this.listeners.abort();
     this.resizeObserver?.disconnect();
+    this.chat.destroy();
     this.root.remove();
     this.overlayHost.remove();
-    this.mapSection.classList.remove('map-experience-flights-active', 'map-experience-news-active');
+    this.mapSection.classList.remove('map-experience-flights-active', 'map-experience-news-active', 'map-experience-chat-active');
   }
 
   private readStoredMode(): MapExperienceMode {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      return stored === 'flights' || stored === 'news' ? stored : 'situation';
+      return stored === 'flights' || stored === 'news' || stored === 'chat' ? stored : 'situation';
     } catch {
       return 'situation';
     }
@@ -137,8 +142,10 @@ export class MapExperienceSwitcher {
   private setMode(mode: MapExperienceMode, persist = true): void {
     this.flightStage.hidden = mode !== 'flights';
     this.newsStage.hidden = mode !== 'news';
+    this.chat.setActive(mode === 'chat');
     this.mapSection.classList.toggle('map-experience-flights-active', mode === 'flights');
     this.mapSection.classList.toggle('map-experience-news-active', mode === 'news');
+    this.mapSection.classList.toggle('map-experience-chat-active', mode === 'chat');
     for (const [key, button] of this.buttons) {
       const active = key === mode;
       button.classList.toggle('active', active);
