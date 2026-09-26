@@ -1,5 +1,5 @@
 import { subscribeAuthState, type AuthSession } from '@/services/auth-state';
-import { mountUserButton, openSignIn, openSignUp } from '@/services/clerk';
+import { mountUserButton, openSignIn, openSignUp, openUserProfile } from '@/services/clerk';
 import { t } from '@/services/i18n';
 import { setTrustedHtml, trustedHtml } from '@/utils/dom-utils';
 
@@ -17,6 +17,11 @@ function ensureClerkAccountBackdrop(): void {
   const style = document.createElement('style');
   style.id = CLERK_ACCOUNT_BACKDROP_STYLE_ID;
   style.textContent = `
+    /* Account dialogs must cover the mobile tab bar (10003) and update notice (10004). */
+    .cl-modalBackdrop {
+      z-index: 11000 !important;
+    }
+
     .cl-modalBackdrop:has(.cl-userProfile-root) {
       background: rgba(34, 36, 39, 0.72) !important;
       backdrop-filter: blur(5px);
@@ -65,32 +70,24 @@ export class AuthHeaderWidget {
   private onSignInClick?: () => void;
   private onSettingsClick?: () => void;
   private onBillingClick?: () => void;
+  private onSignUpClick?: () => void;
+  private onProfileClick?: () => void;
 
   constructor(
     onSignInClick?: () => void,
     onSettingsClick?: () => void,
     onBillingClick?: () => void,
+    onSignUpClick?: () => void,
+    onProfileClick?: () => void,
   ) {
     this.onSignInClick = onSignInClick;
     this.onSettingsClick = onSettingsClick;
     this.onBillingClick = onBillingClick;
+    this.onSignUpClick = onSignUpClick;
+    this.onProfileClick = onProfileClick;
     this.container = document.createElement('div');
     this.container.className = 'auth-header-widget';
     ensureClerkAccountBackdrop();
-
-    // The MONITOR shell currently omits the upstream authWidgetMount node even
-    // though EventHandlerManager still initializes this widget and header.css
-    // still styles the mount. Recreate the mount when needed so the existing
-    // Clerk account controls can be exercised safely on preview builds.
-    // Preview deployments must provide VITE_CLERK_PUBLISHABLE_KEY for Clerk UI.
-    if (!document.getElementById('authWidgetMount')) {
-      const headerRight = document.querySelector<HTMLElement>('.header-right');
-      if (headerRight) {
-        const mount = document.createElement('div');
-        mount.id = 'authWidgetMount';
-        headerRight.appendChild(mount);
-      }
-    }
 
     this.unsubscribeAuth = subscribeAuthState((state: AuthSession) => {
       if (state.isPending) {
@@ -159,16 +156,32 @@ export class AuthHeaderWidget {
     const signUpLink = document.createElement('button');
     signUpLink.className = 'auth-signup-link';
     signUpLink.textContent = t('auth.createAccount');
-    signUpLink.addEventListener('click', () => openSignUp());
+    signUpLink.addEventListener('click', () => {
+      if (this.onSignUpClick) this.onSignUpClick();
+      else openSignUp();
+    });
     this.container.appendChild(signUpLink);
   }
 
   private renderSignedIn(user: NonNullable<AuthSession['user']>): void {
-    const username = document.createElement('span');
-    username.className = 'auth-header-username';
-    username.textContent = user.username?.trim() || user.name;
-    username.title = username.textContent;
-    this.container.appendChild(username);
+    const handle = user.username?.trim();
+    if (handle) {
+      const username = document.createElement('span');
+      username.className = 'auth-header-username';
+      username.textContent = handle;
+      username.title = handle;
+      this.container.appendChild(username);
+    } else {
+      const chooseUsername = document.createElement('button');
+      chooseUsername.type = 'button';
+      chooseUsername.className = 'auth-signup-link auth-choose-username';
+      chooseUsername.textContent = 'Choose username';
+      chooseUsername.addEventListener('click', () => {
+        if (this.onProfileClick) this.onProfileClick();
+        else openUserProfile();
+      });
+      this.container.appendChild(chooseUsername);
+    }
 
     const userBtnEl = document.createElement('div');
     userBtnEl.className = 'auth-clerk-user-button';

@@ -3,6 +3,7 @@ import type { MapView } from '@/components/MapContainer';
 import type { AuthLauncher } from '@/components/AuthLauncher';
 import { AuthHeaderWidget } from '@/components/AuthHeaderWidget';
 import { getAuthState, subscribeAuthState } from '@/services/auth-state';
+import { openUserProfile } from '@/services/clerk';
 import { track, trackMapViewChange, trackThemeChanged } from '@/services/analytics';
 import { getCurrentTheme, setTheme } from '@/utils';
 import { createFocusTrap, type FocusTrap } from '@/utils/focus-trap';
@@ -10,6 +11,7 @@ import {
   overlayHistory,
   type OverlayCloseOrigin,
   type OverlayId,
+  type OverlayOpenHandle,
 } from '@/utils/overlay-history';
 import { reconcileOverlayForTab } from '@/app/mobile-overlay-reconcile';
 import { MarketExplorer } from '@/components/MarketExplorer';
@@ -30,6 +32,7 @@ export class MobilePrimaryNav {
   private regionOpenFrame: number | null = null;
   private alertScrollFrame: number | null = null;
   private authWidget: AuthHeaderWidget | null = null;
+  private pendingAccountOpen: OverlayOpenHandle | null = null;
   private unsubscribeAuth: (() => void) | null = null;
   private unsubscribeHistory: (() => void) | null = null;
   private activeTab = 'map';
@@ -55,14 +58,17 @@ export class MobilePrimaryNav {
   setupAuth(modal: AuthLauncher): void {
     const mobileMount = document.getElementById('mobileAuthWidgetMount');
     const fallback = document.getElementById('mobileAuthFallback') as HTMLButtonElement | null;
-    const openAuth = () => {
-      this.closeMenu();
-      modal.open();
-    };
+    const openAuth = () => this.openAccountSurface(() => modal.open());
     fallback?.addEventListener('click', openAuth, { signal: this.listeners.signal });
     if (!mobileMount) return;
 
-    this.authWidget = new AuthHeaderWidget(openAuth);
+    this.authWidget = new AuthHeaderWidget(
+      openAuth,
+      () => this.openAccountSurface(() => this.ctx.unifiedSettings?.open('settings')),
+      undefined,
+      () => this.openAccountSurface(() => modal.openSignUp()),
+      () => this.openAccountSurface(openUserProfile),
+    );
     mobileMount.appendChild(this.authWidget.getElement());
     const renderPending = (pending: boolean) => {
       mobileMount.hidden = pending;
@@ -70,6 +76,14 @@ export class MobilePrimaryNav {
     };
     renderPending(getAuthState().isPending);
     this.unsubscribeAuth = subscribeAuthState((state) => renderPending(state.isPending));
+  }
+
+  private openAccountSurface(open: () => void): void {
+    this.pendingAccountOpen?.cancel();
+    this.closeMenu();
+    this.pendingAccountOpen = overlayHistory.afterPendingClose(() => {
+      if (!this.listeners.signal.aborted) open();
+    });
   }
 
   updateThemeItem(): void {
@@ -97,6 +111,8 @@ export class MobilePrimaryNav {
   }
 
   destroy(): void {
+    this.pendingAccountOpen?.cancel();
+    this.pendingAccountOpen = null;
     this.marketExplorer?.destroy();
     this.marketExplorer = null;
     this.listeners.abort();

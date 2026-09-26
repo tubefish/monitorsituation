@@ -229,6 +229,16 @@ export class OverlayHistoryManager {
     this.closeToken(entry.token);
   }
 
+  /** Launch third-party UI after all listeners finish a pending Back event. */
+  public afterPendingClose(action: () => void): OverlayOpenHandle {
+    let cancelled = false;
+    const run = () => { if (!cancelled) action(); };
+    // Clerk closes its modals on popstate. Opening within our popstate
+    // listener would let Clerk's later listener close the new modal again.
+    if (!this.deferUntilPop(() => { setTimeout(run, 0); })) run();
+    return { cancel: () => { cancelled = true; } };
+  }
+
   public dismiss(id: OverlayId): void {
     const entry = this.entries.find((candidate) => candidate.id === id);
     if (!entry) return;

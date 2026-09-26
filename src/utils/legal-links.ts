@@ -26,7 +26,6 @@ import {
   CHECKOUT_CONSENT_PRIVACY_LABEL,
   CHECKOUT_CONSENT_LICENSE_LABEL,
   EULA_PATH,
-  LEGAL_FOOTER_LINKS,
   PRIVACY_PATH,
   absoluteLegalUrl,
 } from '../../shared/legal';
@@ -40,14 +39,13 @@ function anchor(href: string, label: string, className: string): string {
 }
 
 /**
- * The legal row for the settings modal — the dashboard's shell surface, shown
- * on every tab so the Terms are one click away from anywhere in the app.
+ * Footer row for the Settings modal. Keep this intentionally minimal for
+ * $MONITOR: the project's X account plus the public privacy policy.
  */
-export function legalLinksHtml(origin: string): string {
-  const links = LEGAL_FOOTER_LINKS
-    .map(link => anchor(absoluteLegalUrl(link.path, origin), link.label, 'legal-links-item'))
-    .join('');
-  return `<nav aria-label="Legal" class="legal-links-row">${links}</nav>`;
+export function legalLinksHtml(_origin: string): string {
+  const xLink = anchor('https://x.com/monitoringmeme', 'X', 'legal-links-item');
+  const privacyLink = anchor('/privacy', 'Privacy', 'legal-links-item');
+  return `<nav aria-label="Links" class="legal-links-row">${xLink}${privacyLink}</nav>`;
 }
 
 /**

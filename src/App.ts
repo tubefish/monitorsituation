@@ -490,6 +490,11 @@ export class App {
       this.panelLayout.applySavedPanelOrder();
     }
 
+    if (keySet.has('worldmonitor-panel-spans') || keySet.has('worldmonitor-panel-col-spans')) {
+      for (const panel of Object.values(this.state.panels)) panel.restoreSavedDimensions();
+      window.dispatchEvent(new Event('resize'));
+    }
+
     if (
       (keySet.has(STORAGE_KEYS.mapLayers) || keySet.has(STORAGE_KEYS.mapLayerGateOwnership))
       && !this.state.initialUrlState?.layers
