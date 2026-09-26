@@ -120,6 +120,18 @@ const HIDDEN_DISPLAY_CONTROL_IDS = [
   'us-globe-visual-preset',
 ] as const;
 
+function installMonitorFavicon(): void {
+  if (typeof document === 'undefined') return;
+
+  document.head.querySelectorAll<HTMLLinkElement>('link[rel="icon"]').forEach((link) => link.remove());
+
+  const favicon = document.createElement('link');
+  favicon.rel = 'icon';
+  favicon.type = 'image/svg+xml';
+  favicon.href = '/favico/monitor-favicon.svg?v=1';
+  document.head.appendChild(favicon);
+}
+
 function shouldHidePanelItem(item: HTMLElement): boolean {
   const key = item.dataset.panel;
   if (key && HIDDEN_SETTINGS_PANEL_KEYS.has(key)) return true;
@@ -200,4 +212,5 @@ function installSettingsPanelVisibilityGuard(): void {
   observer.observe(document.documentElement, { childList: true, subtree: true });
 }
 
+installMonitorFavicon();
 installSettingsPanelVisibilityGuard();
