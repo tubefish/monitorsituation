@@ -962,10 +962,19 @@ export default defineSchema({
     .index("by_normalizedEmail", ["normalizedEmail"])
     .index("by_localePrimary", ["localePrimary"]),
 
+  chatProfiles: defineTable({
+    userId: v.string(),
+    displayName: v.string(),
+    avatarUrl: v.optional(v.string()),
+  }).index("by_user", ["userId"]),
+
   chatMessages: defineTable({
     userId: v.string(),
     displayName: v.string(),
     avatarUrl: v.optional(v.string()),
+    replyTo: v.optional(v.id("chatMessages")),
+    replyDisplayName: v.optional(v.string()),
+    replyExcerpt: v.optional(v.string()),
     body: v.string(),
     createdAt: v.number(),
   })

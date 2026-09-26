@@ -11,6 +11,9 @@ type Message = {
   avatarUrl?: string;
   body: string;
   createdAt: number;
+  replyTo?: Id<'chatMessages'>;
+  replyDisplayName?: string;
+  replyExcerpt?: string;
 };
 
 /** One shared room. The subscription exists only while the overlay is visible. */
@@ -24,6 +27,7 @@ export class GlobalChat {
   private readonly form = document.createElement('form');
   private readonly signInButton = document.createElement('button');
   private readonly counter = document.createElement('span');
+  private readonly replyBar = document.createElement('div');
   private readonly listeners = new AbortController();
   private unsubscribeAuth: (() => void) | null = null;
   private stopUpdates: (() => void) | null = null;
@@ -36,6 +40,8 @@ export class GlobalChat {
   private active = false;
   private generation = 0;
   private sending = false;
+  private replyTarget: Message | null = null;
+  private openMenu: HTMLElement | null = null;
 
   constructor(close: () => void) {
     this.element.className = 'map-experience-stage map-experience-chat';
@@ -68,6 +74,8 @@ export class GlobalChat {
     this.status.setAttribute('role', 'status');
 
     this.form.className = 'map-chat-composer';
+    this.replyBar.className = 'map-chat-reply-bar';
+    this.replyBar.hidden = true;
     this.input.placeholder = 'Type a message…';
     this.input.setAttribute('aria-label', 'Chat message');
     this.input.maxLength = 500;
@@ -86,7 +94,7 @@ export class GlobalChat {
     this.sendButton.type = 'submit';
     this.sendButton.textContent = 'Send ↗';
     composerFooter.append(this.counter, this.sendButton);
-    this.form.append(this.input, composerFooter);
+    this.form.append(this.replyBar, this.input, composerFooter);
     this.form.addEventListener('submit', event => {
       event.preventDefault();
       void this.send();
@@ -95,6 +103,12 @@ export class GlobalChat {
     this.signInButton.className = 'map-chat-signin';
     this.signInButton.textContent = 'Sign in to chat';
     this.signInButton.addEventListener('click', () => void openSignIn(), { signal: this.listeners.signal });
+    this.element.addEventListener('click', event => {
+      if (!(event.target as HTMLElement).closest('.map-chat-menu, .map-chat-menu-trigger')) this.closeMenu();
+    }, { signal: this.listeners.signal });
+    this.element.addEventListener('keydown', event => {
+      if (event.key === 'Escape') this.closeMenu();
+    }, { signal: this.listeners.signal });
     this.element.append(header, room, this.olderButton, this.list, this.status, this.form, this.signInButton);
     this.unsubscribeAuth = subscribeAuthState(state => this.authChanged(state));
   }
@@ -122,6 +136,8 @@ export class GlobalChat {
     this.current = [];
     this.older = [];
     this.client = null;
+    this.closeMenu();
+    this.setReply(null);
     this.cursor = null;
     this.done = true;
     this.list.replaceChildren();
@@ -137,6 +153,18 @@ export class GlobalChat {
     const [client, api] = await Promise.all([getConvexClient(), getConvexApi()]);
     if (!client || !api || !await waitForConvexAuthForUser(userId)) {
       if (this.isCurrent(userId, generation)) this.status.textContent = 'Chat is unavailable right now.';
+      return;
+    }
+    if (!this.isCurrent(userId, generation)) return;
+    const user = getAuthState().user;
+    if (!user) return;
+    try {
+      await client.mutation(api.chatMessages.setMyProfile, {
+        displayName: (user.username?.trim() || user.name.trim() || 'Member').slice(0, 60),
+        avatarUrl: user.image?.startsWith('https://') ? user.image : undefined,
+      });
+    } catch {
+      if (this.isCurrent(userId, generation)) this.status.textContent = 'Could not connect your profile. Reopen chat to try again.';
       return;
     }
     if (!this.isCurrent(userId, generation)) return;
@@ -187,6 +215,7 @@ export class GlobalChat {
   }
 
   private render(userId: string): void {
+    this.closeMenu();
     const unique = new Map([...this.older, ...this.current].map(message => [message._id, message]));
     const messages = [...unique.values()].sort((a, b) => a.createdAt - b.createdAt);
     this.olderButton.hidden = this.done;
@@ -214,21 +243,33 @@ export class GlobalChat {
       time.dateTime = new Date(message.createdAt).toISOString();
       time.textContent = new Date(message.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
       meta.append(name, time);
-      if (message.userId === userId) {
-        const remove = document.createElement('button');
-        remove.type = 'button';
-        remove.className = 'map-chat-delete';
-        remove.textContent = '⋯';
-        remove.title = 'Delete my message';
-        remove.setAttribute('aria-label', `Delete your message from ${time.textContent}`);
-        remove.addEventListener('click', () => {
-          if (window.confirm('Delete this message?')) void this.remove(message._id);
-        }, { signal: this.listeners.signal });
-        meta.append(remove);
+      const actions = document.createElement('div');
+      actions.className = 'map-chat-actions';
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'map-chat-menu-trigger';
+      trigger.textContent = '⋯';
+      trigger.setAttribute('aria-label', `Actions for ${message.displayName}'s message`);
+      trigger.setAttribute('aria-haspopup', 'menu');
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.addEventListener('click', () => this.toggleMenu(actions, trigger, message, userId), { signal: this.listeners.signal });
+      actions.append(trigger);
+      meta.append(actions);
+      if (message.replyDisplayName && message.replyExcerpt) {
+        const quote = document.createElement('div');
+        quote.className = 'map-chat-reply-quote';
+        const author = document.createElement('strong');
+        author.textContent = message.replyDisplayName;
+        const excerpt = document.createElement('span');
+        excerpt.textContent = message.replyExcerpt;
+        quote.append(author, excerpt);
+        content.append(meta, quote);
+      } else {
+        content.append(meta);
       }
       const body = document.createElement('p');
       body.textContent = message.body;
-      content.append(meta, body);
+      content.append(body);
       row.append(avatar, content);
       return row;
     });
@@ -236,20 +277,81 @@ export class GlobalChat {
     if (!messages.length) this.status.textContent = 'No messages yet. Start the conversation.';
   }
 
+  private closeMenu(): void {
+    if (!this.openMenu) return;
+    const trigger = this.openMenu.parentElement?.querySelector('.map-chat-menu-trigger');
+    trigger?.setAttribute('aria-expanded', 'false');
+    this.openMenu.remove();
+    this.openMenu = null;
+  }
+
+  private toggleMenu(actions: HTMLElement, trigger: HTMLButtonElement, message: Message, userId: string): void {
+    const wasOpen = this.openMenu?.parentElement === actions;
+    this.closeMenu();
+    if (wasOpen) return;
+    const menu = document.createElement('div');
+    menu.className = 'map-chat-menu';
+    menu.setAttribute('role', 'menu');
+    if (trigger.getBoundingClientRect().bottom + 140 > this.list.getBoundingClientRect().bottom) {
+      menu.classList.add('map-chat-menu-up');
+    }
+    const option = (label: string, action: () => void) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.setAttribute('role', 'menuitem');
+      button.textContent = label;
+      button.addEventListener('click', () => { this.closeMenu(); action(); }, { signal: this.listeners.signal });
+      menu.append(button);
+    };
+    option('Reply', () => this.setReply(message));
+    option('Copy', () => void this.copyMessage(message.body));
+    if (message.userId === userId) option('Delete', () => void this.remove(message._id));
+    actions.append(menu);
+    this.openMenu = menu;
+    trigger.setAttribute('aria-expanded', 'true');
+    menu.querySelector('button')?.focus();
+  }
+
+  private setReply(message: Message | null): void {
+    this.replyTarget = message;
+    this.replyBar.hidden = !message;
+    if (!message) { this.replyBar.replaceChildren(); return; }
+    const detail = document.createElement('span');
+    detail.textContent = `Replying to ${message.displayName}: ${message.body.slice(0, 100)}`;
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.textContent = '×';
+    cancel.setAttribute('aria-label', 'Cancel reply');
+    cancel.addEventListener('click', () => this.setReply(null), { signal: this.listeners.signal });
+    this.replyBar.replaceChildren(detail, cancel);
+    this.input.focus();
+  }
+
+  private async copyMessage(body: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(body);
+      this.status.textContent = 'Message copied.';
+    } catch {
+      this.status.textContent = 'Could not copy message.';
+    }
+  }
+
   private async send(): Promise<void> {
     const userId = getAuthState().user?.id;
     const body = this.input.value.trim();
     if (!userId || !body || this.sending || !this.client) return;
     const generation = this.generation;
+    const replyTo = this.replyTarget?._id;
     this.sending = true;
     this.sendButton.disabled = true;
     try {
       const api = await getConvexApi();
       if (!api || !await waitForConvexAuthForUser(userId) || !this.isCurrent(userId, generation)) return;
-      await this.client.mutation(api.chatMessages.send, { body });
+      await this.client.mutation(api.chatMessages.send, { body, replyTo });
       if (!this.isCurrent(userId, generation)) return;
       this.input.value = '';
       this.counter.textContent = '0/500';
+      if (this.replyTarget?._id === replyTo) this.setReply(null);
       this.status.textContent = '';
     } catch (error) {
       if (this.isCurrent(userId, generation)) this.status.textContent = error instanceof Error ? error.message : 'Could not send message.';

@@ -19,9 +19,20 @@ describe('Global Chat access', () => {
     expect(result.page).toHaveLength(1);
     expect(result.page[0]).toMatchObject({ displayName: 'Alice', body: 'Hello', avatarUrl: alice.pictureUrl });
     const id = result.page[0]!._id;
+    await t.withIdentity(alice).mutation(api.chatMessages.setMyProfile, {
+      displayName: 'AliceNew', avatarUrl: 'https://img.clerk.com/alice.png',
+    });
+    expect((await t.withIdentity(bob).query(api.chatMessages.list, page)).page[0]).toMatchObject({
+      displayName: 'AliceNew', avatarUrl: 'https://img.clerk.com/alice.png',
+    });
+    await t.withIdentity(bob).mutation(api.chatMessages.setMyProfile, { displayName: 'Bob' });
+    await t.withIdentity(bob).mutation(api.chatMessages.send, { body: 'Replying', replyTo: id });
+    expect((await t.withIdentity(alice).query(api.chatMessages.list, page)).page[0]).toMatchObject({
+      displayName: 'Bob', replyTo: id, replyDisplayName: 'AliceNew', replyExcerpt: 'Hello',
+    });
     await expect(t.withIdentity(bob).mutation(api.chatMessages.remove, { id })).rejects.toThrow(/unavailable/);
     await t.withIdentity(alice).mutation(api.chatMessages.remove, { id });
-    expect((await t.withIdentity(bob).query(api.chatMessages.list, page)).page).toHaveLength(0);
+    expect((await t.withIdentity(bob).query(api.chatMessages.list, page)).page).toHaveLength(1);
   });
 
   test('enforces message length and the five messages per ten seconds limit', async () => {
