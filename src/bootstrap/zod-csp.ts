@@ -9,7 +9,7 @@ if (typeof document !== 'undefined') {
   const favicon = document.createElement('link');
   favicon.rel = 'icon';
   favicon.type = 'image/svg+xml';
-  favicon.href = '/favico/monitor-favicon.svg?v=3';
+  favicon.href = '/favico/monitor-favicon.svg?v=4';
   document.head.appendChild(favicon);
 }
 
