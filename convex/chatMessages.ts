@@ -5,15 +5,22 @@ import { mutation, query } from "./_generated/server";
 const MAX_LENGTH = 500;
 const RATE_WINDOW_MS = 10_000;
 const RATE_MAX = 5;
+const ACTIVE_WINDOW_MS = 90_000;
+const roomValidator = v.union(
+  v.literal("global"),
+  v.literal("geopolitics"),
+  v.literal("markets"),
+  v.literal("crypto"),
+);
 
-/** The global room is visible only to users with a verified Clerk identity. */
+/** Room messages are visible only to users with a verified Clerk identity. */
 export const list = query({
-  args: { paginationOpts: paginationOptsValidator },
-  handler: async (ctx, { paginationOpts }) => {
+  args: { room: roomValidator, paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { room, paginationOpts }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity?.subject) throw new Error("Sign in to view chat");
     const result = await ctx.db.query("chatMessages")
-      .withIndex("by_created")
+      .withIndex("by_room_created", q => q.eq("room", room === "global" ? undefined : room))
       .order("desc")
       .paginate({ ...paginationOpts, numItems: Math.min(50, Math.max(1, paginationOpts.numItems)) });
     const profiles = new Map<string, Promise<{ displayName: string; avatarUrl?: string } | null>>();
@@ -32,6 +39,36 @@ export const list = query({
         };
       })),
     };
+  },
+});
+
+/** Recent signed-in participants in this room, including only those active in the past 90 seconds. */
+export const countOnline = query({
+  args: { room: roomValidator, refresh: v.number() },
+  handler: async (ctx, { room, refresh }) => {
+    void refresh; // A new 30-second bucket refreshes the reactive query when everyone leaves.
+    const active = await ctx.db.query("chatPresence")
+      .withIndex("by_room_seen", q => q.eq("room", room).gte("lastSeenAt", Date.now() - ACTIVE_WINDOW_MS))
+      .collect();
+    return active.length;
+  },
+});
+
+export const heartbeat = mutation({
+  args: { room: roomValidator },
+  handler: async (ctx, { room }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.subject) throw new Error("Sign in to join chat");
+    const now = Date.now();
+    const existing = await ctx.db.query("chatPresence")
+      .withIndex("by_user", q => q.eq("userId", identity.subject)).unique();
+    if (existing) {
+      if (existing.room !== room || now - existing.lastSeenAt >= 30_000) {
+        await ctx.db.patch(existing._id, { room, lastSeenAt: now });
+      }
+    } else {
+      await ctx.db.insert("chatPresence", { userId: identity.subject, room, lastSeenAt: now });
+    }
   },
 });
 
@@ -60,8 +97,8 @@ export const setMyProfile = mutation({
 });
 
 export const send = mutation({
-  args: { body: v.string(), replyTo: v.optional(v.id("chatMessages")) },
-  handler: async (ctx, { body, replyTo }) => {
+  args: { room: roomValidator, body: v.string(), replyTo: v.optional(v.id("chatMessages")) },
+  handler: async (ctx, { room, body, replyTo }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity?.subject) throw new Error("Sign in to send messages");
     const cleaned = body.trim();
@@ -80,12 +117,14 @@ export const send = mutation({
     const avatarUrl = profile?.avatarUrl ?? (identity.pictureUrl?.startsWith("https://") ? identity.pictureUrl : undefined);
     const parent = replyTo ? await ctx.db.get(replyTo) : null;
     if (replyTo && !parent) throw new Error("The message you're replying to is unavailable");
+    if (parent && (parent.room ?? "global") !== room) throw new Error("Replies must stay in the same room");
     const parentProfile = parent ? await ctx.db.query("chatProfiles")
       .withIndex("by_user", q => q.eq("userId", parent.userId)).unique() : null;
     await ctx.db.insert("chatMessages", {
       userId: identity.subject,
       displayName,
       avatarUrl,
+      room: room === "global" ? undefined : room,
       replyTo,
       replyDisplayName: parentProfile?.displayName ?? parent?.displayName,
       replyExcerpt: parent?.body.slice(0, 120),

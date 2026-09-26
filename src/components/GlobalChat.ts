@@ -4,6 +4,14 @@ import { getAuthState, subscribeAuthState, type AuthSession } from '@/services/a
 import { openSignIn } from '@/services/clerk';
 import { getConvexApi, getConvexClient, waitForConvexAuthForUser } from '@/services/convex-client';
 
+type ChatRoom = 'global' | 'geopolitics' | 'markets' | 'crypto';
+const ROOMS: Array<{ id: ChatRoom; label: string }> = [
+  { id: 'global', label: 'Global' },
+  { id: 'geopolitics', label: 'Geopolitics' },
+  { id: 'markets', label: 'Markets' },
+  { id: 'crypto', label: 'Crypto' },
+];
+
 type Message = {
   _id: Id<'chatMessages'>;
   userId: string;
@@ -16,7 +24,7 @@ type Message = {
   replyExcerpt?: string;
 };
 
-/** One shared room. The subscription exists only while the overlay is visible. */
+/** Shared chat rooms with subscriptions only while the overlay is visible. */
 export class GlobalChat {
   public readonly element = document.createElement('aside');
   private readonly list = document.createElement('div');
@@ -28,9 +36,14 @@ export class GlobalChat {
   private readonly signInButton = document.createElement('button');
   private readonly counter = document.createElement('span');
   private readonly replyBar = document.createElement('div');
+  private readonly onlineCount = document.createElement('span');
+  private readonly roomTabs = new Map<ChatRoom, HTMLButtonElement>();
   private readonly listeners = new AbortController();
   private unsubscribeAuth: (() => void) | null = null;
   private stopUpdates: (() => void) | null = null;
+  private stopCount: (() => void) | null = null;
+  private countInterval: number | null = null;
+  private heartbeatInterval: number | null = null;
   private client: ConvexClient | null = null;
   private current: Message[] = [];
   private older: Message[] = [];
@@ -42,26 +55,42 @@ export class GlobalChat {
   private sending = false;
   private replyTarget: Message | null = null;
   private openMenu: HTMLElement | null = null;
+  private room: ChatRoom = 'global';
 
   constructor(close: () => void) {
     this.element.className = 'map-experience-stage map-experience-chat';
     this.element.hidden = true;
-    this.element.setAttribute('aria-label', 'Global chat');
+    this.element.setAttribute('aria-label', 'Chat');
 
     const header = document.createElement('header');
     const title = document.createElement('strong');
     title.textContent = 'GLOBAL CHAT';
+    this.onlineCount.className = 'map-chat-online';
+    this.onlineCount.title = 'Signed-in members active in this room within the last 90 seconds';
+    this.onlineCount.textContent = 'Online: …';
     const closeButton = document.createElement('button');
     closeButton.type = 'button';
     closeButton.className = 'map-chat-close';
     closeButton.textContent = '×';
     closeButton.setAttribute('aria-label', 'Close chat');
     closeButton.addEventListener('click', close, { signal: this.listeners.signal });
-    header.append(title, closeButton);
+    header.append(title, this.onlineCount, closeButton);
 
-    const room = document.createElement('div');
-    room.className = 'map-chat-room';
-    room.textContent = 'Global';
+    const roomTabs = document.createElement('div');
+    roomTabs.className = 'map-chat-rooms';
+    roomTabs.setAttribute('role', 'tablist');
+    roomTabs.setAttribute('aria-label', 'Chat rooms');
+    for (const room of ROOMS) {
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.textContent = room.label;
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', String(room.id === this.room));
+      tab.classList.toggle('active', room.id === this.room);
+      tab.addEventListener('click', () => this.setRoom(room.id), { signal: this.listeners.signal });
+      this.roomTabs.set(room.id, tab);
+      roomTabs.append(tab);
+    }
     this.olderButton.type = 'button';
     this.olderButton.className = 'map-chat-older';
     this.olderButton.textContent = 'Load earlier messages';
@@ -109,7 +138,13 @@ export class GlobalChat {
     this.element.addEventListener('keydown', event => {
       if (event.key === 'Escape') this.closeMenu();
     }, { signal: this.listeners.signal });
-    this.element.append(header, room, this.olderButton, this.list, this.status, this.form, this.signInButton);
+    document.addEventListener('visibilitychange', () => {
+      const userId = getAuthState().user?.id;
+      if (document.visibilityState === 'visible' && userId && this.active && this.client) {
+        void this.heartbeat(userId, this.generation);
+      }
+    }, { signal: this.listeners.signal });
+    this.element.append(header, roomTabs, this.olderButton, this.list, this.status, this.form, this.signInButton);
     this.unsubscribeAuth = subscribeAuthState(state => this.authChanged(state));
   }
 
@@ -124,6 +159,9 @@ export class GlobalChat {
     this.active = false;
     this.generation++;
     this.stopUpdates?.();
+    this.stopCount?.();
+    if (this.countInterval !== null) window.clearInterval(this.countInterval);
+    if (this.heartbeatInterval !== null) window.clearInterval(this.heartbeatInterval);
     this.unsubscribeAuth?.();
     this.listeners.abort();
     this.element.remove();
@@ -133,6 +171,12 @@ export class GlobalChat {
     this.generation++;
     this.stopUpdates?.();
     this.stopUpdates = null;
+    this.stopCount?.();
+    this.stopCount = null;
+    if (this.countInterval !== null) window.clearInterval(this.countInterval);
+    this.countInterval = null;
+    if (this.heartbeatInterval !== null) window.clearInterval(this.heartbeatInterval);
+    this.heartbeatInterval = null;
     this.current = [];
     this.older = [];
     this.client = null;
@@ -142,11 +186,50 @@ export class GlobalChat {
     this.done = true;
     this.list.replaceChildren();
     if (!this.active) return;
+    this.onlineCount.textContent = 'Online: …';
+    void this.startCount(this.generation);
     this.form.hidden = !state.user;
     this.sendButton.disabled = true;
     this.signInButton.hidden = Boolean(state.user) || state.isPending;
     this.status.textContent = state.isPending ? 'Connecting…' : state.user ? 'Loading messages…' : 'Sign in to read and join the chat.';
     if (state.user) void this.start(state.user.id, this.generation);
+  }
+
+  private setRoom(room: ChatRoom): void {
+    if (this.room === room) return;
+    this.room = room;
+    this.list.setAttribute('aria-label', `${ROOMS.find(item => item.id === room)!.label} chat messages`);
+    for (const [id, tab] of this.roomTabs) {
+      tab.classList.toggle('active', id === room);
+      tab.setAttribute('aria-selected', String(id === room));
+    }
+    this.input.value = '';
+    this.counter.textContent = '0/500';
+    this.authChanged(getAuthState());
+  }
+
+  private async startCount(generation: number): Promise<void> {
+    const [client, api] = await Promise.all([getConvexClient(), getConvexApi()]);
+    if (!client || !api || !this.active || generation !== this.generation) {
+      if (this.active && generation === this.generation) this.onlineCount.textContent = 'Online unavailable';
+      return;
+    }
+    const room = this.room;
+    const refresh = () => {
+      this.stopCount?.();
+      this.stopCount = client.onUpdate(api.chatMessages.countOnline,
+        { room, refresh: Math.floor(Date.now() / 30_000) },
+        count => {
+          if (this.active && generation === this.generation && this.room === room) {
+            this.onlineCount.textContent = `${count} online`;
+          }
+        },
+        () => {
+          if (this.active && generation === this.generation) this.onlineCount.textContent = 'Online unavailable';
+        });
+    };
+    refresh();
+    this.countInterval = window.setInterval(refresh, 30_000);
   }
 
   private async start(userId: string, generation: number): Promise<void> {
@@ -170,7 +253,11 @@ export class GlobalChat {
     if (!this.isCurrent(userId, generation)) return;
     this.client = client;
     this.sendButton.disabled = false;
-    this.stopUpdates = client.onUpdate(api.chatMessages.list, { paginationOpts: { cursor: null, numItems: 30 } }, result => {
+    void this.heartbeat(userId, generation);
+    this.heartbeatInterval = window.setInterval(() => {
+      if (document.visibilityState !== 'hidden') void this.heartbeat(userId, generation);
+    }, 45_000);
+    this.stopUpdates = client.onUpdate(api.chatMessages.list, { room: this.room, paginationOpts: { cursor: null, numItems: 30 } }, result => {
       if (!this.isCurrent(userId, generation)) return;
       const nearBottom = this.list.scrollHeight - this.list.scrollTop - this.list.clientHeight < 90;
       this.current = result.page;
@@ -184,6 +271,17 @@ export class GlobalChat {
     }, () => {
       if (this.isCurrent(userId, generation)) this.status.textContent = 'Messages could not load. Try reopening chat.';
     });
+  }
+
+  private async heartbeat(userId: string, generation: number): Promise<void> {
+    if (!this.client || !this.isCurrent(userId, generation)) return;
+    try {
+      const api = await getConvexApi();
+      if (!api || !await waitForConvexAuthForUser(userId) || !this.isCurrent(userId, generation)) return;
+      await this.client.mutation(api.chatMessages.heartbeat, { room: this.room });
+    } catch {
+      // Chat messages still work if the presence indicator is temporarily unavailable.
+    }
   }
 
   private isCurrent(userId: string, generation: number): boolean {
@@ -200,7 +298,7 @@ export class GlobalChat {
     try {
       const api = await getConvexApi();
       if (!api || !await waitForConvexAuthForUser(userId) || !this.isCurrent(userId, generation)) return;
-      const result = await this.client.query(api.chatMessages.list, { paginationOpts: { cursor, numItems: 30 } });
+      const result = await this.client.query(api.chatMessages.list, { room: this.room, paginationOpts: { cursor, numItems: 30 } });
       if (!this.isCurrent(userId, generation)) return;
       this.older.push(...result.page);
       this.cursor = result.continueCursor;
@@ -341,13 +439,14 @@ export class GlobalChat {
     const body = this.input.value.trim();
     if (!userId || !body || this.sending || !this.client) return;
     const generation = this.generation;
+    const room = this.room;
     const replyTo = this.replyTarget?._id;
     this.sending = true;
     this.sendButton.disabled = true;
     try {
       const api = await getConvexApi();
       if (!api || !await waitForConvexAuthForUser(userId) || !this.isCurrent(userId, generation)) return;
-      await this.client.mutation(api.chatMessages.send, { body, replyTo });
+      await this.client.mutation(api.chatMessages.send, { room, body, replyTo });
       if (!this.isCurrent(userId, generation)) return;
       this.input.value = '';
       this.counter.textContent = '0/500';
