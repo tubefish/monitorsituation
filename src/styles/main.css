@@ -3836,9 +3836,15 @@ body.live-news-fullscreen-active .panels-grid > *:not(.live-news-fullscreen) {
   justify-content: flex-end;
   gap: 7px;
   padding: 14px;
+  text-decoration: none;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 38%),
     linear-gradient(135deg, rgba(220, 38, 38, 0.24), rgba(0, 0, 0, 0.88));
+}
+
+.webcam-preview-tile:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: -3px;
 }
 
 .webcam-preview-tile:hover .webcam-preview-play {

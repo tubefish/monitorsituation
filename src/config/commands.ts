@@ -222,7 +222,7 @@ export const COMMANDS: Command[] = [
   { id: 'panel:crypto-heatmap', keywords: ['crypto sectors', 'crypto heatmap', 'altcoin sectors'], label: 'Panel: Crypto Sectors', icon: '\u{1F7E9}', category: 'panels' },
   { id: 'panel:defi-tokens', keywords: ['defi', 'defi tokens', 'decentralized finance'], label: 'Panel: DeFi Tokens', icon: '\u{1FA99}', category: 'panels' },
   { id: 'panel:ai-tokens', keywords: ['ai tokens', 'ai crypto', 'artificial intelligence tokens'], label: 'Panel: AI Tokens', icon: '\u{1F916}', category: 'panels' },
-  { id: 'panel:other-tokens', keywords: ['alt tokens', 'altcoins', 'other tokens', 'small cap crypto'], label: 'Panel: Alt Tokens', icon: '\u{1F4B9}', category: 'panels' },
+  { id: 'panel:other-tokens', keywords: ['monitor trending', 'long tokens', 'fdv leaderboard'], label: 'Panel: Monitor Trending', icon: '\u{1F4B9}', category: 'panels' },
 
   // Tech variant panels
   { id: 'panel:startups', keywords: ['startups', 'startup news', 'vc news'], label: 'Panel: Startups & VC', icon: '\u{1F680}', category: 'panels' },

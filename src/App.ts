@@ -888,6 +888,9 @@ export class App {
     if (shouldPrimeAny(['markets', 'heatmap', 'commodities', 'crypto', 'energy-complex'])) {
       primeTask('markets', () => this.dataLoader.loadMarkets());
     }
+    if (shouldPrime('other-tokens')) {
+      primeTask('monitorTrending', () => this.dataLoader.loadMonitorTrending());
+    }
     if (shouldPrime('polymarket')) {
       primeTask('predictions', () => this.dataLoader.loadPredictions());
     }
@@ -3596,7 +3599,13 @@ export class App {
           name: 'markets',
           fn: () => this.dataLoader.loadMarkets(),
           intervalMs: REFRESH_INTERVALS.markets,
-          condition: () => this.isAnyPanelNearViewport(['markets', 'heatmap', 'commodities', 'crypto', 'crypto-heatmap', 'defi-tokens', 'ai-tokens', 'other-tokens']),
+          condition: () => this.isAnyPanelNearViewport(['markets', 'heatmap', 'commodities', 'crypto', 'crypto-heatmap', 'defi-tokens', 'ai-tokens']),
+        },
+        {
+          name: 'monitorTrending',
+          fn: () => this.dataLoader.loadMonitorTrending(),
+          intervalMs: REFRESH_INTERVALS.monitorTrending,
+          condition: () => this.isPanelNearViewport('other-tokens'),
         },
         {
           name: 'predictions',

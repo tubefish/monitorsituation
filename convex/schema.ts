@@ -962,6 +962,35 @@ export default defineSchema({
     .index("by_normalizedEmail", ["normalizedEmail"])
     .index("by_localePrimary", ["localePrimary"]),
 
+  chatProfiles: defineTable({
+    userId: v.string(),
+    displayName: v.string(),
+    avatarUrl: v.optional(v.string()),
+  }).index("by_user", ["userId"]),
+
+  chatPresence: defineTable({
+    userId: v.string(),
+    room: v.string(),
+    lastSeenAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_room_seen", ["room", "lastSeenAt"]),
+
+  chatMessages: defineTable({
+    userId: v.string(),
+    displayName: v.string(),
+    avatarUrl: v.optional(v.string()),
+    room: v.optional(v.string()), // older messages and Global use undefined
+    replyTo: v.optional(v.id("chatMessages")),
+    replyDisplayName: v.optional(v.string()),
+    replyExcerpt: v.optional(v.string()),
+    body: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_created", ["createdAt"])
+    .index("by_room_created", ["room", "createdAt"])
+    .index("by_user_created", ["userId", "createdAt"]),
+
   webhookEvents: defineTable({
     webhookId: v.string(),
     eventType: v.string(),

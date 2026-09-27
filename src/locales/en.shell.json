@@ -522,7 +522,7 @@
       "infoTooltip": "<strong>Airline Intelligence</strong> Real-time airline operational data: route suspensions, airspace closures, carrier advisories, and emergency diversions. Sourced from aviation authority NOTAMs and carrier bulletins."
     },
     "altTokens": {
-      "infoTooltip": "<strong>Alt Tokens</strong> Prices and 24h/7d performance for alternative and emerging crypto tokens outside the major-cap tiers."
+      "infoTooltip": "<strong>Monitor Trending</strong> Top Long launches on Robinhood Chain by fully diluted valuation (FDV). Rankings refresh every five minutes while this panel is in view. Rank movement compares the previous refresh in this session."
     },
     "bigmac": {
       "infoTooltip": "<strong>Real Big Mac Index</strong> The Economist's Big Mac Index measures purchasing power parity by comparing McDonald's burger prices across countries. Updated when new data is published (quarterly/annually)."

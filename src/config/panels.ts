@@ -489,7 +489,7 @@ const FINANCE_PANELS: Record<string, PanelConfig> = {
   'crypto-heatmap': { name: 'Crypto Sectors', enabled: true, priority: 1 },
   'defi-tokens': { name: 'DeFi Tokens', enabled: true, priority: 2 },
   'ai-tokens': { name: 'AI Tokens', enabled: true, priority: 2 },
-  'other-tokens': { name: 'Alt Tokens', enabled: true, priority: 2 },
+  'other-tokens': { name: 'Monitor Trending', enabled: true, priority: 2 },
   centralbanks: { name: 'Central Bank Watch', enabled: true, priority: 1 },
   economic: { name: 'Macro Stress', enabled: true, priority: 1 },
   'global-procurement': { name: 'Global Procurement', enabled: true, priority: 1, premium: 'locked' as const },

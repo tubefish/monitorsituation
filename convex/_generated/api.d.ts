@@ -32,6 +32,7 @@ import type * as companyMonitoring_evidence from "../companyMonitoring/evidence.
 import type * as companyMonitoring_imports from "../companyMonitoring/imports.js";
 import type * as companyMonitoring_orchestration from "../companyMonitoring/orchestration.js";
 import type * as companyMonitoring_validators from "../companyMonitoring/validators.js";
+import type * as chatMessages from "../chatMessages.js";
 import type * as config_productCatalog from "../config/productCatalog.js";
 import type * as constants from "../constants.js";
 import type * as contactMessages from "../contactMessages.js";
@@ -103,6 +104,7 @@ declare const fullApi: ApiFromModules<{
   "companyMonitoring/imports": typeof companyMonitoring_imports;
   "companyMonitoring/orchestration": typeof companyMonitoring_orchestration;
   "companyMonitoring/validators": typeof companyMonitoring_validators;
+  chatMessages: typeof chatMessages;
   "config/productCatalog": typeof config_productCatalog;
   constants: typeof constants;
   contactMessages: typeof contactMessages;

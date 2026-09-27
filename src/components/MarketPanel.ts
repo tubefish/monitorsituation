@@ -995,8 +995,62 @@ export class AiTokensPanel extends TokenListPanel {
   }
 }
 
-export class OtherTokensPanel extends TokenListPanel {
+export interface MonitorTrendingToken {
+  address: string;
+  name: string;
+  symbol: string;
+  pair: string;
+  fdvUsd: number;
+  imageUrl: string | null;
+}
+
+export class OtherTokensPanel extends Panel {
+  private previousRanks = new Map<string, number>();
+
   constructor() {
-    super({ id: 'other-tokens', title: 'Alt Tokens', infoTooltip: t('components.altTokens.infoTooltip') });
+    super({ id: 'other-tokens', title: 'MONITOR TRENDING', className: 'monitor-trending-panel', infoTooltip: t('components.altTokens.infoTooltip') });
+    const title = this.header.querySelector('.panel-title');
+    if (title) {
+      title.textContent = 'MONITOR ';
+      const accent = document.createElement('span');
+      accent.className = 'monitor-trending-accent';
+      accent.textContent = 'TRENDING';
+      title.appendChild(accent);
+    }
+  }
+
+  renderTrending(tokens: MonitorTrendingToken[], updatedAt: string): void {
+    const ranks = new Map(tokens.map((token, index) => [token.address.toLowerCase(), index + 1]));
+    const formatFdv = (amount: number): string => {
+      if (amount >= 1e9) return `$${(amount / 1e9).toFixed(2)}B`;
+      if (amount >= 1e6) return `$${(amount / 1e6).toFixed(2)}M`;
+      if (amount >= 1e3) return `$${(amount / 1e3).toFixed(1)}K`;
+      return `$${amount.toFixed(0)}`;
+    };
+    const rows = tokens.map((token, index) => {
+      const previous = this.previousRanks.get(token.address.toLowerCase());
+      const movement = previous === undefined || previous === index + 1 ? '—' : previous > index + 1 ? `↑${previous - index - 1}` : `↓${index + 1 - previous}`;
+      const movementClass = movement.startsWith('↑') ? 'up' : movement.startsWith('↓') ? 'down' : '';
+      const image = token.imageUrl ? `<img src="${escapeHtml(token.imageUrl)}" alt="" loading="lazy">` : '<span class="monitor-trending-monogram" aria-hidden="true">●</span>';
+      return `<div class="monitor-trending-row">
+        <span class="monitor-trending-rank">${String(index + 1).padStart(2, '0')}</span>
+        <span class="monitor-trending-identity">${image}<span class="monitor-trending-names"><strong>${escapeHtml(token.symbol)}</strong><small>${escapeHtml(token.name)}</small></span></span>
+        <span class="monitor-trending-pair">${escapeHtml(token.pair || '—')}</span>
+        <strong class="monitor-trending-fdv">${formatFdv(token.fdvUsd)}</strong>
+        <span class="monitor-trending-move ${movementClass}" aria-label="${movement === '—' ? 'Rank unchanged or first update' : `Rank ${movement.startsWith('↑') ? 'up' : 'down'} ${Math.abs(previous! - index - 1)}`}">${movement}</span>
+      </div>`;
+    }).join('');
+    this.previousRanks = ranks;
+    const time = new Date(updatedAt);
+    const timestamp = Number.isNaN(time.valueOf()) ? '' : ` · ${escapeHtml(time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}`;
+    this.setSafeContent(unsafeRawHtml(`<div class="monitor-trending-table">
+      <div class="monitor-trending-head"><span>#</span><span>TOKEN</span><span>PAIR</span><span>FDV</span><span>MOVE</span></div>
+      ${rows || '<p class="monitor-trending-empty">No eligible Long tokens are available right now.</p>'}
+      <div class="monitor-trending-footer"><span>FDV ranking · refreshes every 5 min${timestamp}</span><a href="https://app.long.xyz/tokens?sort=fdv_desc" target="_blank" rel="noopener noreferrer">View on Long ↗</a></div>
+    </div>`, 'Monitor Trending escaped provider fields'));
+  }
+
+  renderUnavailable(): void {
+    this.setSafeContent(unsafeRawHtml('<div class="monitor-trending-empty">Long feed unavailable. The next refresh will retry. <a href="https://app.long.xyz/tokens?sort=fdv_desc" target="_blank" rel="noopener noreferrer">View on Long ↗</a></div>', 'Static Monitor Trending error state'));
   }
 }
