@@ -1,0 +1,47 @@
+/* Smooth the desktop My Monitor collapse/reopen interaction without changing
+   the existing panel, map, or persistence behavior. */
+@media (min-width: 900px) {
+  .monitor-dashboard .main-content:not(.map-hidden) {
+    transition: grid-template-columns 280ms cubic-bezier(.22, 1, .36, 1);
+    will-change: grid-template-columns;
+  }
+
+  /* Keep three grid tracks while collapsed so the map/workspace boundary can
+     interpolate instead of snapping from a three-column layout to two. */
+  .monitor-dashboard .main-content.monitor-workspace-collapsed:not(.map-hidden),
+  .monitor-dashboard .main-content.map-right.monitor-workspace-collapsed:not(.map-hidden) {
+    grid-template-columns: minmax(0, calc(100% - 31px)) 31px minmax(0, 0fr);
+  }
+
+  /* PanelLayoutManager toggles the hidden attribute immediately. Retain the
+     element for the short visual transition while hidden semantics and pointer
+     blocking continue to prevent interaction with the collapsed workspace. */
+  .monitor-dashboard .monitor-workspace {
+    opacity: 1;
+    transition: opacity 180ms ease;
+  }
+
+  .monitor-dashboard .monitor-workspace[hidden] {
+    display: flex !important;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .monitor-dashboard .monitor-divider-toggle,
+  .monitor-dashboard .monitor-reopen-workspace {
+    transition:
+      background-color 140ms ease,
+      color 140ms ease,
+      border-color 140ms ease,
+      box-shadow 140ms ease;
+  }
+}
+
+@media (min-width: 900px) and (prefers-reduced-motion: reduce) {
+  .monitor-dashboard .main-content:not(.map-hidden),
+  .monitor-dashboard .monitor-workspace,
+  .monitor-dashboard .monitor-divider-toggle,
+  .monitor-dashboard .monitor-reopen-workspace {
+    transition: none;
+  }
+}
