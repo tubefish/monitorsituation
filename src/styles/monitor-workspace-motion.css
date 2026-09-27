@@ -8,7 +8,7 @@
       minmax(0, min(max(var(--map-col-width, 68%), 220px), calc(100% - 306px)))
       5px
       minmax(0, 1fr);
-    transition: grid-template-columns 280ms cubic-bezier(.22, 1, .36, 1);
+    transition: grid-template-columns 500ms cubic-bezier(.22, 1, .36, 1);
     will-change: grid-template-columns;
   }
 
@@ -25,7 +25,7 @@
       minmax(0, 1fr)
       5px
       minmax(0, min(max(var(--map-col-width, 68%), 220px), calc(100% - 306px)));
-    transition: grid-template-columns 280ms cubic-bezier(.22, 1, .36, 1);
+    transition: grid-template-columns 500ms cubic-bezier(.22, 1, .36, 1);
     will-change: grid-template-columns;
   }
 
@@ -46,7 +46,7 @@
     opacity: 1;
     visibility: visible;
     transition:
-      opacity 180ms ease,
+      opacity 260ms ease,
       visibility 0s linear 0s;
   }
 
@@ -56,8 +56,8 @@
     visibility: hidden;
     pointer-events: none;
     transition:
-      opacity 180ms ease,
-      visibility 0s linear 280ms;
+      opacity 260ms ease,
+      visibility 0s linear 500ms;
   }
 
   .monitor-dashboard .monitor-divider-toggle,
