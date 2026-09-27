@@ -69,6 +69,10 @@ export function organizeMapLayerControls(root: HTMLElement): () => void {
     if (event.key === 'Escape' && details.open) { details.open = false; summary.focus(); event.stopPropagation(); }
   };
   root.addEventListener('keydown', onKey);
+  const onToggle = () => {
+    if (details.open) root.closest('.map-section')?.dispatchEvent(new Event('monitor-layer-open'));
+  };
+  details.addEventListener('toggle', onToggle);
   sync();
-  return () => { observer.disconnect(); root.removeEventListener('change', sync); root.removeEventListener('keydown', onKey); };
+  return () => { observer.disconnect(); root.removeEventListener('change', sync); root.removeEventListener('keydown', onKey); details.removeEventListener('toggle', onToggle); };
 }

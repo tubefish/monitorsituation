@@ -223,7 +223,6 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
   </div>`;
   html += `<select class="unified-settings-select" id="us-font-family" aria-labelledby="us-font-family-label">`;
   for (const opt of [
-    { value: 'mono', label: t('preferences.fontMono') },
     { value: 'system', label: t('preferences.fontSystem') },
   ] as { value: FontFamily; label: string }[]) {
     const selected = opt.value === currentFont ? ' selected' : '';

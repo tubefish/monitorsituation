@@ -1,6 +1,7 @@
 /* The UI redesign is scoped to MONITOR's full dashboard. Existing panels,
    map layers, authentication and saved tab state keep their own behavior. */
 html.monitor-dashboard {
+  --font-body-base: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --monitor-canvas: #f7f8f9;
   --monitor-workspace-surface: #f0f2f4;
   --monitor-card-surface: #ffffff;
@@ -198,6 +199,8 @@ html.monitor-dashboard[data-theme='dark'] {
   .monitor-dashboard .map-section .map-experience-switcher #mapFullscreenBtn svg { width: 24px; height: 24px; }
   .monitor-dashboard .map-section .map-experience-switcher #mapFullscreenBtn::after { content: 'Expand'; font: 500 11px var(--monitor-reading-font); }
   .monitor-dashboard .map-section .map-experience-switcher #mapFullscreenBtn[aria-expanded="true"]::after { content: 'Restore'; }
+  .monitor-dashboard .map-experience-flights { left: 104px; width: min(340px, calc(100% - 116px)); }
+  .monitor-dashboard .map-experience-flights-active .monitor-layer-controls { opacity: 1; }
 
   /* The renderer's original layer toggles and zoom handlers stay attached;
      only their position and closed state change to the reference's tool rail. */
@@ -258,6 +261,9 @@ html.monitor-dashboard[data-theme='dark'] {
   .monitor-dashboard .deckgl-controls.map-controls { top: 556px; left: 12px; right: auto; }
   .monitor-dashboard .deckgl-controls .map-btn { width: 38px; height: 36px; border-color: var(--monitor-line); background: var(--monitor-card-surface); color: var(--monitor-ink); border-radius: 2px; }
 }
+.monitor-dashboard .map-experience-news > header { position: relative; padding-right: 48px; }
+.monitor-dashboard .map-experience-news-close { position: absolute; top: 7px; right: 8px; width: 32px; height: 32px; border: 0; border-radius: 2px; background: transparent; color: var(--text-secondary); font: 24px/1 var(--monitor-reading-font); cursor: pointer; }
+.monitor-dashboard .map-experience-news-close:hover { background: var(--surface-hover); color: var(--text); }
 .monitor-workspace-header {
   flex: none;
   min-height: 54px;

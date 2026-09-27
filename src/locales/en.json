@@ -3569,7 +3569,7 @@
     "globePreset": "Visual Preset",
     "globePresetDesc": "Switch between classic and enhanced globe visuals to compare.",
     "fontFamily": "Font Family",
-    "fontFamilyDesc": "Monospace for a technical look, system default for easier reading.",
+    "fontFamilyDesc": "Use your device's default font for easier reading.",
     "fontMono": "Monospace",
     "fontSystem": "System Default"
   },

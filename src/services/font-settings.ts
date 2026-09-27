@@ -3,35 +3,26 @@ export type FontFamily = 'mono' | 'system';
 const STORAGE_KEY = 'wm-font-family';
 const EVENT_NAME = 'wm-font-changed';
 
-const ALLOWED: FontFamily[] = ['mono', 'system'];
-
 export function getFontFamily(): FontFamily {
+  return 'system';
+}
+
+export function setFontFamily(_font: FontFamily): void {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw && ALLOWED.includes(raw as FontFamily)) return raw as FontFamily;
+    localStorage.setItem(STORAGE_KEY, 'system');
   } catch {
     // ignore
   }
-  return 'mono';
+  applyFont();
+  window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: { font: 'system' } }));
 }
 
-export function setFontFamily(font: FontFamily): void {
-  const safe = ALLOWED.includes(font) ? font : 'mono';
+export function applyFont(_font?: FontFamily): void {
+  document.documentElement.dataset.font = 'system';
   try {
-    localStorage.setItem(STORAGE_KEY, safe);
+    localStorage.setItem(STORAGE_KEY, 'system');
   } catch {
-    // ignore
-  }
-  applyFont(safe);
-  window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: { font: safe } }));
-}
-
-export function applyFont(font?: FontFamily): void {
-  const resolved = font ?? getFontFamily();
-  if (resolved === 'system') {
-    document.documentElement.dataset.font = 'system';
-  } else {
-    delete document.documentElement.dataset.font;
+    // The system font still applies when storage is unavailable.
   }
 }
 

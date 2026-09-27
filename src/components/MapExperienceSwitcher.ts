@@ -26,6 +26,7 @@ export class MapExperienceSwitcher {
   private readonly resizeObserver: ResizeObserver | null;
   private readonly buttons = new Map<MapExperienceMode, HTMLButtonElement>();
   private readonly fullscreenButton: HTMLButtonElement | null;
+  private currentMode: MapExperienceMode = 'situation';
   private news: LocationNewsItem[] = [];
 
   constructor(
@@ -56,7 +57,10 @@ export class MapExperienceSwitcher {
       const label = document.createElement('span');
       label.textContent = option.label;
       button.append(icon, label);
-      button.addEventListener('click', () => this.setMode(option.mode), { signal: this.listeners.signal });
+      button.addEventListener('click', () => {
+        this.closeLayers();
+        this.setMode(this.currentMode === option.mode && option.mode !== 'situation' ? 'situation' : option.mode);
+      }, { signal: this.listeners.signal });
       this.buttons.set(option.mode, button);
       this.root.append(button);
     }
@@ -69,10 +73,20 @@ export class MapExperienceSwitcher {
     const searchLabel = document.createElement('span');
     searchLabel.textContent = 'Search';
     searchButton.append(searchIcon, searchLabel);
-    searchButton.addEventListener('click', () => document.getElementById('searchBtn')?.click(), { signal: this.listeners.signal });
+    searchButton.addEventListener('click', () => {
+      this.closeLayers();
+      this.setMode('situation');
+      document.getElementById('searchBtn')?.click();
+    }, { signal: this.listeners.signal });
     this.root.append(searchButton);
     this.fullscreenButton = mapSection.querySelector<HTMLButtonElement>('#mapFullscreenBtn');
-    if (this.fullscreenButton) this.root.append(this.fullscreenButton);
+    if (this.fullscreenButton) {
+      this.fullscreenButton.addEventListener('click', () => {
+        this.closeLayers();
+        this.setMode('situation');
+      }, { signal: this.listeners.signal });
+      this.root.append(this.fullscreenButton);
+    }
 
     this.overlayHost.className = 'map-experience-overlay-host';
     this.overlayHost.setAttribute('aria-live', 'polite');
@@ -106,7 +120,13 @@ export class MapExperienceSwitcher {
     newsTitle.textContent = 'Top news by location';
     const newsHint = document.createElement('span');
     newsHint.textContent = 'Select a story to focus the map';
-    newsHeader.append(newsTitle, newsHint);
+    const newsClose = document.createElement('button');
+    newsClose.type = 'button';
+    newsClose.className = 'map-experience-news-close';
+    newsClose.setAttribute('aria-label', 'Close top news');
+    newsClose.textContent = '×';
+    newsClose.addEventListener('click', () => this.setMode('situation'), { signal: this.listeners.signal });
+    newsHeader.append(newsTitle, newsHint, newsClose);
     this.newsList.className = 'map-experience-news-list';
     this.newsStage.append(newsHeader, this.newsList);
 
@@ -115,6 +135,15 @@ export class MapExperienceSwitcher {
     this.resizeObserver?.observe(this.mapSection);
     this.resizeObserver?.observe(this.mapContainer);
     window.addEventListener('resize', () => this.syncOverlayBounds(), { signal: this.listeners.signal });
+    mapSection.addEventListener('monitor-layer-open', () => this.setMode('situation'), { signal: this.listeners.signal });
+    document.addEventListener('pointerdown', (event) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (this.root.contains(target) || this.overlayHost.contains(target)) return;
+      if (target instanceof Element && target.closest('.monitor-layer-controls')) return;
+      this.closeLayers();
+      if (this.currentMode !== 'situation') this.setMode('situation');
+    }, { signal: this.listeners.signal });
     this.syncOverlayBounds();
     this.renderNews();
     this.setMode(this.readStoredMode(), false);
@@ -159,7 +188,13 @@ export class MapExperienceSwitcher {
     this.overlayHost.style.height = `${this.mapContainer.offsetHeight}px`;
   }
 
+  private closeLayers(): void {
+    const drawer = this.mapContainer.querySelector<HTMLDetailsElement>('.monitor-layer-drawer');
+    if (drawer) drawer.open = false;
+  }
+
   private setMode(mode: MapExperienceMode, persist = true): void {
+    this.currentMode = mode;
     this.flightStage.hidden = mode !== 'flights';
     this.newsStage.hidden = mode !== 'news';
     this.chat.setActive(mode === 'chat');
