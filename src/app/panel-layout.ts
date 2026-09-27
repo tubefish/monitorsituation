@@ -1020,7 +1020,7 @@ export class PanelLayoutManager implements AppModule {
         <div class="header-right">
           ${SITE_VARIANT === 'full' ? '<button type="button" id="customizeLayoutBtn" class="monitor-toolbar-button" aria-pressed="false">Customize</button><button type="button" id="shareViewBtn" class="monitor-toolbar-button">Share view</button>' : ''}
           <button class="search-btn" id="searchBtn"><kbd>⌘K</kbd> ${t('header.search')}</button>
-          ${SITE_VARIANT === 'full' ? '<span class="monitor-live-badge"><span aria-hidden="true"></span> LIVE</span><time class="monitor-utc-clock" id="monitorUtcClock" aria-label="UTC time"></time><button type="button" class="monitor-notifications-btn" id="monitorNotificationsBtn" aria-label="Notifications"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg></button>' : ''}
+          ${SITE_VARIANT === 'full' ? '<time class="monitor-header-datetime" id="headerClock" aria-label="UTC date and time" translate="no"></time><span class="monitor-live-badge"><span aria-hidden="true"></span> LIVE</span><button type="button" class="monitor-notifications-btn" id="monitorNotificationsBtn" aria-label="Notifications"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg></button>' : ''}
           ${this.ctx.isDesktopApp ? '' : `<button class="copy-link-btn" id="copyLinkBtn">${t('header.copyLink')}</button>`}
           ${this.ctx.isDesktopApp ? '' : `<button class="copy-link-btn embed-link-btn" id="embedLinkBtn">${t('header.embed')}</button>`}
           ${SITE_VARIANT === 'happy' ? `<button class="tv-mode-btn" id="tvModeBtn" title="TV Mode (Shift+T)" aria-label="TV Mode"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></button>` : ''}
@@ -1113,7 +1113,7 @@ export class PanelLayoutManager implements AppModule {
             <div class="panel-header-left">
               <span class="panel-title">${SITE_VARIANT === 'tech' ? t('panels.techMap') : SITE_VARIANT === 'happy' ? 'Good News Map' : t('panels.map')}</span>
             </div>
-            <span class="header-clock" id="headerClock" translate="no"></span>
+            ${SITE_VARIANT === 'full' ? '' : '<span class="header-clock" id="headerClock" translate="no"></span>'}
             <button class="icon-btn panel-expand-btn" id="mapFullscreenBtn" type="button" title="Expand map" aria-label="Expand map" aria-expanded="false">⛶</button>
           </div>
           <div class="map-container" id="mapContainer"></div>
@@ -1175,13 +1175,6 @@ export class PanelLayoutManager implements AppModule {
     // ordering the LCP element against the shell swap (PR #4512 review).
     markLcpDebug('wm:layout:shell-replaced');
     if (SITE_VARIANT === 'full') {
-      const updateUtcClock = () => {
-        const clock = document.getElementById('monitorUtcClock');
-        if (clock) clock.textContent = `UTC ${new Date().toISOString().slice(11, 16)}`;
-      };
-      updateUtcClock();
-      const utcClockTimer = window.setInterval(updateUtcClock, 60_000);
-      this.panelDragCleanupHandlers.push(() => window.clearInterval(utcClockTimer));
       document.getElementById('monitorNotificationsBtn')?.addEventListener('click', () => this.ctx.unifiedSettings?.open('notifications'));
       const main = document.getElementById('main');
       const workspace = document.getElementById('monitorWorkspace');

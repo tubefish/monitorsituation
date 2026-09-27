@@ -25,6 +25,7 @@ export class MapExperienceSwitcher {
   private readonly listeners = new AbortController();
   private readonly resizeObserver: ResizeObserver | null;
   private readonly buttons = new Map<MapExperienceMode, HTMLButtonElement>();
+  private readonly fullscreenButton: HTMLButtonElement | null;
   private news: LocationNewsItem[] = [];
 
   constructor(
@@ -37,7 +38,7 @@ export class MapExperienceSwitcher {
       : new ResizeObserver(() => this.syncOverlayBounds());
     this.root.className = 'map-experience-switcher';
     this.root.setAttribute('role', 'group');
-    this.root.setAttribute('aria-label', 'Choose map view');
+    this.root.setAttribute('aria-label', 'Map tools');
 
     const options: Array<{ mode: MapExperienceMode; label: string; icon: string }> = [
       { mode: 'situation', label: 'Situation', icon: '◎' },
@@ -49,11 +50,29 @@ export class MapExperienceSwitcher {
       const button = document.createElement('button');
       button.type = 'button';
       button.dataset.mapExperience = option.mode;
-      button.innerHTML = `<span aria-hidden="true">${option.icon}</span><span>${option.label}</span>`;
+      const icon = document.createElement('span');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = option.icon;
+      const label = document.createElement('span');
+      label.textContent = option.label;
+      button.append(icon, label);
       button.addEventListener('click', () => this.setMode(option.mode), { signal: this.listeners.signal });
       this.buttons.set(option.mode, button);
       this.root.append(button);
     }
+    const searchButton = document.createElement('button');
+    searchButton.type = 'button';
+    searchButton.className = 'map-experience-search';
+    const searchIcon = document.createElement('span');
+    searchIcon.setAttribute('aria-hidden', 'true');
+    searchIcon.textContent = '⌕';
+    const searchLabel = document.createElement('span');
+    searchLabel.textContent = 'Search';
+    searchButton.append(searchIcon, searchLabel);
+    searchButton.addEventListener('click', () => document.getElementById('searchBtn')?.click(), { signal: this.listeners.signal });
+    this.root.append(searchButton);
+    this.fullscreenButton = mapSection.querySelector<HTMLButtonElement>('#mapFullscreenBtn');
+    if (this.fullscreenButton) this.root.append(this.fullscreenButton);
 
     this.overlayHost.className = 'map-experience-overlay-host';
     this.overlayHost.setAttribute('aria-live', 'polite');
@@ -118,6 +137,7 @@ export class MapExperienceSwitcher {
     this.listeners.abort();
     this.resizeObserver?.disconnect();
     this.chat.destroy();
+    if (this.fullscreenButton) this.mapSection.querySelector('.panel-header')?.append(this.fullscreenButton);
     this.root.remove();
     this.overlayHost.remove();
     this.mapSection.classList.remove('map-experience-flights-active', 'map-experience-news-active', 'map-experience-chat-active');
