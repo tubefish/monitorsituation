@@ -1,30 +1,63 @@
 /* Smooth the desktop My Monitor collapse/reopen interaction without changing
    the existing panel, map, or persistence behavior. */
 @media (min-width: 900px) {
-  .monitor-dashboard .main-content:not(.map-hidden) {
+  /* Use matching three-track shapes in both states so Chromium can interpolate
+     the split instead of treating the collapse as a discrete layout swap. */
+  .monitor-dashboard .main-content:not(.map-right):not(.map-hidden) {
+    grid-template-columns:
+      minmax(0, min(max(var(--map-col-width, 68%), 220px), calc(100% - 306px)))
+      5px
+      minmax(0, 1fr);
     transition: grid-template-columns 280ms cubic-bezier(.22, 1, .36, 1);
     will-change: grid-template-columns;
   }
 
-  /* Keep three grid tracks while collapsed so the map/workspace boundary can
-     interpolate instead of snapping from a three-column layout to two. */
-  .monitor-dashboard .main-content.monitor-workspace-collapsed:not(.map-hidden),
+  .monitor-dashboard .main-content:not(.map-right).monitor-workspace-collapsed:not(.map-hidden) {
+    grid-template-columns:
+      minmax(0, min(max(100%, 220px), calc(100% - 31px)))
+      31px
+      minmax(0, 0fr);
+  }
+
+  /* Mirror the same transition when a user has chosen the map-right layout. */
+  .monitor-dashboard .main-content.map-right:not(.map-hidden) {
+    grid-template-columns:
+      minmax(0, 1fr)
+      5px
+      minmax(0, min(max(var(--map-col-width, 68%), 220px), calc(100% - 306px)));
+    transition: grid-template-columns 280ms cubic-bezier(.22, 1, .36, 1);
+    will-change: grid-template-columns;
+  }
+
   .monitor-dashboard .main-content.map-right.monitor-workspace-collapsed:not(.map-hidden) {
-    grid-template-columns: minmax(0, calc(100% - 31px)) 31px minmax(0, 0fr);
+    grid-template-columns:
+      minmax(0, 0fr)
+      31px
+      minmax(0, min(max(100%, 220px), calc(100% - 31px)));
+  }
+
+  .monitor-dashboard .main-content.map-right.monitor-workspace-collapsed .map-section {
+    grid-column: 3;
   }
 
   /* PanelLayoutManager toggles the hidden attribute immediately. Retain the
-     element for the short visual transition while hidden semantics and pointer
-     blocking continue to prevent interaction with the collapsed workspace. */
+     element for the short visual transition while keeping it non-interactive. */
   .monitor-dashboard .monitor-workspace {
     opacity: 1;
-    transition: opacity 180ms ease;
+    visibility: visible;
+    transition:
+      opacity 180ms ease,
+      visibility 0s linear 0s;
   }
 
   .monitor-dashboard .monitor-workspace[hidden] {
     display: flex !important;
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
+    transition:
+      opacity 180ms ease,
+      visibility 0s linear 280ms;
   }
 
   .monitor-dashboard .monitor-divider-toggle,
