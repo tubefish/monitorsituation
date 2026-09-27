@@ -97,3 +97,9 @@ html.wm-pro-banner-reserved .pro-banner-slot {
 #authWidgetMount:empty {
   visibility: hidden;
 }
+
+/* $MONITOR desktop redesign: the More destination is intentionally omitted
+   from the primary header while the underlying dashboard routing stays intact. */
+.monitor-primary-nav [data-monitor-jump="more"] {
+  display: none;
+}
