@@ -1002,8 +1002,11 @@ export class DataLoaderManager implements AppModule {
 
     // Happy variant only loads news data -- skip all geopolitical/financial/military data
     if (SITE_VARIANT !== 'happy') {
-      if (shouldLoadAny(['markets', 'heatmap', 'commodities', 'crypto', 'energy-complex', 'crypto-heatmap', 'defi-tokens', 'ai-tokens', 'other-tokens'])) {
+      if (shouldLoadAny(['markets', 'heatmap', 'commodities', 'crypto', 'energy-complex', 'crypto-heatmap', 'defi-tokens', 'ai-tokens'])) {
         tasks.push({ name: 'markets', task: () => runGuarded('markets', () => this.loadMarkets()) });
+      }
+      if (shouldLoad('other-tokens')) {
+        tasks.push({ name: 'monitorTrending', task: () => runGuarded('monitorTrending', () => this.loadMonitorTrending()) });
       }
       if (hasPremiumAccess() && shouldLoad('stock-analysis')) {
         tasks.push({ name: 'stockAnalysis', task: () => runGuarded('stockAnalysis', () => this.loadStockAnalysis()) });
@@ -2441,13 +2444,12 @@ this.ctx.mapExperience?.setLocationNews(geoLocated);
         (this.ctx.panels['crypto-heatmap'] as CryptoHeatmapPanel | undefined)?.showRetrying(t('common.failedCryptoData'));
         (this.ctx.panels['defi-tokens'] as DefiTokensPanel | undefined)?.showRetrying(t('common.failedCryptoData'));
         (this.ctx.panels['ai-tokens'] as AiTokensPanel | undefined)?.showRetrying(t('common.failedCryptoData'));
-        (this.ctx.panels['other-tokens'] as OtherTokensPanel | undefined)?.showRetrying(t('common.failedCryptoData'));
       }
       return;
     }
     const {
       fetchMultipleStocks, fetchCommodityQuotes, fetchPhysicalDivergence, fetchPhysicalPremiums, fetchSectors, warmCommodityCache, warmSectorCache,
-      fetchCrypto, fetchCryptoSectors, fetchDefiTokens, fetchAiTokens, fetchOtherTokens,
+      fetchCrypto, fetchCryptoSectors, fetchDefiTokens, fetchAiTokens,
     } = marketMod;
     try {
       const customEntries = getMarketWatchlistEntries();
@@ -2708,27 +2710,37 @@ this.ctx.mapExperience?.setLocationNews(geoLocated);
     const cryptoHeatmapPanel = this.ctx.panels['crypto-heatmap'] as CryptoHeatmapPanel | undefined;
     const defiPanel = this.ctx.panels['defi-tokens'] as DefiTokensPanel | undefined;
     const aiPanel = this.ctx.panels['ai-tokens'] as AiTokensPanel | undefined;
-    const otherPanel = this.ctx.panels['other-tokens'] as OtherTokensPanel | undefined;
-
-    if (cryptoHeatmapPanel || defiPanel || aiPanel || otherPanel) {
+    if (cryptoHeatmapPanel || defiPanel || aiPanel) {
       try {
-        const [sectors, defi, ai, other] = await Promise.all([
+        const [sectors, defi, ai] = await Promise.all([
           cryptoHeatmapPanel ? fetchCryptoSectors() : Promise.resolve([]),
           defiPanel ? fetchDefiTokens() : Promise.resolve([]),
           aiPanel ? fetchAiTokens() : Promise.resolve([]),
-          otherPanel ? fetchOtherTokens() : Promise.resolve([]),
         ]);
         cryptoHeatmapPanel?.renderSectors(sectors);
         defiPanel?.renderTokens(defi);
         aiPanel?.renderTokens(ai);
-        otherPanel?.renderTokens(other);
       } catch (err) {
         console.warn('[DataLoader] Token panel load failed:', err);
         cryptoHeatmapPanel?.showRetrying(t('common.failedCryptoData'));
         defiPanel?.showRetrying(t('common.failedCryptoData'));
         aiPanel?.showRetrying(t('common.failedCryptoData'));
-        otherPanel?.showRetrying(t('common.failedCryptoData'));
       }
+    }
+  }
+
+  async loadMonitorTrending(): Promise<void> {
+    const panel = this.ctx.panels['other-tokens'] as OtherTokensPanel | undefined;
+    if (!panel) return;
+    try {
+      const response = await fetch(toApiUrl('/api/monitor-trending'));
+      if (!response.ok) throw new Error(`Monitor Trending status ${response.status}`);
+      const payload = await response.json();
+      if (!Array.isArray(payload.tokens) || typeof payload.updatedAt !== 'string') throw new Error('Invalid Monitor Trending response');
+      panel.renderTrending(payload.tokens, payload.updatedAt);
+    } catch (error) {
+      console.warn('[DataLoader] Monitor Trending unavailable:', error);
+      panel.renderUnavailable();
     }
   }
 

@@ -47,7 +47,6 @@ const HIDDEN_SETTINGS_PANEL_NAMES = new Set([
   'AAII Investor Sentiment',
   'AAII Sentiment',
   'Market Breadth',
-  'ALT Tokens',
   'Crypto Sectors',
   'DEFI Tokens',
   'AI Tokens',

@@ -2148,7 +2148,7 @@
       "infoTooltip": "<strong>AI Tokens</strong> Prices and 24h/7d performance for AI and machine learning sector tokens — compute networks, decentralized AI infrastructure, and data protocols."
     },
     "altTokens": {
-      "infoTooltip": "<strong>Alt Tokens</strong> Prices and 24h/7d performance for alternative and emerging crypto tokens outside the major-cap tiers."
+      "infoTooltip": "<strong>Monitor Trending</strong> Top Long launches on Robinhood Chain by fully diluted valuation (FDV). Rankings refresh every five minutes while this panel is in view. Rank movement compares the previous refresh in this session."
     },
     "stockAnalysis": {
       "infoTooltip": "<strong>Premium Stock Analysis</strong> AI-powered analysis for stocks in your watchlist — buy/hold/sell signals, price targets, key risks, and catalysts updated daily."

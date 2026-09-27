@@ -12,6 +12,7 @@ export { IDLE_PAUSE_MS } from '../idle';
 export const REFRESH_INTERVALS = {
   feeds: 20 * 60 * 1000,
   markets: 12 * 60 * 1000,
+  monitorTrending: 5 * 60 * 1000,
   crypto: 12 * 60 * 1000,
   predictions: 15 * 60 * 1000,
   forecasts: 30 * 60 * 1000,
