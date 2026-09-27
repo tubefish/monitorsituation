@@ -184,7 +184,7 @@ export class GlobeMap extends GlobeMapCore {
         width,
         height,
         -DESKTOP_GLOBE_OFFSET_PX,
-        document.documentElement.classList.contains('monitor-dashboard') ? 35 : 0,
+        0,
         width,
         height,
       );
@@ -224,7 +224,7 @@ export class GlobeMap extends GlobeMapCore {
       runtime.currentView = view;
       if (!runtime.globe) return;
       runtime.wakeGlobe();
-      runtime.moveViewport({ lat: 20, lng: 0, altitude: 1.25 });
+      runtime.moveViewport({ lat: 20, lng: 0, altitude: 1.65 });
       return;
     }
 

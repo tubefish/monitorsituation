@@ -34,6 +34,11 @@ const LABEL_CENTER_OVERRIDES: Record<string, { lat: number; lng: number }> = {
   JP: { lat: 37.5, lng: 138.0 },
 };
 
+const LABEL_DISPLAY_NAMES: Record<string, string> = {
+  US: 'UNITED STATES',
+  CD: 'DRC',
+};
+
 type CountryBorderPath = {
   _wmCountryBorder: true;
   id: string;
@@ -468,7 +473,7 @@ export class GlobePresentation {
       labels.push({
         _wmCountryLabel: true,
         code,
-        text: name.toUpperCase(),
+        text: LABEL_DISPLAY_NAMES[code] ?? name.toUpperCase(),
         _lat: override?.lat ?? center.lat,
         _lng: override?.lng ?? center.lng,
         rank,

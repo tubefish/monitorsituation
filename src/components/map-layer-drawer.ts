@@ -18,7 +18,10 @@ export function organizeMapLayerControls(root: HTMLElement): () => void {
   const search = root.querySelector<HTMLInputElement>('.layer-search');
   const guide = root.querySelector<HTMLElement>('.layer-help-btn');
   const count = h('span', { className: 'monitor-layer-count' });
-  const summary = h('summary', {}, h('span', {}, 'Map layers'), count);
+  const globeRail = root.classList.contains('deckgl-layer-toggles');
+  const summary = h('summary', {},
+    ...(globeRail ? [h('span', { className: 'monitor-rail-glyph', 'aria-hidden': 'true' }, '◎')] : []),
+    h('span', {}, globeRail ? 'Layers' : 'Map layers'), count);
   const details = h('details', { className: 'monitor-layer-drawer' }, summary) as HTMLDetailsElement;
   const active = h('div', { className: 'monitor-active-layers', 'aria-label': 'Active map layers' });
   const body = h('div', { className: 'monitor-layer-body' });
@@ -39,7 +42,19 @@ export function organizeMapLayerControls(root: HTMLElement): () => void {
   list.classList.remove('collapsed');
   body.append(list);
   details.append(body);
-  root.replaceChildren(details, active);
+  const railSearch = globeRail
+    ? h('button', { className: 'monitor-rail-search', type: 'button', title: 'Search', 'aria-label': 'Open search' },
+      h('span', { className: 'monitor-rail-glyph', 'aria-hidden': 'true' }, '⌕'), h('span', {}, 'Search')) as HTMLButtonElement
+    : null;
+  const railFilters = globeRail
+    ? h('button', { className: 'monitor-rail-filters', type: 'button', title: 'Filter layers', 'aria-label': 'Filter map layers' },
+      h('span', { className: 'monitor-rail-glyph', 'aria-hidden': 'true' }, '☷'), h('span', {}, 'Filters')) as HTMLButtonElement
+    : null;
+  const openSearch = () => document.getElementById('searchBtn')?.click();
+  const openFilters = () => { details.open = true; search?.focus(); };
+  railSearch?.addEventListener('click', openSearch);
+  railFilters?.addEventListener('click', openFilters);
+  root.replaceChildren(details, ...(railFilters ? [railFilters] : []), ...(railSearch ? [railSearch] : []), active);
   root.classList.add('monitor-layer-controls');
 
   const sync = () => {
@@ -67,5 +82,5 @@ export function organizeMapLayerControls(root: HTMLElement): () => void {
   };
   root.addEventListener('keydown', onKey);
   sync();
-  return () => { observer.disconnect(); root.removeEventListener('change', sync); root.removeEventListener('keydown', onKey); };
+  return () => { observer.disconnect(); root.removeEventListener('change', sync); root.removeEventListener('keydown', onKey); railSearch?.removeEventListener('click', openSearch); railFilters?.removeEventListener('click', openFilters); };
 }
