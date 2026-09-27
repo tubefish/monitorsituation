@@ -11,6 +11,7 @@
 @import url('./map-context-menu.css') layer(base);
 @import url('./supply-chain-panel.css') layer(base);
 @import url('./dashboard-polish.css');
+@import url('./monitor-redesign.css');
 @import url('./map-experience.css');
 @import url('./update-notice.css');
 

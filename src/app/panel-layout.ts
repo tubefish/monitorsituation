@@ -981,7 +981,15 @@ export class PanelLayoutManager implements AppModule {
       <a href="#main" class="skip-link">Skip to main content</a>
       <div class="header" role="banner">
         <div class="header-left">
-          <span class="logo">$MONITOR</span><span class="logo-mobile">$MONITOR</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
+          <span class="logo">${SITE_VARIANT === 'full' ? '◉ MONITOR' : '$MONITOR'}</span><span class="logo-mobile">MONITOR</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
+          ${SITE_VARIANT === 'full' ? `<nav class="monitor-primary-nav" aria-label="Sections">
+            <button type="button" data-monitor-jump="map" class="active">World</button>
+            <button type="button" data-monitor-jump="politics">News</button>
+            <button type="button" data-monitor-jump="markets">Markets</button>
+            <button type="button" data-monitor-jump="commodity-watch">Commodities</button>
+            <button type="button" data-monitor-jump="escalation-correlation">X Tracker</button>
+            <button type="button" data-monitor-jump="more">More</button>
+          </nav>` : ''}
           <a href="https://x.com/monitoringmeme" target="_blank" rel="noopener noreferrer" class="credit-link">
             <svg class="x-logo" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
             <span class="credit-text">@monitoringmeme</span>
@@ -1012,6 +1020,7 @@ export class PanelLayoutManager implements AppModule {
         <div class="header-right">
           ${SITE_VARIANT === 'full' ? '<button type="button" id="customizeLayoutBtn" class="monitor-toolbar-button" aria-pressed="false">Customize</button><button type="button" id="shareViewBtn" class="monitor-toolbar-button">Share view</button>' : ''}
           <button class="search-btn" id="searchBtn"><kbd>⌘K</kbd> ${t('header.search')}</button>
+          ${SITE_VARIANT === 'full' ? '<span class="monitor-live-badge"><span aria-hidden="true"></span> LIVE</span><time class="monitor-utc-clock" id="monitorUtcClock" aria-label="UTC time"></time><button type="button" class="monitor-notifications-btn" id="monitorNotificationsBtn" aria-label="Notifications"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg></button>' : ''}
           ${this.ctx.isDesktopApp ? '' : `<button class="copy-link-btn" id="copyLinkBtn">${t('header.copyLink')}</button>`}
           ${this.ctx.isDesktopApp ? '' : `<button class="copy-link-btn embed-link-btn" id="embedLinkBtn">${t('header.embed')}</button>`}
           ${SITE_VARIANT === 'happy' ? `<button class="tv-mode-btn" id="tvModeBtn" title="TV Mode (Shift+T)" aria-label="TV Mode"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></button>` : ''}
@@ -1114,7 +1123,18 @@ export class PanelLayoutManager implements AppModule {
         </div>
         <div class="map-width-resize-handle" id="mapWidthResizeHandle" title="Drag to widen the map or panels"></div>
         ${SITE_VARIANT === 'full' && this.ctx.isMobile ? '<div id="mobilePanelNavSlot" class="monitor-mobile-panel-nav-slot" aria-hidden="true"></div>' : ''}
-        <div class="panels-grid" id="panelsGrid" role="tabpanel" aria-label="Dashboard panels"></div>
+        ${SITE_VARIANT === 'full' ? `<section class="monitor-workspace" id="monitorWorkspace" aria-label="My Monitor workspace">
+          <div class="monitor-workspace-header">
+            <h2>▦ <span>MY MONITOR</span></h2>
+            <div class="monitor-workspace-actions">
+              <div id="panelTabsMount" class="dashboard-tabs-mount"></div>
+              <button type="button" id="monitorAddPanel" aria-label="Add panel to My Monitor">＋ Add Panel</button>
+              <button type="button" id="monitorCollapseWorkspace" aria-label="Collapse My Monitor workspace" aria-expanded="true" aria-controls="monitorWorkspace">›</button>
+            </div>
+          </div>
+          <div class="panels-grid" id="panelsGrid" role="tabpanel" aria-label="Dashboard panels"></div>
+        </section>
+        <button type="button" class="monitor-reopen-workspace" id="monitorReopenWorkspace" aria-label="Open My Monitor workspace" aria-expanded="false" aria-controls="monitorWorkspace" hidden>‹ <span>MY MONITOR</span></button>` : '<div class="panels-grid" id="panelsGrid" role="tabpanel" aria-label="Dashboard panels"></div>'}
       </main>
       <nav class="mobile-tab-bar" id="mobileTabBar" aria-label="Primary">
         ${SITE_VARIANT === 'full' ? MONITOR_MOBILE_NAV : `
@@ -1154,6 +1174,55 @@ export class PanelLayoutManager implements AppModule {
     // earlier than any LCP candidate in the new shell, making it useless for
     // ordering the LCP element against the shell swap (PR #4512 review).
     markLcpDebug('wm:layout:shell-replaced');
+    if (SITE_VARIANT === 'full') {
+      const updateUtcClock = () => {
+        const clock = document.getElementById('monitorUtcClock');
+        if (clock) clock.textContent = `UTC ${new Date().toISOString().slice(11, 16)}`;
+      };
+      updateUtcClock();
+      const utcClockTimer = window.setInterval(updateUtcClock, 60_000);
+      this.panelDragCleanupHandlers.push(() => window.clearInterval(utcClockTimer));
+      document.getElementById('monitorNotificationsBtn')?.addEventListener('click', () => this.ctx.unifiedSettings?.open('notifications'));
+      const main = document.getElementById('main');
+      const workspace = document.getElementById('monitorWorkspace');
+      const collapse = document.getElementById('monitorCollapseWorkspace');
+      const reopen = document.getElementById('monitorReopenWorkspace');
+      const setCollapsed = (collapsed: boolean) => {
+        main?.classList.toggle('monitor-workspace-collapsed', collapsed);
+        workspace?.toggleAttribute('hidden', collapsed);
+        reopen?.toggleAttribute('hidden', !collapsed);
+        collapse?.setAttribute('aria-expanded', String(!collapsed));
+        reopen?.setAttribute('aria-expanded', String(!collapsed));
+        window.dispatchEvent(new Event('resize'));
+      };
+      collapse?.addEventListener('click', () => setCollapsed(true));
+      reopen?.addEventListener('click', () => setCollapsed(false));
+      document.getElementById('monitorAddPanel')?.addEventListener('click', () => {
+        document.querySelector<HTMLButtonElement>('#panelsGrid .add-panel-block')?.click();
+      });
+      document.querySelectorAll<HTMLButtonElement>('[data-monitor-jump]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const target = button.dataset.monitorJump;
+          if (target === 'more') {
+            document.getElementById('mobileTabBar')?.querySelector<HTMLButtonElement>('[data-mobile-tab="more"]')?.click();
+            return;
+          }
+          if (target === 'map') {
+            document.getElementById('mapSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else {
+            setCollapsed(false);
+            const panel = document.querySelector<HTMLElement>(`#panelsGrid [data-panel="${target}"]`);
+            if (panel && !panel.classList.contains('hidden')) {
+              panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else if (target === 'markets') {
+              document.querySelector<HTMLButtonElement>('[data-open-markets]')?.click();
+            }
+          }
+          document.querySelector('.monitor-primary-nav .active')?.classList.remove('active');
+          button.classList.add('active');
+        });
+      });
+    }
     this.cleanupLayoutEditor?.();
     if (SITE_VARIANT === 'full') this.cleanupLayoutEditor = installDashboardLayoutEditor({
       defaultOrder: MONITOR_DEFAULT_PANEL_ORDER,
@@ -1224,7 +1293,7 @@ export class PanelLayoutManager implements AppModule {
       // nothing changes visually until they create a second tab.
       const initial: PanelTab = {
         id: generateTabId(),
-        name: t('dashboardTabs.defaultName'),
+        name: SITE_VARIANT === 'full' ? 'Layout 1' : t('dashboardTabs.defaultName'),
         ...this.captureCurrentTabState(),
       };
       state = { activeTabId: initial.id, tabs: [initial] };

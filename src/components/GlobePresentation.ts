@@ -229,6 +229,11 @@ export class GlobePresentation {
   ) {}
 
   public async init(): Promise<void> {
+    // The light atlas belongs to MONITOR's new visual shell. Keep the same
+    // Satellite/Tactical preference and all operational globe overlays.
+    if (document.documentElement.classList.contains('monitor-dashboard')) {
+      GLOBE_TEXTURE_URLS['blue-marble'] = '/textures/earth-silver-atlas.jpg';
+    }
     this.preloadTextures();
     this.installToggle();
     await this.installCountryPresentation();
@@ -669,7 +674,7 @@ export class GlobePresentation {
   }
 
   private countryBorderColor(): string {
-    return getGlobeTexture() === 'topographic' ? '#73d8ff' : '#f3f7fb';
+    return getGlobeTexture() === 'topographic' ? '#73d8ff' : '#7e8993';
   }
 
   private countryBorderStroke(): number {
@@ -680,7 +685,7 @@ export class GlobePresentation {
   }
 
   private countryLabelColor(): string {
-    return getGlobeTexture() === 'topographic' ? '#e5f6ff' : '#f7fbff';
+    return getGlobeTexture() === 'topographic' ? '#e5f6ff' : '#212a33';
   }
 
   private applySkin(texture: GlobeTexture): void {
@@ -700,8 +705,8 @@ export class GlobePresentation {
     }
     if (material) material.needsUpdate = true;
 
-    this.globe.atmosphereColor?.(texture === 'topographic' ? '#55b9ec' : '#69bfff');
-    this.globe.atmosphereAltitude?.(texture === 'topographic' ? 0.13 : 0.15);
+    this.globe.atmosphereColor?.(texture === 'topographic' ? '#55b9ec' : '#cbd4dc');
+    this.globe.atmosphereAltitude?.(texture === 'topographic' ? 0.13 : 0.07);
     this.safeWake();
   }
 

@@ -1,0 +1,197 @@
+/* The UI redesign is scoped to MONITOR's full dashboard. Existing panels,
+   map layers, authentication and saved tab state keep their own behavior. */
+html.monitor-dashboard {
+  --monitor-canvas: #f7f8f9;
+  --monitor-workspace-surface: #f0f2f4;
+  --monitor-card-surface: #ffffff;
+  --monitor-line: #dce1e5;
+  --monitor-ink: #171b20;
+  --monitor-muted: #5e6873;
+  --monitor-reading-font: Inter, 'Helvetica Neue', Arial, sans-serif;
+}
+html.monitor-dashboard[data-theme='dark'] {
+  --monitor-canvas: #11161b;
+  --monitor-workspace-surface: #191f25;
+  --monitor-card-surface: #222930;
+  --monitor-line: #38414a;
+  --monitor-ink: #f1f4f6;
+  --monitor-muted: #aab5bf;
+}
+
+.monitor-dashboard .header {
+  min-height: 56px;
+  height: 56px;
+  padding: 0 14px;
+  gap: 20px;
+  background: var(--monitor-card-surface);
+  border-bottom: 1px solid var(--monitor-line);
+  font-family: var(--monitor-reading-font);
+}
+.monitor-dashboard .header-left { flex: 1; min-width: 0; gap: 0; }
+.monitor-dashboard .header .logo {
+  font: 750 21px/1 var(--monitor-reading-font);
+  letter-spacing: -.055em;
+  white-space: nowrap;
+  color: var(--monitor-ink);
+  padding-right: 26px;
+  border-right: 1px solid var(--monitor-line);
+}
+.monitor-dashboard .header .credit-link,
+.monitor-dashboard .header .github-link,
+.monitor-dashboard .header .region-selector,
+.monitor-dashboard .header .status-indicator,
+.monitor-dashboard .header-right > :is(#customizeLayoutBtn, #shareViewBtn, #copyLinkBtn, #embedLinkBtn) { display: none; }
+.monitor-primary-nav { display: flex; align-items: stretch; align-self: stretch; gap: 2px; margin-left: 22px; min-width: 0; }
+.monitor-dashboard .monitor-primary-nav button {
+  border: 0;
+  border-radius: 0;
+  min-height: 55px;
+  padding: 0 clamp(7px, .8vw, 17px);
+  background: transparent;
+  color: var(--monitor-muted);
+  font: 500 13px var(--monitor-reading-font);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.monitor-dashboard .monitor-primary-nav button:hover,
+.monitor-dashboard .monitor-primary-nav button.active { color: var(--monitor-ink); }
+.monitor-dashboard .monitor-primary-nav button.active { box-shadow: inset 0 -2px var(--monitor-ink); font-weight: 650; }
+.monitor-dashboard .header-right { flex: none; gap: 12px; }
+.monitor-live-badge { display: inline-flex; align-items: center; gap: 7px; padding: 7px 9px; border: 1px solid var(--monitor-line); border-radius: 3px; color: var(--monitor-ink); font: 700 12px var(--monitor-reading-font); }
+.monitor-live-badge span { width: 9px; height: 9px; border-radius: 50%; background: #15985d; }
+.monitor-utc-clock { white-space: nowrap; color: var(--monitor-muted); font: 12px var(--monitor-reading-font); }
+.monitor-dashboard .monitor-notifications-btn { display: grid; place-items: center; min-width: 32px; border: 0; background: transparent; color: var(--monitor-ink); cursor: pointer; }
+.monitor-dashboard .search-btn {
+  min-width: min(22vw, 280px);
+  justify-content: space-between;
+  background: var(--monitor-workspace-surface);
+  border: 1px solid var(--monitor-line);
+  border-radius: 3px;
+  color: var(--monitor-muted);
+  font: 13px var(--monitor-reading-font);
+}
+
+/* Preserve the user-adjustable map width; the existing default is 70%. */
+@media (min-width: 900px) {
+  .monitor-dashboard .main-content:not(.map-hidden) {
+    grid-template-columns: min(max(var(--map-col-width, 68%), 220px), calc(100% - 306px)) 5px minmax(0, 1fr);
+    gap: 0;
+    background: var(--monitor-line);
+  }
+  .monitor-dashboard .main-content.map-right:not(.map-hidden) {
+    grid-template-columns: minmax(0, 1fr) 5px min(max(var(--map-col-width, 68%), 220px), calc(100% - 306px));
+  }
+  .monitor-dashboard .main-content.monitor-workspace-collapsed:not(.map-hidden),
+  .monitor-dashboard .main-content.map-right.monitor-workspace-collapsed:not(.map-hidden) {
+    grid-template-columns: minmax(0, 1fr) 5px 31px;
+  }
+  .monitor-dashboard .map-section { border: 0; background: var(--monitor-canvas); }
+  .monitor-dashboard .map-width-resize-handle { background: var(--monitor-line); width: 5px; }
+  .monitor-dashboard .monitor-workspace { grid-column: 3; grid-row: 1; min-width: 0; min-height: 0; }
+  .monitor-dashboard .main-content.map-right .monitor-workspace { grid-column: 1; }
+  .monitor-dashboard .main-content.map-hidden .monitor-workspace,
+  .monitor-dashboard .main-content.map-hidden .monitor-reopen-workspace { grid-column: 1; }
+  .monitor-dashboard .monitor-reopen-workspace { grid-column: 3; grid-row: 1; }
+  .monitor-dashboard .main-content.map-right .monitor-reopen-workspace { grid-column: 1; }
+}
+.monitor-dashboard .map-container,
+.monitor-dashboard .map-section > .panel-header { background: var(--monitor-canvas); }
+.monitor-dashboard .map-section > .panel-header {
+  border-color: var(--monitor-line);
+  color: var(--monitor-ink);
+}
+.monitor-dashboard .map-section .panel-title { font-size: 13px; color: var(--monitor-ink); }
+.monitor-dashboard .map-section .header-clock { color: var(--monitor-muted); }
+
+.monitor-workspace {
+  display: flex;
+  flex-direction: column;
+  background: var(--monitor-workspace-surface);
+  border-left: 1px solid var(--monitor-line);
+  overflow: hidden;
+  font-family: var(--monitor-reading-font);
+}
+.monitor-workspace[hidden], .monitor-reopen-workspace[hidden] { display: none !important; }
+.monitor-workspace-header {
+  flex: none;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px 6px 14px;
+  border-bottom: 1px solid var(--monitor-line);
+}
+.monitor-workspace-header h2 { margin: 0; white-space: nowrap; color: var(--monitor-ink); font: 700 16px/1 var(--monitor-reading-font); letter-spacing: .06em; }
+.monitor-workspace-header h2 span { margin-left: 6px; }
+.monitor-workspace-actions { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.monitor-workspace-actions > button,
+.monitor-workspace .dashboard-tab,
+.monitor-workspace .dashboard-tab-add {
+  border: 1px solid var(--monitor-line);
+  border-radius: 3px;
+  background: var(--monitor-card-surface);
+  color: var(--monitor-ink);
+}
+.monitor-workspace-actions > button { padding: 6px 9px; min-height: 30px; white-space: nowrap; cursor: pointer; font: 600 12px var(--monitor-reading-font); }
+.monitor-workspace-actions > button:hover { background: var(--monitor-canvas); }
+.monitor-workspace .dashboard-tabs-mount { min-height: 0; min-width: 0; }
+.monitor-workspace .dashboard-tabs-bar { min-height: 0; padding: 0; align-items: center; overflow-x: auto; background: transparent; border: 0; }
+.monitor-workspace .dashboard-tablist { align-items: center; }
+.monitor-workspace .dashboard-tab { background: var(--monitor-card-surface); }
+.monitor-workspace .dashboard-tab.active { border-color: var(--monitor-ink); }
+.monitor-workspace .dashboard-tab-label { max-width: 90px; padding: 6px; font-size: 12px; color: var(--monitor-ink); }
+.monitor-workspace .dashboard-tab.active .dashboard-tab-label { color: var(--monitor-ink); }
+.monitor-workspace .dashboard-tab-add { margin: 0 0 0 3px; padding: 5px 8px; }
+.monitor-workspace #panelsGrid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--monitor-workspace-surface);
+  padding: 10px;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(160px, auto);
+  align-content: start;
+}
+.monitor-workspace #panelsGrid > :is(.panel, .panel-deferred-shell) { min-width: 0; border: 1px solid var(--monitor-line); border-radius: 3px; background: var(--monitor-card-surface); box-shadow: none; }
+.monitor-workspace #panelsGrid > :is(.panel, .panel-deferred-shell).col-span-3 { grid-column: 1 / -1; }
+.monitor-workspace .panel-header { border-color: var(--monitor-line); background: var(--monitor-card-surface); }
+.monitor-workspace .panel-title { color: var(--monitor-ink); font-size: 12px; letter-spacing: .025em; }
+.monitor-workspace .add-panel-block[data-cls-mover="add-panel"] { grid-column: 1 / -1; min-height: 48px; border: 1px solid var(--monitor-line); border-radius: 3px; background: transparent; }
+.monitor-reopen-workspace { border: 0; border-left: 1px solid var(--monitor-line); background: var(--monitor-workspace-surface); color: var(--monitor-ink); cursor: pointer; writing-mode: vertical-rl; font: 700 11px var(--monitor-reading-font); letter-spacing: .08em; padding: 12px 8px; }
+.monitor-reopen-workspace span { margin-top: 14px; }
+
+@media (min-width: 900px) and (max-width: 1370px) {
+  .monitor-primary-nav { gap: 0; margin-left: 10px; }
+  .monitor-dashboard .monitor-primary-nav button { padding: 0 6px; font-size: 12px; }
+  .monitor-dashboard .header .logo { font-size: 18px; padding-right: 12px; }
+  .monitor-dashboard .search-btn { min-width: 115px; }
+  .monitor-dashboard .monitor-utc-clock { display: none; }
+  .monitor-workspace-header { flex-wrap: wrap; }
+  .monitor-workspace-actions { width: 100%; justify-content: flex-end; }
+  .monitor-workspace #panelsGrid { grid-template-columns: minmax(0, 1fr); }
+  .monitor-workspace #panelsGrid > :is(.panel, .panel-deferred-shell) { grid-column: 1 / -1 !important; }
+}
+@media (min-width: 900px) and (max-width: 1100px) {
+  .monitor-dashboard .header { gap: 8px; }
+  .monitor-dashboard .header-right { gap: 6px; }
+  .monitor-dashboard .search-btn { min-width: 34px; width: 34px; padding: 0; font-size: 0; }
+  .monitor-dashboard .search-btn kbd { display: none; }
+  .monitor-dashboard .search-btn::before { content: '⌕'; font: 22px var(--monitor-reading-font); margin: auto; }
+  .monitor-dashboard .monitor-notifications-btn { display: none; }
+}
+@media (max-width: 899px) {
+  .monitor-dashboard .monitor-primary-nav { display: none; }
+  .monitor-dashboard .header .logo { font-size: 18px; padding: 0; border: 0; }
+  .monitor-dashboard .monitor-live-badge,
+  .monitor-dashboard .monitor-utc-clock,
+  .monitor-dashboard .monitor-notifications-btn { display: none; }
+  .monitor-workspace { flex: none; overflow: visible; }
+  .monitor-workspace-header { min-height: 50px; }
+  .monitor-workspace-actions > #monitorCollapseWorkspace,
+  .monitor-reopen-workspace { display: none !important; }
+  .monitor-workspace #panelsGrid { display: flex; flex-direction: column; overflow: visible; }
+  .monitor-workspace #panelsGrid > :is(.panel, .panel-deferred-shell) { flex: none; }
+}
