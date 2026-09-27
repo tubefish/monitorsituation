@@ -53,10 +53,10 @@ export function subscribeGlobeRenderScaleChange(cb: (scale: GlobeRenderScale) =>
 
 export function resolveGlobePixelRatio(scale: GlobeRenderScale): number {
   const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
-  if (scale === 'auto') return Math.min(1.5, Math.max(1, dpr));
+  if (scale === 'auto') return Math.min(2, Math.max(1, dpr));
   const num = Number(scale);
   if (!Number.isFinite(num) || num <= 0) return 1;
-  return Math.min(1.5, Math.max(1, num));
+  return Math.min(2, Math.max(1, num));
 }
 
 export interface GlobePerformanceProfile {
