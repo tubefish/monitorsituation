@@ -184,7 +184,7 @@ export class GlobeMap extends GlobeMapCore {
         width,
         height,
         -DESKTOP_GLOBE_OFFSET_PX,
-        0,
+        document.documentElement.classList.contains('monitor-dashboard') ? 35 : 0,
         width,
         height,
       );
@@ -218,6 +218,16 @@ export class GlobeMap extends GlobeMapCore {
   }
 
   public override setView(view: MapView, zoom?: number): void {
+    if (typeof document !== 'undefined' && !isMobileDevice() && view === 'global' && zoom === undefined
+      && document.documentElement.classList.contains('monitor-dashboard')) {
+      const runtime = this as unknown as GlobeRuntime;
+      runtime.currentView = view;
+      if (!runtime.globe) return;
+      runtime.wakeGlobe();
+      runtime.moveViewport({ lat: 20, lng: 0, altitude: 1.25 });
+      return;
+    }
+
     if (!isMobileDevice() || zoom !== undefined) {
       super.setView(view, zoom);
       return;

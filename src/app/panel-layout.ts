@@ -1122,19 +1122,19 @@ export class PanelLayoutManager implements AppModule {
           <div class="map-bottom-grid" id="mapBottomGrid"></div>
         </div>
         <div class="map-width-resize-handle" id="mapWidthResizeHandle" title="Drag to widen the map or panels"></div>
+        ${SITE_VARIANT === 'full' ? '<button type="button" class="monitor-divider-toggle" id="monitorCollapseWorkspace" aria-label="Collapse My Monitor workspace" aria-expanded="true" aria-controls="monitorWorkspace">›</button>' : ''}
         ${SITE_VARIANT === 'full' && this.ctx.isMobile ? '<div id="mobilePanelNavSlot" class="monitor-mobile-panel-nav-slot" aria-hidden="true"></div>' : ''}
         ${SITE_VARIANT === 'full' ? `<section class="monitor-workspace" id="monitorWorkspace" aria-label="My Monitor workspace">
           <div class="monitor-workspace-header">
             <h2>▦ <span>MY MONITOR</span></h2>
             <div class="monitor-workspace-actions">
               <div id="panelTabsMount" class="dashboard-tabs-mount"></div>
-              <button type="button" id="monitorAddPanel" aria-label="Add panel to My Monitor">＋ Add Panel</button>
-              <button type="button" id="monitorCollapseWorkspace" aria-label="Collapse My Monitor workspace" aria-expanded="true" aria-controls="monitorWorkspace">›</button>
             </div>
           </div>
           <div class="panels-grid" id="panelsGrid" role="tabpanel" aria-label="Dashboard panels"></div>
+          <div class="monitor-workspace-footer"><button type="button" id="monitorAddPanel" aria-label="Add panel to My Monitor">＋ ADD PANEL</button></div>
         </section>
-        <button type="button" class="monitor-reopen-workspace" id="monitorReopenWorkspace" aria-label="Open My Monitor workspace" aria-expanded="false" aria-controls="monitorWorkspace" hidden>‹ <span>MY MONITOR</span></button>` : '<div class="panels-grid" id="panelsGrid" role="tabpanel" aria-label="Dashboard panels"></div>'}
+        <button type="button" class="monitor-reopen-workspace" id="monitorReopenWorkspace" aria-label="Open My Monitor workspace" aria-expanded="false" aria-controls="monitorWorkspace" hidden>‹</button>` : '<div class="panels-grid" id="panelsGrid" role="tabpanel" aria-label="Dashboard panels"></div>'}
       </main>
       <nav class="mobile-tab-bar" id="mobileTabBar" aria-label="Primary">
         ${SITE_VARIANT === 'full' ? MONITOR_MOBILE_NAV : `

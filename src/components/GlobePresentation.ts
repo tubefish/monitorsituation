@@ -621,6 +621,7 @@ export class GlobePresentation {
   }
 
   private buildCountryLabelElement(label: CountryLabelDatum): HTMLElement {
+    const isTactical = getGlobeTexture() === 'topographic';
     const el = document.createElement('div');
     Object.assign(el.style, {
       pointerEvents: 'none',
@@ -636,12 +637,12 @@ export class GlobePresentation {
       color: this.countryLabelColor(),
       fontFamily: 'inherit',
       fontSize: `${label.fontPx}px`,
-      fontWeight: '600',
-      letterSpacing: '0.02em',
+      fontWeight: isTactical ? '600' : '500',
+      letterSpacing: isTactical ? '0.02em' : '0.09em',
       lineHeight: '1',
       whiteSpace: 'nowrap',
-      WebkitTextStroke: '0.18px rgba(0, 0, 0, 0.72)',
-      textShadow: '0 1px 2px rgba(0,0,0,0.88), 0 0 2px rgba(0,0,0,0.72)',
+      WebkitTextStroke: isTactical ? '0.18px rgba(0, 0, 0, 0.72)' : '0',
+      textShadow: isTactical ? '0 1px 2px rgba(0,0,0,0.88), 0 0 2px rgba(0,0,0,0.72)' : '0 0 2px rgba(255,255,255,0.8)',
       opacity: '0.96',
     });
 
@@ -653,9 +654,9 @@ export class GlobePresentation {
     if (typeof this.globe.htmlElementsData !== 'function') return;
 
     const altitude = this.globe.pointOfView?.().altitude ?? 1.8;
-    // Match the reference: lots of country names are visible on the full globe,
-    // then the smallest countries join as the camera moves closer.
-    const maxRank: 0 | 1 | 2 = altitude <= 1.65 ? 2 : altitude <= 2.35 ? 1 : 0;
+    // Keep labels readable on the full globe; reveal smaller countries as
+    // the camera approaches rather than stacking them over active markers.
+    const maxRank: 0 | 1 | 2 = altitude <= 0.75 ? 2 : altitude <= 1.15 ? 1 : 0;
 
     const fontFor = (rank: 0 | 1 | 2): number => {
       if (altitude <= 0.75) return rank === 0 ? 13 : rank === 1 ? 12 : 10;

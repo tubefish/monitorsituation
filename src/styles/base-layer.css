@@ -163,13 +163,16 @@
   }
 }
 
-/* $MONITOR restores the built-in Add Panel launcher without re-enabling the
- * separate Pro/MCP promotional add-panel blocks. PanelLayoutManager already
- * creates this button and opens Settings -> Panels when it is clicked; the
- * MONITOR shell was only hiding it with a blanket .add-panel-block rule. */
+/* The workspace footer owns the visible Add Panel action. Keep the original
+ * PanelLayoutManager launcher in the DOM so it can still open Settings ->
+ * Panels when the footer button activates it. */
 @layer base {
-  #panelsGrid .add-panel-block[data-cls-mover="add-panel"] {
-    display: flex !important;
+  @media (min-width: 769px) {
+    .monitor-dashboard .search-btn { display: flex !important; }
+  }
+
+  .monitor-dashboard #panelsGrid .add-panel-block[data-cls-mover="add-panel"] {
+    display: none !important;
   }
 
   @media (max-width: 768px) {
