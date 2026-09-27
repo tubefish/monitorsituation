@@ -26,6 +26,7 @@ import {
   type SearchIndexQueryResult,
 } from '@/components/search-engine';
 import { decorateSearchResultOptions } from '@/components/search-result-options';
+import { SITE_VARIANT } from '@/config/variant';
 import {
   searchMatchIdentity,
   type SearchCommandMatch,
@@ -481,7 +482,7 @@ export class SearchModal {
     this.overlay = document.createElement('div');
     this.overlay.setAttribute('role', 'dialog');
     this.overlay.setAttribute('aria-modal', 'true');
-    this.overlay.setAttribute('aria-label', 'World Monitor intelligence command deck');
+    this.overlay.setAttribute('aria-label', SITE_VARIANT === 'full' ? 'MONITOR Search' : 'World Monitor intelligence command deck');
     this.overlay.dataset.searchScope = this.activeScope;
     // Claim human authority in capture phase, before a click can close the
     // palette or start a new selection. Keyboard-generated clicks have no
@@ -539,13 +540,14 @@ export class SearchModal {
           <div class="search-command-topline">
             <div class="search-command-ident">
               <span class="search-command-mark" aria-hidden="true"><i></i></span>
-              <span>WM // INTELLIGENCE COMMAND DECK</span>
+              <span>${SITE_VARIANT === 'full' ? 'MONITOR / SEARCH' : 'WM // INTELLIGENCE COMMAND DECK'}</span>
               <span class="search-index-state"><i></i> INDEX ONLINE</span>
             </div>
             <div class="search-command-metrics" aria-label="Search index status">
               <span><strong data-search-entity-count>${this.getIndexedEntityCount()}</strong> SIGNALS</span>
               <span><strong data-search-command-count>${this.getVisibleCommandCount()}</strong> OPS</span>
             </div>
+            ${SITE_VARIANT === 'full' ? '<button type="button" class="search-close-btn" aria-label="Close search">×</button>' : ''}
           </div>
           <div class="search-header">
             <span class="search-icon" aria-hidden="true"></span>
@@ -556,7 +558,7 @@ export class SearchModal {
           <div class="search-results"></div>
           <div class="search-results-status wm-visually-hidden"></div>
           <div class="search-footer">
-            <span class="search-footer-ready"><i></i> READY FOR TASKING</span>
+            <span class="search-footer-ready"><i></i> ${SITE_VARIANT === 'full' ? 'READY TO SEARCH' : 'READY FOR TASKING'}</span>
             <span><kbd>\u2191\u2193</kbd> ${t('modals.search.navigate')}</span>
             <span><kbd>\u21B5</kbd> ${t('modals.search.select')}</span>
             <span><kbd>esc</kbd> ${t('modals.search.close')}</span>
@@ -567,6 +569,7 @@ export class SearchModal {
       this.overlay.addEventListener('click', (e) => {
         if (e.target === this.overlay) this.close();
       });
+      this.overlay.querySelector('.search-close-btn')?.addEventListener('click', () => this.close());
 
       this.container.appendChild(this.overlay);
     }

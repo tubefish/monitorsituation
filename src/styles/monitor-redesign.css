@@ -351,3 +351,77 @@ html.monitor-dashboard[data-theme='dark'] {
   .monitor-workspace #panelsGrid > :is(.panel, .panel-deferred-shell) { flex: none; }
   .monitor-workspace-footer { border-top: 0; }
 }
+
+/* Match the Settings overlay while retaining Search's scopes and commands. */
+.monitor-dashboard .search-overlay {
+  --search-accent: var(--monitor-ink);
+  background: rgba(34, 36, 39, .72);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+.monitor-dashboard .search-overlay::before { display: none; }
+
+@media (min-width: 769px) {
+  .monitor-dashboard .search-modal {
+    width: min(760px, calc(100vw - 36px));
+    border: 1px solid var(--monitor-line);
+    border-radius: 2px;
+    background: var(--monitor-card-surface);
+    color: var(--monitor-ink);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .16);
+    animation: none;
+    font-family: var(--monitor-reading-font);
+  }
+  .monitor-dashboard .search-modal::after { display: none; }
+  .monitor-dashboard .search-command-topline {
+    min-height: 52px;
+    gap: 16px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--monitor-line);
+    background: var(--monitor-card-surface);
+    color: var(--monitor-ink);
+    font: 700 13px var(--monitor-reading-font);
+    letter-spacing: .025em;
+  }
+  .monitor-dashboard .search-command-ident { min-width: 0; gap: 10px; }
+  .monitor-dashboard .search-command-mark { display: none; }
+  .monitor-dashboard .search-index-state { color: var(--monitor-muted); font: 500 10px var(--monitor-reading-font); letter-spacing: .025em; white-space: nowrap; }
+  .monitor-dashboard .search-index-state i,
+  .monitor-dashboard .search-footer-ready i { background: #15985d; box-shadow: none; animation: none; }
+  .monitor-dashboard .search-command-metrics { margin-left: auto; gap: 12px; color: var(--monitor-muted); font: 500 10px var(--monitor-reading-font); letter-spacing: 0; white-space: nowrap; }
+  .monitor-dashboard .search-command-metrics strong { color: var(--monitor-ink); }
+  .monitor-dashboard .search-close-btn { flex: none; width: 30px; height: 30px; padding: 0; border: 1px solid var(--monitor-line); border-radius: 2px; background: var(--monitor-card-surface); color: var(--monitor-muted); font: 23px/1 var(--monitor-reading-font); cursor: pointer; }
+  .monitor-dashboard .search-close-btn:hover { background: var(--monitor-workspace-surface); color: var(--monitor-ink); }
+  .monitor-dashboard .search-header { min-height: 70px; padding: 0 18px; background: var(--monitor-card-surface); border-bottom: 1px solid var(--monitor-line); }
+  .monitor-dashboard .search-icon { width: 22px; height: 24px; border: 0; border-radius: 0; box-shadow: none; }
+  .monitor-dashboard .search-icon::before { content: '⌕'; top: -2px; left: 0; width: auto; height: auto; background: none; color: var(--monitor-muted); font: 30px/1 var(--monitor-reading-font); }
+  .monitor-dashboard .search-icon::after { display: none; }
+  .monitor-dashboard .search-input { color: var(--monitor-ink); font: 500 17px/1.4 var(--monitor-reading-font); letter-spacing: 0; caret-color: var(--monitor-ink); }
+  .monitor-dashboard .search-input::placeholder { color: var(--monitor-muted); }
+  .monitor-dashboard .search-kbd,
+  .monitor-dashboard .search-footer kbd { background: var(--monitor-workspace-surface); color: var(--monitor-muted); border-color: var(--monitor-line); font-family: var(--monitor-reading-font); }
+  .monitor-dashboard .search-scope-rail { gap: 0; padding: 0; background: var(--monitor-card-surface); border-bottom: 1px solid var(--monitor-line); }
+  .monitor-dashboard .search-scope { min-height: 42px; background: var(--monitor-card-surface); color: var(--monitor-muted); font: 600 11px var(--monitor-reading-font); letter-spacing: .025em; border-right: 1px solid var(--monitor-line); }
+  .monitor-dashboard .search-scope:last-child { border-right: 0; }
+  .monitor-dashboard .search-scope:is(:hover, .active) { background: var(--monitor-workspace-surface); color: var(--monitor-ink); }
+  .monitor-dashboard .search-scope.active::after { left: 0; right: 0; bottom: 0; background: var(--monitor-ink); box-shadow: none; }
+  .monitor-dashboard .search-scope span { color: inherit; }
+  .monitor-dashboard .search-results { scrollbar-color: var(--monitor-line) transparent; }
+  .monitor-dashboard .search-section-header,
+  .monitor-dashboard .search-command-category-summary { padding: 0 16px; background: var(--monitor-workspace-surface); color: var(--monitor-muted); border-color: var(--monitor-line); font: 600 10px var(--monitor-reading-font); letter-spacing: .06em; }
+  .monitor-dashboard .search-result-item { min-height: 50px; padding: 9px 16px; border-left: 2px solid transparent; background: var(--monitor-card-surface); color: var(--monitor-ink); }
+  .monitor-dashboard .search-result-item:is(:hover, .selected),
+  .monitor-dashboard .search-result-item.command-item.selected { background: var(--monitor-workspace-surface); border-left-color: var(--monitor-ink); }
+  .monitor-dashboard .search-result-item.selected::after { background: var(--monitor-ink); box-shadow: none; }
+  .monitor-dashboard .search-result-title { font-size: 13px; }
+  .monitor-dashboard .search-result-type { background: var(--monitor-workspace-surface); color: var(--monitor-muted); border-color: var(--monitor-line); }
+  .monitor-dashboard .search-result-title mark { color: var(--monitor-ink); background: var(--monitor-workspace-surface); }
+  .monitor-dashboard .search-launch-grid { background: var(--monitor-line); }
+  .monitor-dashboard .search-launch-grid .search-result-icon { color: var(--monitor-ink); }
+  .monitor-dashboard .search-all-commands-wrap,
+  .monitor-dashboard .search-footer { background: var(--monitor-card-surface); border-color: var(--monitor-line); }
+  .monitor-dashboard .search-all-commands-link,
+  .monitor-dashboard .search-all-commands-back { color: var(--monitor-muted); font: 600 11px var(--monitor-reading-font); letter-spacing: .02em; }
+  .monitor-dashboard .search-footer { color: var(--monitor-muted); font: 11px var(--monitor-reading-font); }
+  .monitor-dashboard .search-footer-ready { color: var(--monitor-muted); letter-spacing: .02em; }
+}
