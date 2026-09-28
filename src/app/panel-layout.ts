@@ -277,7 +277,7 @@ export const DEFERRED_PANEL_NATURAL_FOOTPRINTS: Readonly<Record<string, Deferred
   intel: { rowSpan: 2 },
   'internet-disruptions': { rowSpan: 2 },
   'live-news': { rowSpan: 3, className: 'panel-wide' },
-  'monitor-market': { rowSpan: 2 },
+  'monitor-market': { rowSpan: 2, className: 'panel-wide' },
   'market-heatmap': { rowSpan: 3, className: 'panel-wide' },
   'commodity-watch': { rowSpan: 3, className: 'panel-wide' },
   'live-webcams': { className: 'panel-wide' },

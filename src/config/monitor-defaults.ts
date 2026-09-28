@@ -1,6 +1,6 @@
 import type { PanelConfig } from '@/types';
 import { SITE_VARIANT } from './variant';
-import { migrateMonitorMarketLayout } from './monitor-layout-migration';
+import { migrateMonitorMarketLayout, migrateMonitorMarketWidth } from './monitor-layout-migration';
 import {
   ALL_PANELS,
   DEFAULT_PANELS as UPSTREAM_DEFAULT_PANELS,
@@ -17,7 +17,7 @@ import {
  *
  * Desktop natural footprints are owned by the panel components/CSS:
  * - live-news: 2 wide x 3 tall
- * - monitor-market: 1 wide x 2 tall
+ * - monitor-market: 2 wide x 2 tall
  * - commodity-watch: 2 wide x 3 tall
  * - threat-timeline: 2 wide x 2 tall
  * - intel: 1 wide x 2 tall
@@ -31,9 +31,9 @@ import {
  */
 export const MONITOR_DEFAULT_PANEL_ORDER = [
   'map',
+  'escalation-correlation',
   'politics',
   'threat-timeline',
-  'escalation-correlation',
   'market-heatmap',
   'commodity-watch',
   'live-news',
@@ -103,6 +103,23 @@ function migrateMonitorPanelOrder(): void {
 
 migrateMonitorPanelOrder();
 
+// Apply the new factory placement to existing MONITOR browsers once. Leave
+// every other panel in its saved position and keep later user rearrangements.
+if (SITE_VARIANT === 'full' && typeof window !== 'undefined') {
+  try {
+    const migrationKey = 'monitor-x-tracker-first-v1';
+    if (window.localStorage.getItem(migrationKey) !== 'done') {
+      const raw: unknown = JSON.parse(window.localStorage.getItem(PANEL_ORDER_STORAGE_KEY) || 'null');
+      if (Array.isArray(raw) && raw.every(key => typeof key === 'string') && raw.includes('escalation-correlation')) {
+        const order = raw.filter(key => key !== 'escalation-correlation');
+        order.unshift('escalation-correlation');
+        window.localStorage.setItem(PANEL_ORDER_STORAGE_KEY, JSON.stringify(order));
+      }
+      window.localStorage.setItem(migrationKey, 'done');
+    }
+  } catch { /* Normal defaults still apply if storage is unavailable. */ }
+}
+
 // Introduce the new section once without moving any existing panels or
 // overwriting their saved sizes, zones, or enabled/disabled preferences.
 if (SITE_VARIANT === 'full' && typeof window !== 'undefined') {
@@ -121,7 +138,10 @@ if (SITE_VARIANT === 'full' && typeof window !== 'undefined') {
 }
 
 if (SITE_VARIANT === 'full' && typeof window !== 'undefined') {
-  try { migrateMonitorMarketLayout(window.localStorage); } catch { /* Storage may be disabled. */ }
+  try {
+    migrateMonitorMarketLayout(window.localStorage);
+    migrateMonitorMarketWidth(window.localStorage);
+  } catch { /* Storage may be disabled. */ }
 }
 
 /**

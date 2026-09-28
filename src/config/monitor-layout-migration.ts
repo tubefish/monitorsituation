@@ -22,3 +22,20 @@ export function migrateMonitorMarketLayout(storage: Pick<Storage, 'getItem' | 's
     storage.setItem(marker, 'done');
   } catch { /* Defaults still work when browser storage is unavailable. */ }
 }
+
+/** Remove the old forced narrow footprint so the panel uses its natural width. */
+export function migrateMonitorMarketWidth(storage: Pick<Storage, 'getItem' | 'setItem'>): void {
+  const marker = 'monitor-market-natural-width-v1';
+  try {
+    if (storage.getItem(marker) === 'done') return;
+    const saved: unknown = JSON.parse(storage.getItem('worldmonitor-panel-col-spans') || '{}');
+    if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+      const spans = saved as Record<string, unknown>;
+      if (spans['monitor-market'] === 1) {
+        delete spans['monitor-market'];
+        storage.setItem('worldmonitor-panel-col-spans', JSON.stringify(spans));
+      }
+    }
+    storage.setItem(marker, 'done');
+  } catch { /* Natural panel width still applies when storage is unavailable. */ }
+}
