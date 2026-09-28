@@ -40,32 +40,9 @@
     grid-column: 3;
   }
 
-  /* Keep all three grid tracks in both states. The globe track narrows as
-     Longfolio's workspace grows into its place instead of jumping to one track. */
-  .monitor-dashboard .main-content:not(.map-right).monitor-longfolio-active:not(.map-hidden) {
-    grid-template-columns:
-      minmax(0, min(max(0%, 0px), calc(100% - 0px)))
-      0px
-      minmax(0, 1fr);
-  }
-
-  .monitor-dashboard .main-content.map-right.monitor-longfolio-active:not(.map-hidden) {
-    grid-template-columns:
-      minmax(0, 1fr)
-      0px
-      minmax(0, min(max(0%, 0px), calc(100% - 0px)));
-  }
-
-  .monitor-dashboard .main-content.monitor-longfolio-active:not(.map-right) .monitor-workspace { grid-column: 3; }
-  .monitor-dashboard .main-content.map-right.monitor-longfolio-active .monitor-workspace { grid-column: 1; }
-
   .monitor-dashboard .main-content .map-section,
   .monitor-dashboard .main-content .map-width-resize-handle {
     transition: opacity 200ms ease, visibility 0s;
-  }
-
-  .monitor-dashboard .main-content.monitor-longfolio-active :is(.map-section, .map-width-resize-handle, .monitor-divider-toggle) {
-    transition: opacity 200ms ease, visibility 0s linear 580ms;
   }
 
   /* PanelLayoutManager toggles the hidden attribute immediately. Retain the

@@ -43,7 +43,9 @@ html.monitor-dashboard[data-theme='dark'] {
 .monitor-dashboard .header .status-indicator,
 .monitor-dashboard .header-right > :is(#customizeLayoutBtn, #shareViewBtn, #copyLinkBtn, #embedLinkBtn) { display: none; }
 .monitor-primary-nav { display: flex; align-items: stretch; align-self: stretch; gap: 2px; margin-left: 22px; min-width: 0; }
-.monitor-dashboard .monitor-primary-nav button {
+.monitor-dashboard .monitor-primary-nav :is(button, a) {
+  display: inline-flex;
+  align-items: center;
   border: 0;
   border-radius: 0;
   min-height: 55px;
@@ -51,10 +53,11 @@ html.monitor-dashboard[data-theme='dark'] {
   background: transparent;
   color: var(--monitor-muted);
   font: 500 13px var(--monitor-reading-font);
+  text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
 }
-.monitor-dashboard .monitor-primary-nav button:hover,
+.monitor-dashboard .monitor-primary-nav :is(button, a):hover,
 .monitor-dashboard .monitor-primary-nav button.active { color: var(--monitor-ink); }
 .monitor-dashboard .monitor-primary-nav button.active { box-shadow: inset 0 -2px var(--monitor-ink); font-weight: 650; }
 .monitor-dashboard .header-right { flex: none; gap: 12px; }
@@ -125,33 +128,6 @@ html.monitor-dashboard[data-theme='dark'] {
   border-left: 1px solid var(--monitor-line);
   overflow: hidden;
   font-family: var(--monitor-reading-font);
-}
-/* Longfolio expands the workspace while preserving the Main globe position. */
-.monitor-dashboard .main-content.monitor-longfolio-active .map-section,
-.monitor-dashboard .main-content.monitor-longfolio-active .map-width-resize-handle,
-.monitor-dashboard .main-content.monitor-longfolio-active .monitor-divider-toggle,
-.monitor-dashboard .main-content.monitor-longfolio-active .monitor-reopen-workspace {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-.monitor-dashboard .main-content.monitor-longfolio-active .map-section { min-width: 0; overflow: hidden; }
-.monitor-dashboard .main-content.monitor-longfolio-active .monitor-workspace {
-  grid-row: 1;
-  border-left: 0;
-  background: #fff;
-}
-.monitor-dashboard .main-content.monitor-longfolio-active #panelsGrid {
-  flex: 1;
-  background: #fff;
-  padding: 0;
-}
-.monitor-dashboard .main-content.monitor-longfolio-active #panelsGrid > *,
-.monitor-dashboard .main-content.monitor-longfolio-active .monitor-workspace-footer {
-  display: none !important;
-}
-@media (max-width: 899px) {
-  .monitor-dashboard .main-content.monitor-longfolio-active .map-section { display: none !important; }
 }
 .monitor-workspace[hidden], .monitor-reopen-workspace[hidden] { display: none !important; }
 .monitor-divider-toggle,
@@ -362,7 +338,7 @@ html.monitor-dashboard[data-theme='dark'] {
 
 @media (min-width: 900px) and (max-width: 1370px) {
   .monitor-primary-nav { gap: 0; margin-left: 10px; }
-  .monitor-dashboard .monitor-primary-nav button { padding: 0 6px; font-size: 12px; }
+  .monitor-dashboard .monitor-primary-nav :is(button, a) { padding: 0 6px; font-size: 12px; }
   .monitor-dashboard .header .logo { font-size: 18px; padding-right: 12px; }
   .monitor-dashboard .search-btn { min-width: 115px; }
   .monitor-dashboard .header .monitor-header-datetime { font-size: 10px; }

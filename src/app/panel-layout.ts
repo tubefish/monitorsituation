@@ -988,7 +988,7 @@ export class PanelLayoutManager implements AppModule {
             <button type="button" data-monitor-jump="markets">Markets</button>
             <button type="button" data-monitor-jump="commodity-watch">Commodities</button>
             <button type="button" data-monitor-jump="escalation-correlation">X Tracker</button>
-            <button type="button" data-monitor-jump="longfolio">Longfolio</button>
+            <a href="https://analytics.monitorsituation.xyz/" target="_blank" rel="noopener noreferrer">Longfolio</a>
             <button type="button" data-monitor-jump="more">More</button>
           </nav>` : ''}
           <a href="https://x.com/monitoringmeme" target="_blank" rel="noopener noreferrer" class="credit-link">
@@ -1128,11 +1128,8 @@ export class PanelLayoutManager implements AppModule {
         ${SITE_VARIANT === 'full' ? `<section class="monitor-workspace" id="monitorWorkspace" aria-label="My Monitor workspace">
           <div class="monitor-workspace-header">
             <h2>MY MONITOR</h2>
-            <div class="monitor-workspace-actions">
-              <div id="panelTabsMount" class="dashboard-tabs-mount"></div>
-            </div>
           </div>
-          <div class="panels-grid" id="panelsGrid" role="tabpanel" aria-label="Dashboard panels"></div>
+          <div class="panels-grid" id="panelsGrid" role="region" aria-label="Dashboard panels"></div>
           <div class="monitor-workspace-footer"><button type="button" id="monitorAddPanel" aria-label="Add panel to My Monitor">＋ ADD PANEL</button></div>
         </section>
         <button type="button" class="monitor-reopen-workspace" id="monitorReopenWorkspace" aria-label="Open My Monitor workspace" aria-expanded="false" aria-controls="monitorWorkspace" hidden>‹</button>` : '<div class="panels-grid" id="panelsGrid" role="tabpanel" aria-label="Dashboard panels"></div>'}
@@ -1199,15 +1196,8 @@ export class PanelLayoutManager implements AppModule {
           const target = button.dataset.monitorJump;
           if (target !== 'markets') {
             document.dispatchEvent(new Event('monitor:leave-markets'));
-            if (target !== 'longfolio') {
-              const mainTab = this.tabsState?.tabs.find((tab) => tab.name.trim().toLowerCase() === 'main');
-              if (mainTab && this.tabsState?.activeTabId !== mainTab.id) this.switchToTab(mainTab.id);
-            }
           }
-          if (target === 'longfolio') {
-            const longfolioTab = this.tabsState?.tabs.find((tab) => tab.name.trim().toLowerCase() === 'longfolio');
-            if (longfolioTab) this.switchToTab(longfolioTab.id);
-          } else if (target === 'more') {
+          if (target === 'more') {
             document.getElementById('mobileTabBar')?.querySelector<HTMLButtonElement>('[data-mobile-tab="more"]')?.click();
             return;
           }
@@ -1289,7 +1279,6 @@ export class PanelLayoutManager implements AppModule {
 
   private initPanelTabs(): void {
     const mount = document.getElementById('panelTabsMount');
-    if (!mount) return;
 
     let state = loadTabsState();
     if (!state) {
@@ -1303,34 +1292,18 @@ export class PanelLayoutManager implements AppModule {
       saveTabsState(state);
     }
     if (SITE_VARIANT === 'full') {
-      // Earlier builds stored just "Layout 1". Promote that active workspace
-      // to Main, then add the permanent blank Longfolio destination.
-      let changed = false;
-      let main = state.tabs.find((tab) => tab.name.trim().toLowerCase() === 'main');
-      if (!main) {
-        main = state.tabs.find((tab) => tab.id === state.activeTabId) ?? state.tabs[0]!;
-        main.name = 'Main';
-        changed = true;
-      }
-      if (!state.tabs.some((tab) => tab.name.trim().toLowerCase() === 'longfolio')) {
-        state.tabs.push({
-          id: generateTabId(),
-          name: 'Longfolio',
-          panelSettings: Object.fromEntries(Object.entries(main.panelSettings).map(([key, config]) => [key, { ...config, enabled: false }])),
-          panelOrder: [],
-          bottomSet: [],
-        });
-        changed = true;
-      }
-      // Legacy custom tabs remain stored, but navigation now has two destinations.
-      if (!state.tabs.some((tab) => tab.id === state.activeTabId && isMonitorFixedTabName(tab.name))) {
-        const active = state.tabs.find((tab) => tab.id === state.activeTabId);
-        if (active) Object.assign(active, this.captureCurrentTabState());
-        state.activeTabId = main.id;
+      // Keep the existing Main panel layout when retiring the blank Longfolio
+      // tab. Restore Main if the user last left Longfolio selected.
+      const main = state.tabs.find((tab) => tab.name.trim().toLowerCase() === 'main')
+        ?? state.tabs.find((tab) => tab.name.trim().toLowerCase() !== 'longfolio')
+        ?? state.tabs[0]!;
+      if (state.activeTabId === main.id) Object.assign(main, this.captureCurrentTabState());
+      else {
         this.applyTabPanelState(main.panelSettings, main.panelOrder, main.bottomSet);
-        changed = true;
       }
-      if (changed) saveTabsState(state);
+      main.name = 'Main';
+      state = { activeTabId: main.id, tabs: [main] };
+      saveTabsState(state);
     }
     const orderedTabs = orderMonitorTabs(state.tabs);
     if (orderedTabs.some((tab, index) => tab.id !== state.tabs[index]?.id)) {
@@ -1345,6 +1318,7 @@ export class PanelLayoutManager implements AppModule {
     // answer and also re-runs this method for tabs not yet opened.
     this.healStoredTabSnapshots();
 
+    if (!mount) return;
     this.panelTabBar = new PanelTabBar(() => this.tabsState!, {
       onSelect: (id) => this.switchToTab(id),
       onAdd: () => this.addTab(),
@@ -1353,30 +1327,6 @@ export class PanelLayoutManager implements AppModule {
     });
     mount.appendChild(this.panelTabBar.getElement());
     this.updateTabCapLock();
-    this.syncMonitorTabMapVisibility();
-  }
-
-  /** Longfolio uses the full workspace; the map selection stays intact for Main. */
-  private syncMonitorTabMapVisibility(): void {
-    if (SITE_VARIANT !== 'full' || !this.tabsState) return;
-    const active = this.tabsState.tabs.find((tab) => tab.id === this.tabsState!.activeTabId);
-    const longfolio = active?.name.trim().toLowerCase() === 'longfolio';
-    const longfolioNav = document.querySelector<HTMLButtonElement>('.monitor-primary-nav [data-monitor-jump="longfolio"]');
-    if (longfolio) {
-      document.querySelector('.monitor-primary-nav .active')?.classList.remove('active');
-      longfolioNav?.classList.add('active');
-    } else if (longfolioNav?.classList.contains('active')) {
-      longfolioNav.classList.remove('active');
-      document.querySelector('.monitor-primary-nav [data-monitor-jump="map"]')?.classList.add('active');
-    }
-    const main = document.getElementById('main');
-    if (!main || main.classList.contains('monitor-longfolio-active') === longfolio) return;
-
-    if (longfolio && main.classList.contains('monitor-workspace-collapsed')) {
-      document.getElementById('monitorReopenWorkspace')?.click();
-    }
-    main.classList.toggle('monitor-longfolio-active', longfolio);
-    requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
   }
 
   /**
@@ -1851,7 +1801,6 @@ export class PanelLayoutManager implements AppModule {
     this.applyTabPanelState(tab.panelSettings, tab.panelOrder, tab.bottomSet);
     this.panelTabBar?.refresh();
     this.updateTabCapLock();
-    this.syncMonitorTabMapVisibility();
     return { tab, persisted: persist.persisted };
   }
 
@@ -1944,18 +1893,11 @@ export class PanelLayoutManager implements AppModule {
     if (!target) return { persisted: true };
 
     this.snapshotActiveTab();
-    // Longfolio hides the globe through the split transition. Keep its map
-    // selection in sync with Main so the map can remain mounted while the
-    // column narrows to zero, then return at the same position on Main.
-    if (SITE_VARIANT === 'full' && target.name.trim().toLowerCase() === 'longfolio' && this.ctx.panelSettings.map) {
-      target.panelSettings.map = { ...this.ctx.panelSettings.map };
-    }
     this.tabsState.activeTabId = tabId;
     const persist = saveTabsState(this.tabsState);
 
     this.applyTabPanelState(target.panelSettings, target.panelOrder, target.bottomSet);
     this.panelTabBar?.refresh();
-    this.syncMonitorTabMapVisibility();
     return persist;
   }
 
@@ -2014,7 +1956,6 @@ export class PanelLayoutManager implements AppModule {
     tab.name = name;
     const persist = saveTabsState(this.tabsState);
     this.panelTabBar?.refresh();
-    if (tabId === this.tabsState.activeTabId) this.syncMonitorTabMapVisibility();
     return persist;
   }
 
@@ -2036,7 +1977,6 @@ export class PanelLayoutManager implements AppModule {
       persist = saveTabsState(this.tabsState);
     }
     this.panelTabBar?.refresh();
-    if (wasActive) this.syncMonitorTabMapVisibility();
     // Deleting frees a slot: a capped user drops back under the limit.
     this.updateTabCapLock();
     showToast(t('dashboardTabs.tabDeleted', { name: removed!.name }));
