@@ -168,10 +168,6 @@
  * PanelLayoutManager launcher in the DOM so it can still open Settings ->
  * Panels when the footer button activates it. */
 @layer base {
-  @media (min-width: 769px) {
-    .monitor-dashboard .search-btn { display: flex !important; }
-  }
-
   .monitor-dashboard #panelsGrid .add-panel-block[data-cls-mover="add-panel"] {
     display: none !important;
   }
