@@ -126,6 +126,22 @@ html.monitor-dashboard[data-theme='dark'] {
   overflow: hidden;
   font-family: var(--monitor-reading-font);
 }
+/* A Longfolio tab takes over the workspace without changing the saved map
+   preference. Returning to Main restores the existing globe and panels. */
+.monitor-dashboard .main-content.monitor-longfolio-active {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+.monitor-dashboard .main-content.monitor-longfolio-active .map-section,
+.monitor-dashboard .main-content.monitor-longfolio-active .map-width-resize-handle,
+.monitor-dashboard .main-content.monitor-longfolio-active .monitor-divider-toggle,
+.monitor-dashboard .main-content.monitor-longfolio-active .monitor-reopen-workspace {
+  display: none !important;
+}
+.monitor-dashboard .main-content.monitor-longfolio-active .monitor-workspace {
+  grid-column: 1 !important;
+  grid-row: 1;
+  border-left: 0;
+}
 .monitor-workspace[hidden], .monitor-reopen-workspace[hidden] { display: none !important; }
 .monitor-divider-toggle,
 .monitor-reopen-workspace {

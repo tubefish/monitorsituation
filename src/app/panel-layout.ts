@@ -1308,6 +1308,22 @@ export class PanelLayoutManager implements AppModule {
     });
     mount.appendChild(this.panelTabBar.getElement());
     this.updateTabCapLock();
+    this.syncMonitorTabMapVisibility();
+  }
+
+  /** Longfolio uses the full workspace; the map selection stays intact for Main. */
+  private syncMonitorTabMapVisibility(): void {
+    if (SITE_VARIANT !== 'full' || !this.tabsState) return;
+    const active = this.tabsState.tabs.find((tab) => tab.id === this.tabsState!.activeTabId);
+    const longfolio = active?.name.trim().toLowerCase() === 'longfolio';
+    const main = document.getElementById('main');
+    if (!main || main.classList.contains('monitor-longfolio-active') === longfolio) return;
+
+    if (longfolio && main.classList.contains('monitor-workspace-collapsed')) {
+      document.getElementById('monitorReopenWorkspace')?.click();
+    }
+    main.classList.toggle('monitor-longfolio-active', longfolio);
+    requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
   }
 
   /**
@@ -1777,6 +1793,7 @@ export class PanelLayoutManager implements AppModule {
     this.applyTabPanelState(tab.panelSettings, tab.panelOrder, tab.bottomSet);
     this.panelTabBar?.refresh();
     this.updateTabCapLock();
+    this.syncMonitorTabMapVisibility();
     return { tab, persisted: persist.persisted };
   }
 
@@ -1874,6 +1891,7 @@ export class PanelLayoutManager implements AppModule {
 
     this.applyTabPanelState(target.panelSettings, target.panelOrder, target.bottomSet);
     this.panelTabBar?.refresh();
+    this.syncMonitorTabMapVisibility();
     return persist;
   }
 
@@ -1931,6 +1949,7 @@ export class PanelLayoutManager implements AppModule {
     tab.name = name;
     const persist = saveTabsState(this.tabsState);
     this.panelTabBar?.refresh();
+    if (tabId === this.tabsState.activeTabId) this.syncMonitorTabMapVisibility();
     return persist;
   }
 
@@ -1951,6 +1970,7 @@ export class PanelLayoutManager implements AppModule {
       persist = saveTabsState(this.tabsState);
     }
     this.panelTabBar?.refresh();
+    if (wasActive) this.syncMonitorTabMapVisibility();
     // Deleting frees a slot: a capped user drops back under the limit.
     this.updateTabCapLock();
     showToast(t('dashboardTabs.tabDeleted', { name: removed!.name }));
