@@ -988,7 +988,7 @@ export class PanelLayoutManager implements AppModule {
             <button type="button" data-monitor-jump="markets">Markets</button>
             <button type="button" data-monitor-jump="commodity-watch">Commodities</button>
             <button type="button" data-monitor-jump="escalation-correlation">X Tracker</button>
-            <a href="https://analytics.monitorsituation.xyz/" target="_blank" rel="noopener noreferrer">Longfolio</a>
+            <a href="https://analytics.monitorsituation.xyz/" target="_blank" rel="noopener noreferrer">Analytics</a>
             <button type="button" data-monitor-jump="more">More</button>
           </nav>` : ''}
           <a href="https://x.com/monitoringmeme" target="_blank" rel="noopener noreferrer" class="credit-link">
