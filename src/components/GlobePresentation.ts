@@ -269,6 +269,7 @@ export class GlobePresentation {
     if (this.toggle || typeof document === 'undefined') return;
 
     const toggle = document.createElement('div');
+    toggle.className = 'monitor-globe-appearance';
     toggle.setAttribute('role', 'group');
     toggle.setAttribute('aria-label', 'Globe appearance');
     Object.assign(toggle.style, {

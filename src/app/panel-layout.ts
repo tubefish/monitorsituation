@@ -1077,16 +1077,20 @@ export class PanelLayoutManager implements AppModule {
           <span class="mobile-menu-item-icon">${getCurrentTheme() === 'dark' ? '☀️' : '🌙'}</span>
           <span class="mobile-menu-item-label">${getCurrentTheme() === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
         </button>
-        <a class="mobile-menu-item" href="https://x.com/monitoringmeme" target="_blank" rel="noopener noreferrer">
+        ${SITE_VARIANT === 'full' ? '' : `<a class="mobile-menu-item" href="https://x.com/monitoringmeme" target="_blank" rel="noopener noreferrer">
           <span class="mobile-menu-item-icon"><svg class="x-logo" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span>
           <span class="mobile-menu-item-label">@monitoringmeme</span>
-        </a>
+        </a>`}
         <div class="mobile-menu-divider"></div>
         ${SITE_VARIANT === 'full' ? '<button type="button" id="mobileCustomizeLayoutBtn" class="mobile-menu-item" aria-pressed="false">Customize layout</button><button type="button" id="mobileShareViewBtn" class="mobile-menu-item">Share this view</button>' : ''}
-        <div class="mobile-menu-footer-links">
+        ${SITE_VARIANT === 'full' ? `<div class="monitor-mobile-menu-destinations">
+          <button type="button" class="site-footer-markets" data-open-markets>Markets</button>
+          <a href="https://analytics.monitorsituation.xyz/" target="_blank" rel="noopener noreferrer">Analytics</a>
+        </div>
+        <div class="mobile-menu-footer-links">${referenceLinksHtml}</div>` : `<div class="mobile-menu-footer-links">
           <button type="button" class="site-footer-markets" data-open-markets>Markets</button>
           ${referenceLinksHtml}
-        </div>
+        </div>`}
       </nav>
       <div class="region-sheet-backdrop" id="regionSheetBackdrop"></div>
       <div class="region-bottom-sheet" id="regionBottomSheet">
@@ -1118,6 +1122,16 @@ export class PanelLayoutManager implements AppModule {
             <button class="icon-btn panel-expand-btn" id="mapFullscreenBtn" type="button" title="Expand map" aria-label="Expand map" aria-expanded="false">⛶</button>
           </div>
           <div class="map-container" id="mapContainer"></div>
+          ${SITE_VARIANT === 'full' ? `<button type="button" class="monitor-map-key-toggle" id="monitorMapKeyToggle" aria-expanded="false" aria-controls="monitorMapKey">Map key</button>
+          <div class="monitor-map-key" id="monitorMapKey" role="region" aria-label="Map key" hidden>
+            <strong>MAP KEY</strong>
+            <span><i class="monitor-map-key-conflict" aria-hidden="true"></i>Conflict / security</span>
+            <span><i class="monitor-map-key-political" aria-hidden="true"></i>Political</span>
+            <span><i class="monitor-map-key-protest" aria-hidden="true"></i>Protest</span>
+            <span><i class="monitor-map-key-natural" aria-hidden="true"></i>Natural event</span>
+            <span><i class="monitor-map-key-live" aria-hidden="true"></i>Other / live</span>
+            <span><i class="monitor-map-key-cluster" aria-hidden="true"></i>Event cluster</span>
+          </div>` : ''}
           ${SITE_VARIANT === 'happy' ? '<button class="tv-exit-btn" id="tvExitBtn">Exit TV Mode</button>' : ''}
           <div class="map-resize-handle" id="mapResizeHandle" title="Drag to resize the map"></div>
           <div class="map-bottom-grid" id="mapBottomGrid"></div>
@@ -1173,6 +1187,12 @@ export class PanelLayoutManager implements AppModule {
     // ordering the LCP element against the shell swap (PR #4512 review).
     markLcpDebug('wm:layout:shell-replaced');
     if (SITE_VARIANT === 'full') {
+      const mapKeyButton = document.getElementById('monitorMapKeyToggle');
+      const mapKey = document.getElementById('monitorMapKey');
+      mapKeyButton?.addEventListener('click', () => {
+        const open = mapKey?.toggleAttribute('hidden') === false;
+        mapKeyButton.setAttribute('aria-expanded', String(open));
+      });
       document.getElementById('monitorNotificationsBtn')?.addEventListener('click', () => this.ctx.unifiedSettings?.open('notifications'));
       const main = document.getElementById('main');
       const workspace = document.getElementById('monitorWorkspace');

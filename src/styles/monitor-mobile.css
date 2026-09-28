@@ -21,10 +21,12 @@
 
   .monitor-dashboard .header .logo-mobile::before {
     content: '';
-    width: 16px;
-    height: 16px;
-    border: 3px double currentColor;
+    width: 18px;
+    height: 18px;
+    box-sizing: border-box;
+    border: 1px solid currentColor;
     border-radius: 50%;
+    background: radial-gradient(circle, currentColor 0 5px, transparent 5.5px);
   }
 
   .monitor-dashboard .main-content,
@@ -35,6 +37,64 @@
     border: 0;
     border-bottom: 1px solid var(--monitor-line);
   }
+
+  .monitor-dashboard .monitor-globe-appearance {
+    top: auto !important;
+    right: auto !important;
+    bottom: 36px !important;
+    left: 12px !important;
+    border-radius: 2px !important;
+  }
+
+  .monitor-dashboard .monitor-map-key-toggle {
+    position: absolute;
+    right: 12px;
+    bottom: 36px;
+    z-index: 950;
+    min-height: 34px;
+    padding: 5px 10px;
+    border: 1px solid var(--monitor-line);
+    border-radius: 2px;
+    background: var(--monitor-card-surface);
+    color: var(--monitor-ink);
+    font: 650 11px var(--monitor-reading-font);
+    cursor: pointer;
+  }
+
+  .monitor-dashboard .monitor-map-key-toggle[aria-expanded='true'] {
+    border-color: var(--monitor-ink);
+    background: var(--monitor-ink);
+    color: var(--monitor-card-surface);
+  }
+
+  .monitor-dashboard .monitor-map-key {
+    position: absolute;
+    right: 12px;
+    bottom: 76px;
+    z-index: 950;
+    display: grid;
+    gap: 10px;
+    min-width: 185px;
+    padding: 14px;
+    border: 1px solid var(--monitor-line);
+    border-radius: 2px;
+    background: var(--monitor-card-surface);
+    color: var(--monitor-ink);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .09);
+    font: 500 11px var(--monitor-reading-font);
+  }
+
+  .monitor-dashboard .monitor-map-key[hidden] { display: none; }
+  .monitor-dashboard .map-section.collapsed:not(.live-news-fullscreen) :is(.monitor-map-key-toggle, .monitor-map-key) { display: none; }
+  .monitor-dashboard .monitor-map-key strong { font-size: 11px; letter-spacing: .06em; }
+  .monitor-dashboard .monitor-map-key span { display: flex; align-items: center; gap: 9px; }
+  .monitor-dashboard .monitor-map-key i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .monitor-dashboard .monitor-map-key-conflict { background: #d94141; }
+  .monitor-dashboard .monitor-map-key-political { background: #3d82d8; }
+  .monitor-dashboard .monitor-map-key-protest { background: #ec8731; }
+  .monitor-dashboard .monitor-map-key-natural { background: #e4b53e; }
+  .monitor-dashboard .monitor-map-key-live { background: #32a766; }
+  .monitor-dashboard .monitor-map-key-cluster { background: #8558e5; }
 
   .monitor-dashboard .map-section .map-experience-switcher,
   .monitor-dashboard .map-section > .panel-header + .map-container + .map-experience-switcher {
@@ -187,4 +247,45 @@
   }
 
   .monitor-dashboard #mobileTabBar .mobile-tab-icon svg { width: 19px; height: 19px; }
+
+  .monitor-dashboard .mobile-menu {
+    display: flex;
+    flex-direction: column;
+    background: var(--monitor-card-surface);
+    border-right: 1px solid var(--monitor-line);
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .monitor-dashboard .mobile-menu-title { color: var(--monitor-ink); font: 700 14px var(--monitor-reading-font); letter-spacing: .06em; }
+  .monitor-dashboard .monitor-mobile-menu-destinations { border-top: 1px solid var(--monitor-line); }
+  .monitor-dashboard .monitor-mobile-menu-destinations :is(button, a) {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 20px;
+    border: 0;
+    border-bottom: 1px solid var(--monitor-line);
+    border-radius: 0;
+    background: transparent;
+    color: var(--monitor-ink);
+    font: 500 14px var(--monitor-reading-font);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .monitor-dashboard .mobile-menu-footer-links {
+    margin-top: auto;
+    gap: 20px;
+    padding: 18px 20px 0;
+    border-top: 1px solid var(--monitor-line);
+  }
+
+  .monitor-dashboard .mobile-menu-footer-links a { color: var(--monitor-muted); font: 500 12px var(--monitor-reading-font); }
+}
+
+@media (min-width: 769px) {
+  .monitor-dashboard .monitor-map-key-toggle,
+  .monitor-dashboard .monitor-map-key { display: none; }
 }
