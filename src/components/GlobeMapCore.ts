@@ -708,6 +708,12 @@ export class GlobeMap {
     const initW = this.container.clientWidth || window.innerWidth;
     const initH = this.container.clientHeight || window.innerHeight;
 
+    // The new silver atlas needs an 8192px texture. Fall back to the original
+    // silver atlas on GPUs whose WebGL texture limit is below that size.
+    if (GLOBE_TEXTURE_URLS['blue-marble'] === '/textures/earth-silver-atlas-8k.webp'
+      && globe.renderer()?.capabilities?.maxTextureSize < 8192) {
+      GLOBE_TEXTURE_URLS['blue-marble'] = '/textures/earth-silver-atlas.jpg';
+    }
     const initialTexture = getGlobeTexture();
     globe
       .globeImageUrl(GLOBE_TEXTURE_URLS[initialTexture])

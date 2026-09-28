@@ -1,3 +1,5 @@
+import { SITE_VARIANT } from '@/config/variant';
+
 export type GlobeRenderScale = 'auto' | '1' | '1.5' | '2' | '3';
 export type GlobeTexture = 'topographic' | 'blue-marble';
 
@@ -79,9 +81,14 @@ export const GLOBE_TEXTURE_OPTIONS: { value: GlobeTexture; label: string }[] = [
   { value: 'topographic', label: 'Tactical' },
 ];
 
+// Pick the MONITOR atlas before GlobeMapCore constructs the WebGL globe. A
+// later swap in GlobePresentation lets the old photographic texture flash on
+// refresh while the country presentation is still loading.
 export const GLOBE_TEXTURE_URLS: Record<GlobeTexture, string> = {
   'topographic': '/textures/earth-topo-bathy.jpg',
-  'blue-marble': '/textures/earth-blue-marble.jpg',
+  'blue-marble': SITE_VARIANT === 'full'
+    ? '/textures/earth-silver-atlas-8k.webp'
+    : '/textures/earth-blue-marble.jpg',
 };
 
 export function getGlobeTexture(): GlobeTexture {

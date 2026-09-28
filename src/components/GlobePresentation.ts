@@ -234,11 +234,6 @@ export class GlobePresentation {
   ) {}
 
   public async init(): Promise<void> {
-    // The light atlas belongs to MONITOR's new visual shell. Keep the same
-    // Satellite/Tactical preference and all operational globe overlays.
-    if (document.documentElement.classList.contains('monitor-dashboard')) {
-      GLOBE_TEXTURE_URLS['blue-marble'] = '/textures/earth-silver-atlas.jpg';
-    }
     this.preloadTextures();
     this.installToggle();
     await this.installCountryPresentation();
