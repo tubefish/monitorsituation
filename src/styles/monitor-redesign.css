@@ -301,7 +301,6 @@ html.monitor-dashboard[data-theme='dark'] {
   border-bottom: 1px solid var(--monitor-line);
 }
 .monitor-workspace-header h2 { margin: 0; white-space: nowrap; color: var(--monitor-ink); font: 700 16px/1 var(--monitor-reading-font); letter-spacing: .06em; }
-.monitor-workspace-header h2 span { margin-left: 6px; }
 .monitor-workspace-actions { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .monitor-workspace-actions > button,
 .monitor-workspace .dashboard-tab,

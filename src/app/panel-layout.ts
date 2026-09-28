@@ -1126,7 +1126,7 @@ export class PanelLayoutManager implements AppModule {
         ${SITE_VARIANT === 'full' && this.ctx.isMobile ? '<div id="mobilePanelNavSlot" class="monitor-mobile-panel-nav-slot" aria-hidden="true"></div>' : ''}
         ${SITE_VARIANT === 'full' ? `<section class="monitor-workspace" id="monitorWorkspace" aria-label="My Monitor workspace">
           <div class="monitor-workspace-header">
-            <h2>▦ <span>MY MONITOR</span></h2>
+            <h2>MY MONITOR</h2>
             <div class="monitor-workspace-actions">
               <div id="panelTabsMount" class="dashboard-tabs-mount"></div>
             </div>
@@ -1343,7 +1343,7 @@ export class PanelLayoutManager implements AppModule {
     const cap = this.updateTabCapLock();
     switch (action.type) {
       case 'list':
-        return describeDashboardTabs(this.tabsState, cap);
+        return { ...describeDashboardTabs(this.tabsState, cap), canCreate: SITE_VARIANT !== 'full' && cap.allowed };
       case 'select': {
         const resolved = resolveSelectDashboardTab(this.tabsState, action.tabId);
         if (!resolved.ok) {
@@ -1361,13 +1361,18 @@ export class PanelLayoutManager implements AppModule {
         );
       }
       case 'create': {
+        if (SITE_VARIANT === 'full') {
+          return mutationDenied('create', 'tab_creation_disabled', 'Additional MONITOR tabs are disabled.', {
+            cap: cap.cap, canCreate: false, tabCount: this.tabsState.tabs.length,
+          });
+        }
         const resolved = resolveCreateDashboardTab(this.tabsState, cap, action.name);
         if (!resolved.ok) {
           if (resolved.reason === 'tab_cap') trackGateHit('dashboard-tab');
           return mutationDenied('create', resolved.reason, resolved.message, {
             ...(resolved.lockReason ? { lockReason: resolved.lockReason } : {}),
             cap: cap.cap,
-            canCreate: cap.allowed,
+            canCreate: SITE_VARIANT !== 'full' && cap.allowed,
             tabCount: this.tabsState.tabs.length,
           });
         }
@@ -1417,7 +1422,7 @@ export class PanelLayoutManager implements AppModule {
         if (!resolved.ok) {
           return mutationDenied('delete', resolved.reason, resolved.message, {
             tabCount: this.tabsState.tabs.length,
-            canCreate: cap.allowed,
+            canCreate: SITE_VARIANT !== 'full' && cap.allowed,
             cap: cap.cap,
           });
         }
@@ -1431,7 +1436,7 @@ export class PanelLayoutManager implements AppModule {
           activeTabId: this.tabsState.activeTabId,
           unchanged: false,
           tabCount: this.tabsState.tabs.length,
-          canCreate: nextCap.allowed,
+          canCreate: SITE_VARIANT !== 'full' && nextCap.allowed,
           cap: nextCap.cap,
         }));
       }
@@ -1768,7 +1773,7 @@ export class PanelLayoutManager implements AppModule {
       unchanged,
       ...(extra.alreadyExisted ? { alreadyExisted: true } : {}),
       tabCount: this.tabsState?.tabs.length ?? 0,
-      canCreate: cap.allowed,
+      canCreate: SITE_VARIANT !== 'full' && cap.allowed,
       cap: cap.cap,
     }));
   }
@@ -1932,7 +1937,7 @@ export class PanelLayoutManager implements AppModule {
   }
 
   private addTab(): void {
-    if (!this.tabsState) return;
+    if (!this.tabsState || SITE_VARIANT === 'full') return;
 
     const verdict = this.updateTabCapLock();
     if (!verdict.allowed) {
@@ -2164,6 +2169,10 @@ export class PanelLayoutManager implements AppModule {
   }
 
   applyPanelSettings(): void {
+    if (SITE_VARIANT === 'full' && this.ctx.panelSettings['other-tokens']?.enabled) {
+      this.ctx.panelSettings['other-tokens'].enabled = false;
+      saveToStorage(STORAGE_KEYS.panels, this.ctx.panelSettings);
+    }
     Object.entries(this.ctx.panelSettings).forEach(([key, config]) => {
       if (key === 'map') {
         const mapSection = document.getElementById('mapSection');

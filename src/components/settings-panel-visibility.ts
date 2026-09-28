@@ -1,4 +1,5 @@
 import { ALL_PANELS } from '@/config/panels';
+import { SITE_VARIANT } from '@/config/variant';
 
 // Panels that remain implemented in the product but should not be exposed in
 // Settings -> Panels. Keep both canonical and UI-facing names here because a
@@ -133,11 +134,12 @@ function installMonitorFavicon(): void {
 
 function shouldHidePanelItem(item: HTMLElement): boolean {
   const key = item.dataset.panel;
+  const label = item.querySelector<HTMLElement>('.panel-toggle-label')?.textContent?.trim();
+  if (SITE_VARIANT === 'full' && (key === 'other-tokens' || label === 'Monitor Trending')) return true;
   if (key && HIDDEN_SETTINGS_PANEL_KEYS.has(key)) return true;
 
   // Fall back to the exact rendered label. This catches variant/local config
   // naming differences without hiding unrelated panels through fuzzy matches.
-  const label = item.querySelector<HTMLElement>('.panel-toggle-label')?.textContent?.trim();
   return Boolean(label && HIDDEN_SETTINGS_PANEL_NAMES.has(label));
 }
 

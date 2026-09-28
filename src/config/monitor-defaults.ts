@@ -34,7 +34,6 @@ export const MONITOR_DEFAULT_PANEL_ORDER = [
   'politics',
   'markets',
   'threat-timeline',
-  'other-tokens',
   'escalation-correlation',
   'market-heatmap',
   'commodity-watch',

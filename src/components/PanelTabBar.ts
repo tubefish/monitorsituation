@@ -1,5 +1,6 @@
 import { DASHBOARD_TAB_NAME_MAX_LENGTH, isMonitorFixedTabName, type PanelTab, type TabsState } from '@/services/tab-store';
 import { t } from '@/services/i18n';
+import { SITE_VARIANT } from '@/config/variant';
 import { PanelGateReason } from '@/services/panel-gating';
 import { lockSvg, upgradeSvg } from '@/components/gate-icons';
 import { setTrustedHtml, trustedHtml } from '@/utils/dom-utils';
@@ -241,6 +242,11 @@ export class PanelTabBar {
       this.tablistEl.appendChild(this.renderTab(tab, tab.id === activeTabId, tabs.length > 1 && !isMonitorFixedTabName(tab.name)));
     }
     this.updateControlledPanel(activeTabId);
+    if (SITE_VARIANT === 'full') {
+      this.addBtn = null;
+      this.element.replaceChildren(this.tablistEl, this.liveRegion);
+      return;
+    }
     const addBtn = document.createElement('button');
     addBtn.className = 'dashboard-tab-add';
     addBtn.title = t('dashboardTabs.addTabTitle');

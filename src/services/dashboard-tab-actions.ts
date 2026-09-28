@@ -30,6 +30,7 @@ export type DashboardTabDenialReason =
   | 'invalid_name'
   | 'tab_not_found'
   | 'tab_cap'
+  | 'tab_creation_disabled'
   | 'last_tab'
   | 'protected_tab'
   | 'confirmation_required'

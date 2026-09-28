@@ -1465,6 +1465,13 @@ export class App {
       }
     }
 
+    // Monitor Trending has been retired from the full workspace. Existing
+    // saved layouts must not re-enable its feed after a reload.
+    if (currentVariant === 'full' && panelSettings['other-tokens']?.enabled) {
+      panelSettings['other-tokens'] = { ...panelSettings['other-tokens'], enabled: false };
+      if (storageAvailable) saveToStorage(STORAGE_KEYS.panels, panelSettings);
+    }
+
     const disabledSources = new Set(loadFromStorage<string[]>(STORAGE_KEYS.disabledFeeds, []));
 
     // Build shared state object
