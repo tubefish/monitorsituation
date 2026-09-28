@@ -1,0 +1,190 @@
+/* MONITOR's phone layout uses the same surfaces and sharp controls as desktop.
+   Keep the map, panel, and navigation behavior owned by their existing modules. */
+@media (max-width: 768px) {
+  .monitor-dashboard .header {
+    height: 54px;
+    min-height: 54px;
+    padding: 0 14px;
+    gap: 8px;
+    background: var(--monitor-card-surface);
+    border-bottom: 1px solid var(--monitor-line);
+  }
+
+  .monitor-dashboard .header .logo-mobile {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--monitor-ink);
+    font: 750 18px/1 var(--monitor-reading-font);
+    letter-spacing: -.045em;
+  }
+
+  .monitor-dashboard .header .logo-mobile::before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 3px double currentColor;
+    border-radius: 50%;
+  }
+
+  .monitor-dashboard .main-content,
+  .monitor-dashboard .map-section,
+  .monitor-dashboard .map-container { background: var(--monitor-canvas); }
+
+  .monitor-dashboard .map-section {
+    border: 0;
+    border-bottom: 1px solid var(--monitor-line);
+  }
+
+  .monitor-dashboard .map-section .map-experience-switcher,
+  .monitor-dashboard .map-section > .panel-header + .map-container + .map-experience-switcher {
+    top: 10px;
+    left: 10px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    width: calc(100% - 20px);
+    padding: 0;
+    transform: none;
+    border: 1px solid #38424b;
+    border-radius: 2px;
+    background: #1c242a;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .monitor-dashboard .map-section .map-experience-switcher button {
+    min-width: 0;
+    min-height: 44px;
+    padding: 5px 2px;
+    border-radius: 0;
+    border-right: 1px solid #38424b;
+    color: #cbd1d6;
+    font: 600 11px/1.15 var(--monitor-reading-font);
+    white-space: nowrap;
+  }
+
+  .monitor-dashboard .map-section .map-experience-switcher [data-map-experience="chat"] { border-right: 0; }
+  .monitor-dashboard .map-section .map-experience-switcher button:is(:hover, .active, :focus-visible) {
+    background: #303a43;
+    color: #fff;
+    box-shadow: none;
+  }
+
+  .monitor-dashboard .map-experience-flights,
+  .monitor-dashboard .map-experience-news,
+  .monitor-dashboard .map-experience-chat {
+    top: 64px;
+    border: 1px solid var(--monitor-line);
+    border-radius: 2px;
+    background: var(--monitor-card-surface);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .09);
+    backdrop-filter: none;
+  }
+
+  .monitor-dashboard .mobile-panel-nav {
+    gap: 0;
+    padding: 8px 10px;
+    background: var(--monitor-card-surface);
+    border-bottom: 1px solid var(--monitor-line);
+  }
+
+  .monitor-dashboard .mobile-panel-nav-chip {
+    min-height: 36px;
+    padding: 6px 12px;
+    border: 1px solid var(--monitor-line);
+    border-right: 0;
+    border-radius: 0;
+    background: var(--monitor-card-surface);
+    color: var(--monitor-muted);
+    font: 600 11px var(--monitor-reading-font);
+  }
+
+  .monitor-dashboard .mobile-panel-nav-chip:last-child { border-right: 1px solid var(--monitor-line); }
+  .monitor-dashboard .mobile-panel-nav-chip.active {
+    border-color: var(--monitor-ink);
+    background: var(--monitor-ink);
+    color: var(--monitor-card-surface);
+  }
+
+  .monitor-dashboard .monitor-workspace {
+    border: 0;
+    background: var(--monitor-workspace-surface);
+  }
+
+  .monitor-dashboard .monitor-workspace-header {
+    min-height: 50px;
+    padding: 0 14px;
+    background: var(--monitor-workspace-surface);
+    border-bottom: 1px solid var(--monitor-line);
+  }
+
+  .monitor-dashboard .monitor-workspace-header h2 {
+    color: var(--monitor-ink);
+    font: 700 14px var(--monitor-reading-font);
+    letter-spacing: .055em;
+  }
+
+  .monitor-dashboard .monitor-workspace #panelsGrid {
+    gap: 10px;
+    padding: 10px 10px 12px;
+    background: var(--monitor-workspace-surface);
+  }
+
+  .monitor-dashboard .monitor-workspace #panelsGrid > :is(.panel, .panel-deferred-shell) {
+    border: 1px solid var(--monitor-line);
+    border-radius: 2px;
+    background: var(--monitor-card-surface);
+    box-shadow: none;
+  }
+
+  .monitor-dashboard .monitor-workspace .panel-header {
+    background: var(--monitor-card-surface);
+    border-bottom: 1px solid var(--monitor-line);
+  }
+
+  .monitor-dashboard .monitor-workspace .panel-title {
+    color: var(--monitor-ink);
+    font: 700 13px var(--monitor-reading-font);
+    letter-spacing: .015em;
+  }
+
+  .monitor-dashboard .monitor-workspace-footer {
+    padding: 0 10px 16px;
+    background: var(--monitor-workspace-surface);
+  }
+
+  .monitor-dashboard .monitor-workspace-footer button {
+    min-height: 48px;
+    border-radius: 2px;
+    background: var(--monitor-card-surface);
+  }
+
+  .monitor-dashboard #mobileTabBar.mobile-tab-bar {
+    min-height: 60px;
+    padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    border-top: 1px solid var(--monitor-line);
+    background: var(--monitor-card-surface);
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .monitor-dashboard #mobileTabBar .mobile-tab {
+    min-height: 60px;
+    gap: 4px;
+    border-radius: 0;
+    border-right: 1px solid var(--monitor-line);
+    background: transparent;
+    color: var(--monitor-muted);
+    font: 600 11px var(--monitor-reading-font);
+  }
+
+  .monitor-dashboard #mobileTabBar .mobile-tab:last-child { border-right: 0; }
+  .monitor-dashboard #mobileTabBar .mobile-tab.active {
+    color: var(--monitor-ink);
+    background: var(--monitor-workspace-surface);
+    box-shadow: inset 0 2px var(--monitor-ink);
+  }
+
+  .monitor-dashboard #mobileTabBar .mobile-tab-icon svg { width: 19px; height: 19px; }
+}
