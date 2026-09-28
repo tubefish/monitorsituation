@@ -588,6 +588,7 @@ export class EventHandlerManager implements AppModule {
       document.removeEventListener('keydown', this.boundMapFullscreenEscHandler);
       this.boundMapFullscreenEscHandler = null;
     }
+    document.body.classList.remove('monitor-map-fullscreen-active');
     if (this.boundSearchKeyHandler) {
       document.removeEventListener('keydown', this.boundSearchKeyHandler);
       this.boundSearchKeyHandler = null;
@@ -2737,16 +2738,38 @@ export class EventHandlerManager implements AppModule {
     const expandSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
     const shrinkSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/></svg>';
     let isFullscreen = false;
+    let mapMotion: Animation | null = null;
 
     const toggle = () => {
+      mapMotion?.finish();
+      mapSection.style.removeProperty('z-index');
+      const animateMap = SITE_VARIANT === 'full'
+        && window.matchMedia('(min-width: 900px) and (prefers-reduced-motion: no-preference)').matches;
+      const before = animateMap ? mapSection.getBoundingClientRect() : null;
       isFullscreen = !isFullscreen;
       mapSection.classList.toggle('live-news-fullscreen', isFullscreen);
       document.body.classList.toggle('live-news-fullscreen-active', isFullscreen);
+      document.body.classList.toggle('monitor-map-fullscreen-active', isFullscreen && SITE_VARIANT === 'full');
       setTrustedHtml(btn, trustedHtml(isFullscreen ? shrinkSvg : expandSvg, "legacy direct innerHTML migration"));
       btn.title = isFullscreen ? 'Restore map · Esc' : 'Expand map';
       btn.setAttribute('aria-label', btn.title);
       btn.setAttribute('aria-expanded', String(isFullscreen));
-      this.syncMapAfterLayoutChange();
+      if (before && before.width > 0 && before.height > 0) {
+        const after = mapSection.getBoundingClientRect();
+        if (after.width > 0 && after.height > 0) {
+          mapSection.style.zIndex = '10000';
+          const motion = mapSection.animate([
+            { transform: `translate(${before.left - after.left}px, ${before.top - after.top}px) scale(${before.width / after.width}, ${before.height / after.height})` },
+            { transform: 'none' },
+          ], { duration: 580, easing: 'cubic-bezier(.25, .8, .25, 1)' });
+          mapMotion = motion;
+          motion.onfinish = () => {
+            mapSection.style.removeProperty('z-index');
+            if (mapMotion === motion) mapMotion = null;
+          };
+        }
+      }
+      this.syncMapAfterLayoutChange(620);
     };
 
     btn.addEventListener('click', toggle);

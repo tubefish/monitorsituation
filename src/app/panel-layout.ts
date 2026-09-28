@@ -988,6 +988,7 @@ export class PanelLayoutManager implements AppModule {
             <button type="button" data-monitor-jump="markets">Markets</button>
             <button type="button" data-monitor-jump="commodity-watch">Commodities</button>
             <button type="button" data-monitor-jump="escalation-correlation">X Tracker</button>
+            <button type="button" data-monitor-jump="longfolio">Longfolio</button>
             <button type="button" data-monitor-jump="more">More</button>
           </nav>` : ''}
           <a href="https://x.com/monitoringmeme" target="_blank" rel="noopener noreferrer" class="credit-link">
@@ -1198,10 +1199,15 @@ export class PanelLayoutManager implements AppModule {
           const target = button.dataset.monitorJump;
           if (target !== 'markets') {
             document.dispatchEvent(new Event('monitor:leave-markets'));
-            const mainTab = this.tabsState?.tabs.find((tab) => tab.name.trim().toLowerCase() === 'main');
-            if (mainTab && this.tabsState?.activeTabId !== mainTab.id) this.switchToTab(mainTab.id);
+            if (target !== 'longfolio') {
+              const mainTab = this.tabsState?.tabs.find((tab) => tab.name.trim().toLowerCase() === 'main');
+              if (mainTab && this.tabsState?.activeTabId !== mainTab.id) this.switchToTab(mainTab.id);
+            }
           }
-          if (target === 'more') {
+          if (target === 'longfolio') {
+            const longfolioTab = this.tabsState?.tabs.find((tab) => tab.name.trim().toLowerCase() === 'longfolio');
+            if (longfolioTab) this.switchToTab(longfolioTab.id);
+          } else if (target === 'more') {
             document.getElementById('mobileTabBar')?.querySelector<HTMLButtonElement>('[data-mobile-tab="more"]')?.click();
             return;
           }
@@ -1355,6 +1361,14 @@ export class PanelLayoutManager implements AppModule {
     if (SITE_VARIANT !== 'full' || !this.tabsState) return;
     const active = this.tabsState.tabs.find((tab) => tab.id === this.tabsState!.activeTabId);
     const longfolio = active?.name.trim().toLowerCase() === 'longfolio';
+    const longfolioNav = document.querySelector<HTMLButtonElement>('.monitor-primary-nav [data-monitor-jump="longfolio"]');
+    if (longfolio) {
+      document.querySelector('.monitor-primary-nav .active')?.classList.remove('active');
+      longfolioNav?.classList.add('active');
+    } else if (longfolioNav?.classList.contains('active')) {
+      longfolioNav.classList.remove('active');
+      document.querySelector('.monitor-primary-nav [data-monitor-jump="map"]')?.classList.add('active');
+    }
     const main = document.getElementById('main');
     if (!main || main.classList.contains('monitor-longfolio-active') === longfolio) return;
 

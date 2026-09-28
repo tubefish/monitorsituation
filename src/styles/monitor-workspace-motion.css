@@ -110,3 +110,13 @@
   .monitor-dashboard .main-content .map-section,
   .monitor-dashboard .main-content .map-width-resize-handle { transition: none; }
 }
+
+/* Map Expand shares a fullscreen body class with video panels. The global
+   fullscreen rules hide layer toggles; the globe needs its Layers rail. */
+@layer base {
+  body.monitor-map-fullscreen-active #mapSection .deckgl-layer-toggles.monitor-layer-controls {
+    display: block !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+}
