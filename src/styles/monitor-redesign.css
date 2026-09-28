@@ -126,19 +126,17 @@ html.monitor-dashboard[data-theme='dark'] {
   overflow: hidden;
   font-family: var(--monitor-reading-font);
 }
-/* A Longfolio tab takes over the workspace without changing the saved map
-   preference. Returning to Main restores the existing globe and panels. */
-.monitor-dashboard .main-content.monitor-longfolio-active {
-  grid-template-columns: minmax(0, 1fr) !important;
-}
+/* Longfolio expands the workspace while preserving the Main globe position. */
 .monitor-dashboard .main-content.monitor-longfolio-active .map-section,
 .monitor-dashboard .main-content.monitor-longfolio-active .map-width-resize-handle,
 .monitor-dashboard .main-content.monitor-longfolio-active .monitor-divider-toggle,
 .monitor-dashboard .main-content.monitor-longfolio-active .monitor-reopen-workspace {
-  display: none !important;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
+.monitor-dashboard .main-content.monitor-longfolio-active .map-section { min-width: 0; overflow: hidden; }
 .monitor-dashboard .main-content.monitor-longfolio-active .monitor-workspace {
-  grid-column: 1 !important;
   grid-row: 1;
   border-left: 0;
   background: #fff;
@@ -151,6 +149,9 @@ html.monitor-dashboard[data-theme='dark'] {
 .monitor-dashboard .main-content.monitor-longfolio-active #panelsGrid > *,
 .monitor-dashboard .main-content.monitor-longfolio-active .monitor-workspace-footer {
   display: none !important;
+}
+@media (max-width: 899px) {
+  .monitor-dashboard .main-content.monitor-longfolio-active .map-section { display: none !important; }
 }
 .monitor-workspace[hidden], .monitor-reopen-workspace[hidden] { display: none !important; }
 .monitor-divider-toggle,

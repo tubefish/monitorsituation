@@ -8,7 +8,7 @@
       minmax(0, min(max(var(--map-col-width, 68%), 220px), calc(100% - 306px)))
       5px
       minmax(0, 1fr);
-    transition: grid-template-columns 500ms cubic-bezier(.22, 1, .36, 1);
+    transition: grid-template-columns 580ms cubic-bezier(.25, .8, .25, 1);
     will-change: grid-template-columns;
   }
 
@@ -25,7 +25,7 @@
       minmax(0, 1fr)
       5px
       minmax(0, min(max(var(--map-col-width, 68%), 220px), calc(100% - 306px)));
-    transition: grid-template-columns 500ms cubic-bezier(.22, 1, .36, 1);
+    transition: grid-template-columns 580ms cubic-bezier(.25, .8, .25, 1);
     will-change: grid-template-columns;
   }
 
@@ -38,6 +38,34 @@
 
   .monitor-dashboard .main-content.map-right.monitor-workspace-collapsed .map-section {
     grid-column: 3;
+  }
+
+  /* Keep all three grid tracks in both states. The globe track narrows as
+     Longfolio's workspace grows into its place instead of jumping to one track. */
+  .monitor-dashboard .main-content:not(.map-right).monitor-longfolio-active:not(.map-hidden) {
+    grid-template-columns:
+      minmax(0, min(max(0%, 0px), calc(100% - 0px)))
+      0px
+      minmax(0, 1fr);
+  }
+
+  .monitor-dashboard .main-content.map-right.monitor-longfolio-active:not(.map-hidden) {
+    grid-template-columns:
+      minmax(0, 1fr)
+      0px
+      minmax(0, min(max(0%, 0px), calc(100% - 0px)));
+  }
+
+  .monitor-dashboard .main-content.monitor-longfolio-active:not(.map-right) .monitor-workspace { grid-column: 3; }
+  .monitor-dashboard .main-content.map-right.monitor-longfolio-active .monitor-workspace { grid-column: 1; }
+
+  .monitor-dashboard .main-content .map-section,
+  .monitor-dashboard .main-content .map-width-resize-handle {
+    transition: opacity 200ms ease, visibility 0s;
+  }
+
+  .monitor-dashboard .main-content.monitor-longfolio-active :is(.map-section, .map-width-resize-handle, .monitor-divider-toggle) {
+    transition: opacity 200ms ease, visibility 0s linear 580ms;
   }
 
   /* PanelLayoutManager toggles the hidden attribute immediately. Retain the
@@ -57,7 +85,7 @@
     pointer-events: none;
     transition:
       opacity 260ms ease,
-      visibility 0s linear 500ms;
+      visibility 0s linear 580ms;
   }
 
   .monitor-dashboard .monitor-divider-toggle,
@@ -66,7 +94,9 @@
       background-color 140ms ease,
       color 140ms ease,
       border-color 140ms ease,
-      box-shadow 140ms ease;
+      box-shadow 140ms ease,
+      opacity 200ms ease,
+      visibility 0s;
   }
 }
 
@@ -77,4 +107,6 @@
   .monitor-dashboard .monitor-reopen-workspace {
     transition: none;
   }
+  .monitor-dashboard .main-content .map-section,
+  .monitor-dashboard .main-content .map-width-resize-handle { transition: none; }
 }

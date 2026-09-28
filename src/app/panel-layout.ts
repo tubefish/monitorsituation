@@ -1196,6 +1196,11 @@ export class PanelLayoutManager implements AppModule {
       document.querySelectorAll<HTMLButtonElement>('[data-monitor-jump]').forEach((button) => {
         button.addEventListener('click', () => {
           const target = button.dataset.monitorJump;
+          if (target !== 'markets') {
+            document.dispatchEvent(new Event('monitor:leave-markets'));
+            const mainTab = this.tabsState?.tabs.find((tab) => tab.name.trim().toLowerCase() === 'main');
+            if (mainTab && this.tabsState?.activeTabId !== mainTab.id) this.switchToTab(mainTab.id);
+          }
           if (target === 'more') {
             document.getElementById('mobileTabBar')?.querySelector<HTMLButtonElement>('[data-mobile-tab="more"]')?.click();
             return;
@@ -1925,6 +1930,12 @@ export class PanelLayoutManager implements AppModule {
     if (!target) return { persisted: true };
 
     this.snapshotActiveTab();
+    // Longfolio hides the globe through the split transition. Keep its map
+    // selection in sync with Main so the map can remain mounted while the
+    // column narrows to zero, then return at the same position on Main.
+    if (SITE_VARIANT === 'full' && target.name.trim().toLowerCase() === 'longfolio' && this.ctx.panelSettings.map) {
+      target.panelSettings.map = { ...this.ctx.panelSettings.map };
+    }
     this.tabsState.activeTabId = tabId;
     const persist = saveTabsState(this.tabsState);
 

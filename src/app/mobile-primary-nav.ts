@@ -47,6 +47,12 @@ export class MobilePrimaryNav {
   init(): void {
     this.setupTabBar();
     this.setupMenu();
+    document.addEventListener('monitor:leave-markets', () => {
+      if (!this.marketExplorer || document.getElementById('marketsView')?.hidden) return;
+      this.closeMarkets();
+      this.lastContentTab = 'map';
+      this.setActive('map');
+    }, { signal: this.listeners.signal });
     this.unsubscribeHistory = overlayHistory.subscribe((top) => {
       if (top === 'search' || top === 'search-pending') this.setActive('search');
       else if (top === 'menu' || top === 'region' || top === 'settings' || top === 'settings-pending') this.setActive('more');
