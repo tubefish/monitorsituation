@@ -46,6 +46,28 @@
     border-radius: 2px !important;
   }
 
+  .monitor-dashboard .map-section .deckgl-controls.map-controls {
+    top: 50%;
+    right: 12px;
+    bottom: auto;
+    left: auto;
+    transform: translateY(-50%);
+  }
+
+  .monitor-dashboard .map-section .deckgl-controls .zoom-controls { gap: 0; }
+  .monitor-dashboard .map-section .deckgl-controls .map-btn {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--monitor-line);
+    border-bottom: 0;
+    border-radius: 0;
+    background: var(--monitor-card-surface);
+    color: var(--monitor-ink);
+    box-shadow: none;
+  }
+
+  .monitor-dashboard .map-section .deckgl-controls .map-btn:last-child { border-bottom: 1px solid var(--monitor-line); }
+
   .monitor-dashboard .monitor-map-key-toggle {
     position: absolute;
     right: 12px;
