@@ -11,6 +11,7 @@ import type { ExportGateLockReason, TabCapVerdict } from './gates/export-resolve
 import {
   DASHBOARD_TAB_NAME_MAX_LENGTH,
   isDashboardTabId,
+  isMonitorFixedTabName,
   type PanelTab,
   type TabsState,
 } from './tab-store';
@@ -30,6 +31,7 @@ export type DashboardTabDenialReason =
   | 'tab_not_found'
   | 'tab_cap'
   | 'last_tab'
+  | 'protected_tab'
   | 'confirmation_required'
   | 'tabs_unavailable'
   | 'persist_failed'
@@ -129,7 +131,7 @@ export function describeDashboardTabs(
     id: tab.id,
     name: tab.name,
     active: tab.id === state.activeTabId,
-    canDelete,
+    canDelete: canDelete && !isMonitorFixedTabName(tab.name),
   }));
   const snapshot: DashboardTabListSnapshot = {
     activeTabId: state.activeTabId,
@@ -226,6 +228,12 @@ export function resolveRenameDashboardTab(
   if (!tab) {
     return { ok: false, reason: 'tab_not_found', message: 'That dashboard tab is not available.' };
   }
+  if (isMonitorFixedTabName(tab.name) && tab.name !== name) {
+    return { ok: false, reason: 'protected_tab', message: 'This MONITOR tab cannot be renamed.' };
+  }
+  if (!isMonitorFixedTabName(tab.name) && isMonitorFixedTabName(name)) {
+    return { ok: false, reason: 'protected_tab', message: 'This name is reserved for a MONITOR tab.' };
+  }
   return { ok: true, unchanged: tab.name === name, tab, name };
 }
 
@@ -262,6 +270,9 @@ export function resolveDeleteDashboardTab(
     return { ok: false, reason: 'tab_not_found', message: 'That dashboard tab is not available.' };
   }
   const tab = state.tabs[index]!;
+  if (isMonitorFixedTabName(tab.name)) {
+    return { ok: false, reason: 'protected_tab', message: 'This MONITOR tab cannot be deleted.' };
+  }
   const fallback = state.tabs[index === 0 ? 1 : index - 1]!;
   return {
     ok: true,

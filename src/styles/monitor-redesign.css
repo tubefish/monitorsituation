@@ -141,6 +141,16 @@ html.monitor-dashboard[data-theme='dark'] {
   grid-column: 1 !important;
   grid-row: 1;
   border-left: 0;
+  background: #fff;
+}
+.monitor-dashboard .main-content.monitor-longfolio-active #panelsGrid {
+  flex: 1;
+  background: #fff;
+  padding: 0;
+}
+.monitor-dashboard .main-content.monitor-longfolio-active #panelsGrid > *,
+.monitor-dashboard .main-content.monitor-longfolio-active .monitor-workspace-footer {
+  display: none !important;
 }
 .monitor-workspace[hidden], .monitor-reopen-workspace[hidden] { display: none !important; }
 .monitor-divider-toggle,
@@ -307,10 +317,29 @@ html.monitor-dashboard[data-theme='dark'] {
 .monitor-workspace .dashboard-tabs-bar { min-height: 0; padding: 0; align-items: center; overflow-x: auto; background: transparent; border: 0; }
 .monitor-workspace .dashboard-tablist { align-items: center; }
 .monitor-workspace .dashboard-tab { background: var(--monitor-card-surface); }
-.monitor-workspace .dashboard-tab.active { border-color: var(--monitor-ink); }
+.monitor-workspace .dashboard-tab.active {
+  border-color: var(--monitor-ink);
+  animation: monitor-tab-select 240ms cubic-bezier(.22, 1, .36, 1);
+}
 .monitor-workspace .dashboard-tab-label { max-width: 90px; padding: 6px; font-size: 12px; color: var(--monitor-ink); }
 .monitor-workspace .dashboard-tab.active .dashboard-tab-label { color: var(--monitor-ink); }
 .monitor-workspace .dashboard-tab-add { margin: 0 0 0 3px; padding: 5px 8px; }
+.monitor-workspace .dashboard-tab,
+.monitor-workspace .dashboard-tab-add {
+  transition: transform 180ms cubic-bezier(.22, 1, .36, 1), background-color 180ms ease, border-color 180ms ease;
+}
+.monitor-workspace .dashboard-tab:hover,
+.monitor-workspace .dashboard-tab-add:hover { transform: translateY(-2px); background: var(--monitor-canvas); }
+.monitor-workspace .dashboard-tab:active,
+.monitor-workspace .dashboard-tab-add:active { transform: translateY(1px); }
+@keyframes monitor-tab-select {
+  from { transform: translateY(3px); background: var(--monitor-canvas); }
+  to { transform: translateY(0); background: var(--monitor-card-surface); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .monitor-workspace .dashboard-tab,
+  .monitor-workspace .dashboard-tab-add { transition: none; animation: none; }
+}
 .monitor-workspace #panelsGrid {
   flex: 1;
   min-height: 0;

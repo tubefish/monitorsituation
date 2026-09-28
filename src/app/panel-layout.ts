@@ -83,7 +83,7 @@ import {
   generateTabId,
   buildDefaultTabPanels,
 } from '@/services/tab-store';
-import type { PanelTab, TabsPersistReceipt, TabsState } from '@/services/tab-store';
+import { isMonitorFixedTabName, orderMonitorTabs, type PanelTab, type TabsPersistReceipt, type TabsState } from '@/services/tab-store';
 import {
   DASHBOARD_TAB_UNAVAILABLE_RESULT,
   applyPersistReceipt,
@@ -1292,6 +1292,11 @@ export class PanelLayoutManager implements AppModule {
       state = { activeTabId: initial.id, tabs: [initial] };
       saveTabsState(state);
     }
+    const orderedTabs = orderMonitorTabs(state.tabs);
+    if (orderedTabs.some((tab, index) => tab.id !== state.tabs[index]?.id)) {
+      state.tabs = orderedTabs;
+      saveTabsState(state);
+    }
     this.tabsState = state;
     // Clamp stored snapshots to the current free-tier cap so a workspace saved
     // while Pro (or persisted before the cap existed) can't re-enable an
@@ -1946,6 +1951,7 @@ export class PanelLayoutManager implements AppModule {
     if (!this.tabsState) return { persisted: true };
     const tab = this.tabsState.tabs.find((t) => t.id === tabId);
     if (!tab) return { persisted: true };
+    if (isMonitorFixedTabName(tab.name) || isMonitorFixedTabName(name)) return { persisted: true };
     tab.name = name;
     const persist = saveTabsState(this.tabsState);
     this.panelTabBar?.refresh();
@@ -1957,6 +1963,7 @@ export class PanelLayoutManager implements AppModule {
     if (!this.tabsState || this.tabsState.tabs.length <= 1) return { persisted: true };
     const idx = this.tabsState.tabs.findIndex((t) => t.id === tabId);
     if (idx === -1) return { persisted: true };
+    if (isMonitorFixedTabName(this.tabsState.tabs[idx]!.name)) return { persisted: true };
     const wasActive = this.tabsState.activeTabId === tabId;
     const [removed] = this.tabsState.tabs.splice(idx, 1);
 

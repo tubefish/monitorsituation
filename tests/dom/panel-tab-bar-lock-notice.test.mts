@@ -98,7 +98,7 @@ describe('PanelTabBar — cap-locked "+" at rest', () => {
     bar.setAddLock(lockFor(PanelGateReason.ANONYMOUS));
 
     expect(bar.getElement().querySelectorAll('.dashboard-tab')).toHaveLength(2);
-    expect(bar.getElement().querySelectorAll('.dashboard-tab-close')).toHaveLength(2);
+    expect(bar.getElement().querySelectorAll('.dashboard-tab-close')).toHaveLength(1);
   });
 
   it('still routes the click to the manager, which is the single enforcement point', () => {

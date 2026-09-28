@@ -27,6 +27,20 @@ export interface TabsState {
 /** Matches the dashboard tab rename input (`maxLength` on the visible control). */
 export const DASHBOARD_TAB_NAME_MAX_LENGTH = 40;
 
+/** These MONITOR workspaces are navigation destinations, not disposable layouts. */
+export function isMonitorFixedTabName(name: string): boolean {
+  return SITE_VARIANT === 'full' && ['main', 'longfolio'].includes(name.trim().toLowerCase());
+}
+
+export function orderMonitorTabs(tabs: PanelTab[]): PanelTab[] {
+  if (SITE_VARIANT !== 'full') return tabs;
+  const priority = (tab: PanelTab): number => {
+    const name = tab.name.trim().toLowerCase();
+    return name === 'longfolio' ? 0 : name === 'main' ? 1 : 2;
+  };
+  return [...tabs].sort((left, right) => priority(left) - priority(right));
+}
+
 /**
  * Stable tab IDs from `generateTabId()`. Agents must use these, never display names.
  * `Date.now().toString(36)` and the random suffix are lowercase base36.

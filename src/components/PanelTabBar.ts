@@ -1,4 +1,4 @@
-import { DASHBOARD_TAB_NAME_MAX_LENGTH, type PanelTab, type TabsState } from '@/services/tab-store';
+import { DASHBOARD_TAB_NAME_MAX_LENGTH, isMonitorFixedTabName, type PanelTab, type TabsState } from '@/services/tab-store';
 import { t } from '@/services/i18n';
 import { PanelGateReason } from '@/services/panel-gating';
 import { lockSvg, upgradeSvg } from '@/components/gate-icons';
@@ -117,7 +117,7 @@ export class PanelTabBar {
       const tabId = tabEl.dataset.tabId;
       if (!tabId) return;
       const tab = this.getState().tabs.find((tb) => tb.id === tabId);
-      if (tab) this.startRename(tabEl, tab);
+      if (tab && !isMonitorFixedTabName(tab.name)) this.startRename(tabEl, tab);
     });
 
     this.render();
@@ -238,7 +238,7 @@ export class PanelTabBar {
     this.tablistEl.replaceChildren();
     const { tabs, activeTabId } = this.getState();
     for (const tab of tabs) {
-      this.tablistEl.appendChild(this.renderTab(tab, tab.id === activeTabId, tabs.length > 1));
+      this.tablistEl.appendChild(this.renderTab(tab, tab.id === activeTabId, tabs.length > 1 && !isMonitorFixedTabName(tab.name)));
     }
     this.updateControlledPanel(activeTabId);
     const addBtn = document.createElement('button');
@@ -269,7 +269,7 @@ export class PanelTabBar {
     // All tabs drive the same panel grid (only its contents swap on switch).
     label.setAttribute('aria-controls', 'panelsGrid');
     label.textContent = tab.name;
-    label.title = t('dashboardTabs.renameHint', { name: tab.name });
+    if (!isMonitorFixedTabName(tab.name)) label.title = t('dashboardTabs.renameHint', { name: tab.name });
     label.addEventListener('click', () => {
       if (!isActive) this.callbacks.onSelect(tab.id);
     });

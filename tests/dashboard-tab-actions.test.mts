@@ -13,7 +13,7 @@ import {
   resolveRenameDashboardTab,
   resolveSelectDashboardTab,
 } from '../src/services/dashboard-tab-actions.ts';
-import type { PanelTab, TabsState } from '../src/services/tab-store.ts';
+import { orderMonitorTabs, type PanelTab, type TabsState } from '../src/services/tab-store.ts';
 import type { TabCapVerdict } from '../src/services/gates/export-resolver.ts';
 
 const MAIN_ID = 'tab-main01-abc123';
@@ -50,7 +50,7 @@ describe('listDashboardTabs availability', () => {
     );
     assert.equal(listed.activeTabId, MARKETS_ID);
     assert.deepEqual(listed.tabs, [
-      { id: MAIN_ID, name: 'Main', active: false, canDelete: true },
+      { id: MAIN_ID, name: 'Main', active: false, canDelete: false },
       { id: MARKETS_ID, name: 'Markets', active: true, canDelete: true },
     ]);
     assert.equal(listed.canCreate, true);
@@ -131,6 +131,24 @@ describe('renameDashboardTab', () => {
       'invalid_name',
     );
   });
+
+  it('keeps Main and Longfolio reserved while allowing custom tab names', () => {
+    const LONGFOLIO_ID = 'tab-longfo-abc123';
+    const current = state(MAIN_ID, [
+      tab(MAIN_ID, 'Main'), tab(LONGFOLIO_ID, 'Longfolio'), tab(MARKETS_ID, 'Markets'),
+    ]);
+    assert.equal(resolveRenameDashboardTab(current, MAIN_ID, 'Other').reason, 'protected_tab');
+    assert.equal(resolveRenameDashboardTab(current, LONGFOLIO_ID, 'Other').reason, 'protected_tab');
+    assert.equal(resolveRenameDashboardTab(current, MARKETS_ID, 'Longfolio').reason, 'protected_tab');
+    assert.equal(resolveRenameDashboardTab(current, MARKETS_ID, 'Watchlist').ok, true);
+  });
+});
+
+describe('MONITOR fixed tab order', () => {
+  it('puts Longfolio first, Main second, then preserves custom tab order', () => {
+    const tabs = [tab(MARKETS_ID, 'Markets'), tab(MAIN_ID, 'Main'), tab('tab-longfo-abc123', 'Longfolio'), tab('tab-news01-abc123', 'News')];
+    assert.deepEqual(orderMonitorTabs(tabs).map((item) => item.name), ['Longfolio', 'Main', 'Markets', 'News']);
+  });
 });
 
 describe('persist receipt', () => {
@@ -179,6 +197,7 @@ describe('deleteDashboardTab', () => {
     assert.equal(resolveDeleteDashboardTab(single, MAIN_ID, undefined).reason, 'confirmation_required');
 
     const two = state(MARKETS_ID, [tab(MAIN_ID, 'Main'), tab(MARKETS_ID, 'Markets')]);
+    assert.equal(resolveDeleteDashboardTab(two, MAIN_ID, true).reason, 'protected_tab');
     const deleted = resolveDeleteDashboardTab(two, MARKETS_ID, true);
     assert.equal(deleted.ok, true);
     if (deleted.ok) {
