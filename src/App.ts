@@ -1,5 +1,6 @@
 import type { Monitor, PanelConfig, MapLayers } from '@/types';
 import { WEB_APP_ORIGIN } from '@/config/web-origin';
+import { MONITOR_HIDDEN_PANEL_KEYS } from '@/config/monitor-defaults';
 import {
   isStockResearchPath,
   stockResearchSymbolFromPath,
@@ -1465,11 +1466,15 @@ export class App {
       }
     }
 
-    // Monitor Trending has been retired from the full workspace. Existing
-    // saved layouts must not re-enable its feed after a reload.
-    if (currentVariant === 'full' && panelSettings['other-tokens']?.enabled) {
-      panelSettings['other-tokens'] = { ...panelSettings['other-tokens'], enabled: false };
-      if (storageAvailable) saveToStorage(STORAGE_KEYS.panels, panelSettings);
+    // Retired full-workspace panels must stay hidden in existing saved layouts.
+    if (currentVariant === 'full') {
+      let changed = false;
+      for (const key of MONITOR_HIDDEN_PANEL_KEYS) {
+        if (!panelSettings[key]?.enabled) continue;
+        panelSettings[key] = { ...panelSettings[key], enabled: false };
+        changed = true;
+      }
+      if (changed && storageAvailable) saveToStorage(STORAGE_KEYS.panels, panelSettings);
     }
 
     const disabledSources = new Set(loadFromStorage<string[]>(STORAGE_KEYS.disabledFeeds, []));

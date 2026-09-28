@@ -1,5 +1,5 @@
 import { installDashboardLayoutEditor } from './dashboard-layout-editor';
-import { MONITOR_DEFAULT_PANEL_ORDER } from '@/config/monitor-defaults';
+import { MONITOR_DEFAULT_PANEL_ORDER, MONITOR_HIDDEN_PANEL_KEYS } from '@/config/monitor-defaults';
 import { MONITOR_MOBILE_NAV } from '@/config/monitor-mobile-nav';
 import { waitForDashboardStyles } from '@/utils/dashboard-styles-ready';
 import { movePanelToKeyboardZone } from '@/app/panel-keyboard-reorder';
@@ -1282,15 +1282,44 @@ export class PanelLayoutManager implements AppModule {
 
     let state = loadTabsState();
     if (!state) {
-      // First run — wrap the user's current layout in an initial tab so
-      // nothing changes visually until they create a second tab.
+      // Start from the user's current layout, including any saved panels.
       const initial: PanelTab = {
         id: generateTabId(),
-        name: SITE_VARIANT === 'full' ? 'Layout 1' : t('dashboardTabs.defaultName'),
+        name: SITE_VARIANT === 'full' ? 'Main' : t('dashboardTabs.defaultName'),
         ...this.captureCurrentTabState(),
       };
       state = { activeTabId: initial.id, tabs: [initial] };
       saveTabsState(state);
+    }
+    if (SITE_VARIANT === 'full') {
+      // Earlier builds stored just "Layout 1". Promote that active workspace
+      // to Main, then add the permanent blank Longfolio destination.
+      let changed = false;
+      let main = state.tabs.find((tab) => tab.name.trim().toLowerCase() === 'main');
+      if (!main) {
+        main = state.tabs.find((tab) => tab.id === state.activeTabId) ?? state.tabs[0]!;
+        main.name = 'Main';
+        changed = true;
+      }
+      if (!state.tabs.some((tab) => tab.name.trim().toLowerCase() === 'longfolio')) {
+        state.tabs.push({
+          id: generateTabId(),
+          name: 'Longfolio',
+          panelSettings: Object.fromEntries(Object.entries(main.panelSettings).map(([key, config]) => [key, { ...config, enabled: false }])),
+          panelOrder: [],
+          bottomSet: [],
+        });
+        changed = true;
+      }
+      // Legacy custom tabs remain stored, but navigation now has two destinations.
+      if (!state.tabs.some((tab) => tab.id === state.activeTabId && isMonitorFixedTabName(tab.name))) {
+        const active = state.tabs.find((tab) => tab.id === state.activeTabId);
+        if (active) Object.assign(active, this.captureCurrentTabState());
+        state.activeTabId = main.id;
+        this.applyTabPanelState(main.panelSettings, main.panelOrder, main.bottomSet);
+        changed = true;
+      }
+      if (changed) saveTabsState(state);
     }
     const orderedTabs = orderMonitorTabs(state.tabs);
     if (orderedTabs.some((tab, index) => tab.id !== state.tabs[index]?.id)) {
@@ -2169,9 +2198,14 @@ export class PanelLayoutManager implements AppModule {
   }
 
   applyPanelSettings(): void {
-    if (SITE_VARIANT === 'full' && this.ctx.panelSettings['other-tokens']?.enabled) {
-      this.ctx.panelSettings['other-tokens'].enabled = false;
-      saveToStorage(STORAGE_KEYS.panels, this.ctx.panelSettings);
+    if (SITE_VARIANT === 'full') {
+      let changed = false;
+      for (const key of MONITOR_HIDDEN_PANEL_KEYS) {
+        if (!this.ctx.panelSettings[key]?.enabled) continue;
+        this.ctx.panelSettings[key].enabled = false;
+        changed = true;
+      }
+      if (changed) saveToStorage(STORAGE_KEYS.panels, this.ctx.panelSettings);
     }
     Object.entries(this.ctx.panelSettings).forEach(([key, config]) => {
       if (key === 'map') {

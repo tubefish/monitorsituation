@@ -239,6 +239,7 @@ export class PanelTabBar {
     this.tablistEl.replaceChildren();
     const { tabs, activeTabId } = this.getState();
     for (const tab of tabs) {
+      if (SITE_VARIANT === 'full' && !isMonitorFixedTabName(tab.name)) continue;
       this.tablistEl.appendChild(this.renderTab(tab, tab.id === activeTabId, tabs.length > 1 && !isMonitorFixedTabName(tab.name)));
     }
     this.updateControlledPanel(activeTabId);

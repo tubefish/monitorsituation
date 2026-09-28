@@ -32,7 +32,6 @@ import {
 export const MONITOR_DEFAULT_PANEL_ORDER = [
   'map',
   'politics',
-  'markets',
   'threat-timeline',
   'escalation-correlation',
   'market-heatmap',
@@ -46,6 +45,9 @@ export const MONITOR_DEFAULT_PANEL_ORDER = [
   'finance',
   'monitor-market',
 ] as const;
+
+/** Panels retained in code but removed from the full MONITOR workspace. */
+export const MONITOR_HIDDEN_PANEL_KEYS = ['markets', 'other-tokens'] as const;
 
 /**
  * The upstream app has two legacy layout migrations that intentionally move

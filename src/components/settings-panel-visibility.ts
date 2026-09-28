@@ -135,7 +135,7 @@ function installMonitorFavicon(): void {
 function shouldHidePanelItem(item: HTMLElement): boolean {
   const key = item.dataset.panel;
   const label = item.querySelector<HTMLElement>('.panel-toggle-label')?.textContent?.trim();
-  if (SITE_VARIANT === 'full' && (key === 'other-tokens' || label === 'Monitor Trending')) return true;
+  if (SITE_VARIANT === 'full' && (key === 'other-tokens' || key === 'markets' || label === 'Monitor Trending' || label === 'Markets')) return true;
   if (key && HIDDEN_SETTINGS_PANEL_KEYS.has(key)) return true;
 
   // Fall back to the exact rendered label. This catches variant/local config
