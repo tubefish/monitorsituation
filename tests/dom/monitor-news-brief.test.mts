@@ -40,6 +40,11 @@ describe('the situation brief selection', () => {
     const fresh = story('Congress passes funding bill', 'Reuters US', 0.1);
     expect(selectMonitorBrief([old, fresh], now)[0]).toBe(fresh);
   });
+  it('excludes publisher-labelled opinion rather than presenting it as reporting', () => {
+    const news = story('Bitcoin exchange launches regulated trading', 'CoinDesk');
+    const opinion = { ...story('Democrats killed the crypto bill', 'CoinDesk'), link: 'https://www.coindesk.com/opinion/2026/09/29/crypto-bill' };
+    expect(selectMonitorBrief([news, opinion, { ...story('Congress must act'), isOpinion: true }, story('Opinion: Trump should change course')], now)).toEqual([news]);
+  });
 });
 
 describe('the situation brief interface', () => {

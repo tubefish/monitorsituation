@@ -10,6 +10,7 @@ export interface BriefCandidate {
   pubDate?: Date | string | number;
   publishedAt?: number;
   pubDateMissing?: boolean;
+  isOpinion?: boolean;
 }
 
 // Topic-specific feeds prevent a general wire's first five local stories from
@@ -71,6 +72,10 @@ export function selectMonitorBrief<T extends BriefCandidate>(items: readonly T[]
     const topic = briefTopic(item);
     const link = linkIdentity(item.link);
     if (!topic || !link || !Number.isFinite(time) || time > now + 5 * 60_000 || now - time > BRIEF_MAX_AGE_MS) return [];
+    // Wire feeds can mix reporting and op-eds. Preserve the server's explicit
+    // stamp, and recognize publisher-labelled opinion URLs in RSS fallbacks.
+    if (item.isOpinion || /\/(opinion|commentary|editorials?)(\/|$)/i.test(new URL(link).pathname)
+      || /^(opinion|editorial|commentary)\s*[:|–-]/i.test(item.title)) return [];
     const ageHours = Math.max(0, now - time) / 3_600_000;
     const secondary = topic === 'Sports' || topic === 'Culture';
     // Threat labels never increase editorial rank. Recency dominates within
