@@ -1762,6 +1762,9 @@ export class DataLoaderManager implements AppModule {
       const { fetchCategoryFeeds, getFeedFailures } = await getRssModule();
       const fetchedItems = await fetchCategoryFeeds(fallbackFeeds, {
         batchSize: this.perFeedFallbackBatchSize,
+        // Retain the complete bounded brief pool until editorial selection;
+        // a generic newest-20 cut can erase the markets/culture topics first.
+        maxItems: SITE_VARIANT === 'full' && category === 'politics' ? 40 : 20,
         onBatch: (partialItems) => {
           scheduleRender(partialItems);
           // Map flashes and breaking-news alerts fire on the FRESH batch only.

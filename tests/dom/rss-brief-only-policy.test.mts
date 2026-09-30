@@ -53,7 +53,9 @@ vi.mock('@/services/ai-classify-queue', async (importOriginal) => ({
 import {
   BRIEF_ONLY_RSS_FETCH_POLICY,
   fetchFeed,
+  fetchCategoryFeeds,
 } from '@/services/rss';
+import { briefTopic, selectMonitorBrief } from '../../shared/monitor-news';
 import { fetchCountryCoverage } from '@/services/country-coverage';
 
 function overlappingRss(titles: string[]): string {
@@ -154,6 +156,29 @@ describe('brief-only RSS fetch policy', () => {
 });
 
 describe('MONITOR RSS recovery', () => {
+  it('retains markets and culture candidates until the main brief can balance topics', async () => {
+    const now = Date.parse('2026-09-30T12:00:00Z');
+    vi.setSystemTime(now);
+    aiQueueMocks.canQueueAiClassification.mockReturnValue(false);
+    const feeds = ['Wire A', 'Wire B', 'Wire C', 'Wire D', 'Wire E', 'Financial Times', 'BBC Culture']
+      .map((name, index) => ({ name: `brief-cap-${name}`, url: `/api/rss-proxy?brief-feed=${index}` }));
+    proxyMocks.fetchWithProxy.mockImplementation(async (url: string) => {
+      const index = Number(new URL(url, 'https://example.com').searchParams.get('brief-feed'));
+      const prefix = index === 5 ? 'Inflation update' : index === 6 ? 'Oscars nominees' : 'Ukraine peace talks';
+      const xml = overlappingRss(Array.from({ length: 5 }, (_, n) => `${prefix} ${index}-${n}`))
+        .replaceAll('Mon, 31 Aug 2026 10:00:00 GMT', new Date(now - index * 3_600_000).toUTCString())
+        .replaceAll('https://news.example/', `https://news.example/${index}/`);
+      return new Response(xml, { headers: { 'Content-Type': 'application/rss+xml' } });
+    });
+    const candidates = await fetchCategoryFeeds(feeds, { batchSize: 2, maxItems: 40 });
+    expect(candidates).toHaveLength(35);
+    const topics = selectMonitorBrief(candidates, now).map(briefTopic);
+    expect(topics).toContain('Markets');
+    expect(topics).toContain('Culture');
+    expect(await fetchCategoryFeeds(feeds)).toHaveLength(20);
+    vi.useRealTimers();
+  });
+
   it('reports an HTTP failure to topic panels instead of returning an empty success', async () => {
     proxyMocks.fetchWithProxy.mockResolvedValue(new Response('unavailable', { status: 503 }));
     await expect(fetchFeed({ name: 'monitor-failed-fixture', url: '/api/rss-proxy?url=fixture' }, {

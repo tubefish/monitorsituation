@@ -444,10 +444,12 @@ export async function fetchCategoryFeeds(
   feeds: Feed[],
   options: {
     batchSize?: number;
+    /** Candidate budget before a caller applies topic balancing. */
+    maxItems?: number;
     onBatch?: (items: NewsItem[]) => void;
   } = {}
 ): Promise<NewsItem[]> {
-  const topLimit = 20;
+  const topLimit = Math.min(40, Math.max(1, options.maxItems ?? 20));
   const batchSize = options.batchSize ?? 5;
 
   // Filter feeds by language:

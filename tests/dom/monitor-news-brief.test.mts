@@ -71,4 +71,11 @@ describe('the situation brief interface', () => {
     expect(brief.element.querySelector('article')).toBeNull();
     expect(brief.element.textContent).toContain('No fresh headlines available');
   });
+  it('does not repeat Google News headline-only excerpts or publisher suffixes', () => {
+    vi.useFakeTimers(); vi.setSystemTime(now);
+    const brief = new MonitorNewsBrief();
+    brief.update([{ ...story('Congress passes funding bill - Reuters', 'Reuters US'), snippet: 'Congress passes funding bill Reuters' }]);
+    expect(brief.element.querySelector('h3')?.textContent).toBe('Congress passes funding bill');
+    expect(brief.element.querySelector('.monitor-brief-summary')).toBeNull();
+  });
 });

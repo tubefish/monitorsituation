@@ -51,6 +51,7 @@ export class MonitorNewsBrief {
     const visible = this.items.filter(item => this.active === 'Top stories' || briefTopic(item) === this.active);
     const fragment = document.createDocumentFragment();
     visible.forEach((item, index) => {
+      const headline = item.title.replace(/\s+[-–|]\s+(Reuters|AP News|BBC(?: News)?|CNN)$/i, '');
       const article = document.createElement('article');
       article.className = 'monitor-brief-story';
       if (index === 0) article.classList.add('monitor-brief-lead');
@@ -62,13 +63,17 @@ export class MonitorNewsBrief {
       link.href = item.link; // selectMonitorBrief admits only absolute HTTP(S) URLs.
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
-      link.textContent = item.title;
+      link.textContent = headline;
       heading.append(link);
       article.append(topic, heading);
-      if (item.snippet?.trim() && item.snippet.trim() !== item.title.trim()) {
+      const excerpt = item.snippet?.trim() ?? '';
+      const normalize = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+      // Google News descriptions often contain only the headline + publisher.
+      // Do not present that duplicate text as a meaningful summary.
+      if (excerpt && !normalize(excerpt).startsWith(normalize(headline))) {
         const summary = document.createElement('p');
         summary.className = 'monitor-brief-summary';
-        summary.textContent = item.snippet.trim();
+        summary.textContent = excerpt;
         article.append(summary);
       }
       const meta = document.createElement('div');
