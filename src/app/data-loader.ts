@@ -1572,7 +1572,7 @@ export class DataLoaderManager implements AppModule {
         // no partial coverage to disclose — clear any badge a prior custom-path
         // load left behind.
         this.clearNewsSourceCoverage(category);
-        this.setNewsRefreshDegraded(category, false);
+        this.setNewsRefreshDegraded(category, digestServedStale);
         const items = (digest.categories[category]?.items ?? [])
           .map(protoItemToNewsItem)
           .filter(i => enabledNames.has(i.source));
@@ -1695,6 +1695,7 @@ export class DataLoaderManager implements AppModule {
       if (!isCustom && staleItems.length > 0) {
         recordSelectedFreshness(true);
         console.warn(`[News] Digest missing for "${category}", serving stale headlines (${staleItems.length})`);
+        this.setNewsRefreshDegraded(category, true);
         this.renderNewsForCategory(category, staleItems);
         this.ctx.statusPanel?.updateFeed(category.charAt(0).toUpperCase() + category.slice(1), {
           status: 'ok',
@@ -1737,9 +1738,13 @@ export class DataLoaderManager implements AppModule {
       // source is reached within ceil(N / cap) cycles.
       recordSelectedFreshness(false);
       const rotationCycle = isCustom ? this.newsRotationCycle(category) : 0;
+      // The main brief spans seven topics; keep its outage path bounded to
+      // eight sources so one world wire does not replace the whole edition.
+      const fallbackLimit = SITE_VARIANT === 'full' && category === 'politics'
+        ? 8 : this.perFeedFallbackCategoryFeedLimit;
       const fallbackFeeds = isCustom
         ? selectRotatingFeedWindow(reachableFeeds, this.perFeedFallbackCategoryFeedLimit, rotationCycle)
-        : this.selectLimitedFeeds(enabledFeeds, this.perFeedFallbackCategoryFeedLimit);
+        : this.selectLimitedFeeds(enabledFeeds, fallbackLimit);
       if (isCustom) {
         // Advanced as soon as the window is claimed rather than after the fetch
         // resolves, so a cycle that fails outright still moves on instead of

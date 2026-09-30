@@ -1,3 +1,4 @@
+import { MonitorNewsBrief } from './news/MonitorNewsBrief';
 import { Panel } from './Panel';
 import { WindowedList } from './VirtualList';
 import type { NewsItem, ClusteredEvent, DeviationLevel, RelatedAsset, RelatedAssetContext } from '@/types';
@@ -40,6 +41,7 @@ interface PreparedCluster {
 
 export class NewsPanel extends Panel {
   private clusteredMode = true;
+  private monitorBrief: MonitorNewsBrief | null = null;
   private deviationEl: HTMLElement | null = null;
   private relatedAssetContext = new Map<string, RelatedAssetContext>();
   private onRelatedAssetClick?: (asset: RelatedAsset) => void;
@@ -101,7 +103,7 @@ export class NewsPanel extends Panel {
 
   super({
     id,
-    title,
+    title: isWorldNews && SITE_VARIANT === 'full' ? 'Situation Brief' : title,
     showCount: true,
     trackActivity: true,
     infoTooltip,
@@ -109,6 +111,10 @@ export class NewsPanel extends Panel {
     defaultRowSpan: isIntelFeed || isWorldNews ? 2 : undefined,
   });
     this.sortMode = this.loadSortMode();
+    if (isWorldNews && SITE_VARIANT === 'full') {
+      this.monitorBrief = new MonitorNewsBrief();
+      return;
+    }
     this.createDeviationIndicator();
     this.createSortToggle();
     this.createSummarizeButton();
@@ -484,6 +490,20 @@ export class NewsPanel extends Panel {
   }
 
   public renderNews(items: NewsItem[]): void {
+    if (this.monitorBrief) {
+      this.clearErrorState();
+      const selected = this.monitorBrief.update(items);
+      this.setCount(selected.length);
+      if (selected.length) this.renderCurrentDataBadge();
+      else {
+        this.renderedBadgeState = 'unavailable';
+        this.setDataBadge('unavailable');
+      }
+      if (this.monitorBrief.element.parentElement !== this.content) {
+        this.setContentNodes(this.monitorBrief.element);
+      }
+      return;
+    }
     if (items.length === 0) {
       this.renderRequestId += 1; // Cancel in-flight clustering from previous renders.
       this.renderedBadgeState = 'unavailable';

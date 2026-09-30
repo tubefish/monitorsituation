@@ -350,12 +350,19 @@ export async function fetchFeed(feed: Feed, options: FetchFeedOptions = {}): Pro
       const geoMatches = inferGeoHubsFromTitle(title);
       const topGeo = geoMatches[0];
 
+      // Read publisher excerpts as inert text; never inject feed HTML into the brief.
+      const descriptionHtml = item.querySelector(isAtom ? 'summary, content' : 'description')?.textContent ?? '';
+      const descriptionDoc = new DOMParser().parseFromString(descriptionHtml, 'text/html');
+      descriptionDoc.querySelectorAll('script, style').forEach(node => node.remove());
+      const snippet = descriptionDoc.body.textContent?.replace(/\s+/g, ' ').trim().slice(0, 400) || undefined;
+
       parsed.push({
         source: feed.name,
         title,
         link,
         pubDate,
         pubDateMissing,
+        snippet,
         isAlert,
         threat,
         ...(topGeo && { lat: topGeo.hub.lat, lon: topGeo.hub.lon, locationName: topGeo.hub.name }),
