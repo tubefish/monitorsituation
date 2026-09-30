@@ -1,3 +1,5 @@
+import { MONITOR_BRIEF_FEEDS } from '../../../../shared/monitor-news';
+
 export interface ServerFeed {
   name: string;
   url: string;
@@ -49,11 +51,7 @@ const gnLocale = (q: string, hl: string, gl: string, ceid: string) =>
 export const VARIANT_FEEDS: Record<string, Record<string, ServerFeed[]>> = {
   full: {
     politics: [
-      { name: 'BBC World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
-      { name: 'Guardian World', url: 'https://www.theguardian.com/world/rss' },
-      { name: 'AP News', url: gn('site:apnews.com when:1d') },
-      { name: 'Reuters World', url: gn('site:reuters.com world when:1d') },
-      { name: 'CNN World', url: gn('site:cnn.com world news when:1d') },
+      ...MONITOR_BRIEF_FEEDS.map(feed => ({ ...feed, deadlinePriority: 1 })),
       { name: 'Trump - Truth Social', url: 'https://trumpstruth.org/feed' },
     ],
     us: [

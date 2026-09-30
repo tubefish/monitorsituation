@@ -1227,7 +1227,11 @@ export class PanelLayoutManager implements AppModule {
             setCollapsed(false);
             const panel = document.querySelector<HTMLElement>(`#panelsGrid [data-panel="${target}"]`);
             if (panel && !panel.classList.contains('hidden')) {
-              panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              // News is a reading destination; use the existing accessible
+              // expanded panel (Escape/close returns to the dashboard).
+              if (target !== 'politics' || !this.ctx.newsPanels.politics?.setFullscreen(true)) {
+                panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
             } else if (target === 'markets') {
               document.querySelector<HTMLButtonElement>('[data-open-markets]')?.click();
             }

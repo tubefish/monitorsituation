@@ -1,3 +1,4 @@
+import { selectMonitorBrief } from '../../../../shared/monitor-news';
 import type {
   ServerContext,
   ListFeedDigestRequest,
@@ -3060,7 +3061,9 @@ async function buildDigest(
         ? items
         : items.filter((item) => typeof item.link !== 'string' || !revokedUrls.has(item.link));
       ledgerDrops.perCategoryCap += Math.max(0, servable.length - MAX_ITEMS_PER_CATEGORY);
-      slicedByCategory.set(category, servable.slice(0, MAX_ITEMS_PER_CATEGORY));
+      slicedByCategory.set(category, variant === 'full' && category === 'politics'
+        ? selectMonitorBrief(servable, Date.now(), MAX_ITEMS_PER_CATEGORY)
+        : servable.slice(0, MAX_ITEMS_PER_CATEGORY));
     }
 
     const allSliced = [...slicedByCategory.values()].flat();
