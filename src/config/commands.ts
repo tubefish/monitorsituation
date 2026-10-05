@@ -159,6 +159,7 @@ export const COMMANDS: Command[] = [
   { id: 'panel:deduction', keywords: ['deduct', 'deduction', 'ai deduction', 'situation analysis', 'scenario analysis'], label: 'Panel: AI Deduction', icon: '\u{1F9E0}', category: 'panels' },
   { id: 'panel:regional-intelligence', keywords: ['regional intelligence', 'regional brief', 'region snapshot', 'balance vector', 'regime', 'mena brief', 'east asia brief', 'europe brief', 'scenarios', 'transmission paths'], label: 'Panel: Regional Intelligence', icon: '\u{1F30D}', category: 'panels' },
   { id: 'panel:military-correlation', keywords: ['force posture', 'military correlation', 'military posture'], label: 'Panel: Force Posture', icon: '\u{1F396}\uFE0F', category: 'panels' },
+  { id: 'panel:whos-monitoring', keywords: ['monitoring', 'who is monitoring', 'x search', 'tweets'], label: "Panel: Who's Monitoring", icon: '◎', category: 'panels' },
   { id: 'panel:escalation-correlation', keywords: ['escalation', 'escalation monitor', 'escalation risk'], label: 'Panel: Escalation Monitor', icon: '\u{1F4C8}', category: 'panels' },
   { id: 'panel:economic-correlation', keywords: ['economic warfare', 'economic correlation', 'sanctions impact'], label: 'Economic Warfare', icon: '\u{1F4B1}', category: 'panels' },
   { id: 'panel:disaster-correlation', keywords: ['disaster cascade', 'disaster correlation', 'natural disaster'], label: 'Panel: Disaster Cascade', icon: '\u{1F30A}', category: 'panels' },
