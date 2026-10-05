@@ -7,7 +7,7 @@ const source = readFileSync(
   'utf8',
 );
 
-test('X Tracker includes the nine requested X accounts in order', () => {
+test('X Tracker includes the ten requested X accounts in order', () => {
   const handles = [...source.matchAll(/handle: '([^']+)'/g)].map(match => match[1]);
   assert.deepEqual(handles, [
     'monitoringmeme',
@@ -19,6 +19,7 @@ test('X Tracker includes the nine requested X accounts in order', () => {
     'rapidresponse47',
     'zerohedge',
     'watcherguru',
+    'anniejacobsen',
   ]);
 });
 

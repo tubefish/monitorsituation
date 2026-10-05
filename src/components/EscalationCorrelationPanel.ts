@@ -27,6 +27,7 @@ export const ESCALATION_X_ACCOUNTS: readonly XAccountSource[] = [
   { label: 'Rapid Response 47', handle: 'rapidresponse47' },
   { label: 'ZeroHedge', handle: 'zerohedge' },
   { label: 'Watcher.Guru', handle: 'watcherguru' },
+  { label: 'Annie Jacobsen', handle: 'anniejacobsen' },
 ];
 
 export class EscalationCorrelationPanel extends Panel {
