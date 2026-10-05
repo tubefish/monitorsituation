@@ -845,19 +845,30 @@ export function isApiCallTarget(url: string, apiOrigin: string): boolean {
   return parsed.origin === apiOrigin && parsed.pathname.startsWith('/api/');
 }
 
-function isCredentiallessPublicDataRequest(
+function isPublicDataRequest(
   input: RequestInfo | URL,
   init: RequestInit | undefined,
   url: string,
 ): boolean {
   const credentials = init?.credentials ?? (input instanceof Request ? input.credentials : undefined);
-  if (credentials !== 'omit') return false;
-
   let parsed: URL;
   try {
     parsed = new URL(url, typeof location === 'undefined' ? 'http://localhost' : location.href);
   } catch {
     return false;
+  }
+
+  // This public MONITOR dataset also runs on protected Vercel previews. Keep
+  // their same-origin access cookie without involving the anonymous API
+  // session. No other URL or credential mode gains this exemption.
+  if (credentials !== 'omit') {
+    const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
+    return credentials === 'same-origin'
+      && typeof location !== 'undefined'
+      && parsed.origin === location.origin
+      && parsed.pathname === '/api/bootstrap'
+      && parsed.search === '?keys=diseaseWatch&public=1'
+      && method.toUpperCase() === 'GET';
   }
 
   const pathname = parsed.pathname.length > 1 ? parsed.pathname.replace(/\/+$/, '') : parsed.pathname;
@@ -935,7 +946,7 @@ export function installWmSessionFetchInterceptor(): void {
     // the interceptor's synthetic 503 prevents the public CDN path from
     // restoring the dashboard. Keep the bypass narrow so arbitrary bootstrap
     // reads cannot opt out of the normal session machinery.
-    if (isCredentiallessPublicDataRequest(input, init, url)) return original(input, init);
+    if (isPublicDataRequest(input, init, url)) return original(input, init);
 
     // Premium routes have a dedicated auth-injection layer
     // (`installWebApiRedirect`'s `enrichInitForPremium` adds Clerk Bearer JWT,

@@ -104,4 +104,16 @@ describe('ensureHydrated public on-demand key guard (WORLDMONITOR-XP)', () => {
       'each demanded dataset gets one independently cacheable request',
     );
   });
+
+  it('preserves same-origin preview access for Disease Watch only', async () => {
+    const modes: Array<RequestCredentials | undefined> = [];
+    const original = globalThis.fetch;
+    globalThis.fetch = (input, init) => {
+      modes.push(init?.credentials);
+      return original(input, init);
+    };
+    assert.deepEqual(await ensureHydrated('diseaseWatch'), { ok: true });
+    assert.deepEqual(await ensureHydrated('forecasts'), { ok: true });
+    assert.deepEqual(modes, ['same-origin', 'omit']);
+  });
 });
