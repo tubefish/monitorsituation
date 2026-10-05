@@ -1,3 +1,4 @@
+import { loadDiseaseWatch } from './_disease-watch.js';
 import { waitUntil as vercelWaitUntil } from '@vercel/functions';
 
 import {
@@ -532,6 +533,18 @@ export default async function handler(req, ctx) {
 
   const keys = Object.values(registry);
   const names = Object.keys(registry);
+  // The opt-in Disease Watch resolves its two public sources on demand. It
+  // never blocks startup tiers and stays within MONITOR's function budget.
+  if (auth.kind === 'public-on-demand' && names.length === 1 && names[0] === 'diseaseWatch') {
+    const diseaseWatch = await loadDiseaseWatch();
+    const healthy = diseaseWatch.russia.status === 'ok' && diseaseWatch.global.status === 'ok';
+    return jsonResponse({ data: { diseaseWatch }, missing: [] }, 200, {
+      ...getPublicBootstrapHeaders(),
+      'Cache-Control': healthy ? 'max-age=60' : 'no-store',
+      ...(healthy ? { 'CDN-Cache-Control': 'public, s-maxage=60' } : {}),
+    });
+  }
+
   const measureR2Shadow = shouldMeasureBootstrapR2Shadow(auth.kind, tier);
   const redisStartedAt = measureR2Shadow ? performance.now() : null;
 

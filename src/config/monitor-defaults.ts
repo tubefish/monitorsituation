@@ -33,6 +33,7 @@ export const MONITOR_DEFAULT_PANEL_ORDER = [
   'map',
   'escalation-correlation',
   'politics',
+  'disease-outbreaks',
   'threat-timeline',
   'market-heatmap',
   'commodity-watch',

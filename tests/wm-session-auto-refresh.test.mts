@@ -732,6 +732,24 @@ describe('wm-session refresh-on-401 (Layer 2)', () => {
       });
       assert.equal(displacement.status, 200, 'public displacement should bypass dead-session suppression');
 
+      const diseaseWatch = await wrappedFetch('/api/bootstrap?keys=diseaseWatch&public=1', {
+        credentials: 'same-origin',
+      });
+      assert.equal(diseaseWatch.status, 200, 'public Disease Watch must preserve preview access without requiring a wm-session');
+
+      for (const url of [
+        'https://api.worldmonitor.app/api/bootstrap?keys=diseaseWatch&public=1',
+        '/api/bootstrap?keys=marketQuotes&public=1',
+        '/api/bootstrap?keys=diseaseWatch&public=1&keys=marketQuotes',
+      ]) {
+        const guarded = await wrappedFetch(url, { credentials: 'same-origin' });
+        assert.equal(guarded.status, 503, 'the exemption must not extend to another origin, dataset, or query');
+      }
+      const diseasePost = await wrappedFetch('/api/bootstrap?keys=diseaseWatch&public=1', {
+        credentials: 'same-origin', method: 'POST',
+      });
+      assert.equal(diseasePost.status, 503, 'the exemption is read-only');
+
       const missingPublicFlag = await wrappedFetch('https://api.worldmonitor.app/api/bootstrap?tier=fast', {
         credentials: 'omit',
       });
@@ -763,7 +781,7 @@ describe('wm-session refresh-on-401 (Layer 2)', () => {
     }
 
     assert.deepEqual(
-      forwarded.slice(-6),
+      forwarded.slice(-7),
       [
         { url: 'https://api.worldmonitor.app/api/bootstrap?tier=fast&public=1', credentials: 'omit' },
         { url: 'https://api.worldmonitor.app/api/bootstrap?public=1&tier=slow', credentials: 'omit' },
@@ -771,6 +789,7 @@ describe('wm-session refresh-on-401 (Layer 2)', () => {
         { url: 'https://api.worldmonitor.app/api/bootstrap?keys=weatherAlerts&public=1', credentials: 'omit' },
         { url: 'https://api.worldmonitor.app/api/news/v1/list-feed-digest?variant=full&lang=en&public=1', credentials: 'omit' },
         { url: 'https://api.worldmonitor.app/api/displacement/v1/get-displacement-summary?flow_limit=50&public=1', credentials: 'omit' },
+        { url: '/api/bootstrap?keys=diseaseWatch&public=1', credentials: 'same-origin' },
       ],
       'only exact credential-less public data requests should reach native fetch during cooldown',
     );

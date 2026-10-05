@@ -77,6 +77,20 @@ World Monitor is a real-time global intelligence dashboard built as a TypeScript
 
 ### MONITOR deployment
 
+MONITOR's Disease Watch is an opt-in expanded dashboard opened from the header
+or mobile menu, with a compact panel in new visitors' layouts. Russia is the
+priority watch. Its editorial assessment has a fixed review date and is never
+reclassified by incoming headlines. A separate news stream contains selected
+publishers' Russia/plague/pneumonia headlines; global coverage uses WHO Disease
+Outbreak News bulletins. Neither stream is a case census.
+
+`/api/bootstrap?keys=diseaseWatch&public=1` resolves these public sources on
+demand through `api/_disease-watch.js`, with bounded requests, coalescing and
+short caching. It adds no Vercel function, scheduled publisher, credentials or
+startup-tier payload. Every source retains its own successful-fetch timestamp;
+failed refreshes are labeled and cached results expire after 24 hours. The
+original outbreak-map dataset and non-MONITOR variants remain separate.
+
 The MONITOR fork retains twelve Vercel API functions. Its current dashboard uses
 the news v1 RPC family in place of the upstream economic v1 family; `.vercelignore`
 controls route discovery and the build prune script asserts the same set. MONITOR
