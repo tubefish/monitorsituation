@@ -80,3 +80,38 @@ test('fetches and normalizes an allowlisted account with paid reads behind CDN c
   assert.equal(body.posts[0].metrics.likes, 12);
   assert.equal(body.posts[0].hasMedia, true);
 });
+
+test('monitoring search enforces 6+ likes, literal text, authors, sort and pagination', async () => {
+  process.env.X_BEARER_TOKEN = 'fixture';
+  const post = (id, text, likes) => ({ id, text, author_id: '42', created_at: `2026-10-05T12:00:${id.padStart(2,'0')}Z`, public_metrics: { like_count: likes } });
+  globalThis.fetch = async url => {
+    const params = new URL(url).searchParams;
+    assert.equal(params.get('query'), 'monitoring -is:retweet');
+    assert.equal(params.get('next_token'), 'next_123');
+    assert.equal(params.get('sort_order'), 'recency');
+    return Response.json({
+      data: [post('1', 'Monitoring the situation', 5), post('2', 'MONITORING now', 6), post('3', 'unmonitoring', 90), post('4', '#monitoring', 100), post('4', '#monitoring', 100), post('5', 'monitoring', undefined)],
+      includes: { users: [{ id: '42', username: 'tester', name: '<script>test</script>', profile_image_url: 'javascript:alert(1)' }] },
+      meta: { next_token: 'next_456' },
+    });
+  };
+  const response = await handler(new Request('https://example.test/api/escalation-x-feed?mode=monitoring&cursor=next_123'));
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.deepEqual(body.posts.map(p => p.id), ['4', '2']);
+  assert.equal(body.posts[0].account.profileImageUrl, '');
+  assert.equal(body.nextToken, 'next_456');
+});
+
+test('monitoring search validates cursors and handles access/rate failures without secrets', async () => {
+  process.env.X_BEARER_TOKEN = 'fixture';
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Response('', {status: 403}); };
+  assert.equal((await handler(new Request('https://example.test/api/escalation-x-feed?mode=monitoring&cursor=%26query%3Dother'))).status, 400);
+  assert.equal(calls, 0);
+  assert.equal((await handler(new Request('https://example.test/api/escalation-x-feed?mode=monitoring'))).status, 502);
+  globalThis.fetch = async () => new Response('', {status: 429});
+  const response = await handler(new Request('https://example.test/api/escalation-x-feed?mode=monitoring'));
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get('retry-after'), '60');
+});

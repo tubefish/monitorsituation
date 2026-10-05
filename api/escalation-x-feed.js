@@ -74,8 +74,9 @@ export default async function handler(req) {
 
   const requestUrl = new URL(req.url);
   const handle = (requestUrl.searchParams.get('account') || '').trim().toLowerCase();
+  const monitoring = requestUrl.searchParams.get('mode') === 'monitoring';
   const label = ESCALATION_X_ACCOUNTS[handle];
-  if (!label) {
+  if (!monitoring && !label) {
     return jsonResponse({ error: 'Unknown account' }, 400, NO_STORE_HEADERS);
   }
 
@@ -85,6 +86,7 @@ export default async function handler(req) {
   }
 
   try {
+    if (monitoring) return await monitoringSearch(requestUrl, bearerToken);
     const userParams = new URLSearchParams({
       'user.fields': 'name,username,profile_image_url,verified,verified_type',
     });
@@ -134,7 +136,7 @@ export default async function handler(req) {
   } catch (error) {
     const status = Number(error?.status);
     if (status === 401 || status === 403) {
-      return jsonResponse({ error: 'X authentication failed' }, 502, NO_STORE_HEADERS);
+      return jsonResponse({ error: monitoring ? 'X search access is unavailable for this API key' : 'X authentication failed' }, 502, NO_STORE_HEADERS);
     }
     if (status === 429) {
       return jsonResponse({ error: 'X rate limit reached; please try again shortly' }, 503, {
@@ -145,4 +147,49 @@ export default async function handler(req) {
     const timedOut = error?.name === 'AbortError';
     return jsonResponse({ error: timedOut ? 'X request timed out' : 'X feed is temporarily unavailable' }, timedOut ? 504 : 502, NO_STORE_HEADERS);
   }
+}
+
+// Fixed search, not a general-purpose paid X proxy. Each page is CDN-cached.
+async function monitoringSearch(requestUrl, bearerToken) {
+  const cursor = requestUrl.searchParams.get('cursor') || '';
+  if (cursor.length > 2048 || (cursor && !/^[A-Za-z0-9_=-]+$/.test(cursor))) {
+    return jsonResponse({ error: 'Invalid search cursor' }, 400, NO_STORE_HEADERS);
+  }
+  const params = new URLSearchParams({
+    query: 'monitoring -is:retweet',
+    max_results: '100',
+    sort_order: 'recency',
+    expansions: 'author_id',
+    'tweet.fields': 'created_at,author_id,attachments,public_metrics,note_tweet',
+    'user.fields': 'name,username,profile_image_url,verified',
+  });
+  if (cursor) params.set('next_token', cursor);
+  const payload = await fetchXJson(`/tweets/search/recent?${params}`, bearerToken);
+  if (payload.errors?.length && !Array.isArray(payload.data)) {
+    return jsonResponse({ error: 'X search is temporarily unavailable' }, 502, NO_STORE_HEADERS);
+  }
+  const users = new Map((payload.includes?.users || []).map(user => [user.id, user]));
+  const seen = new Set();
+  const posts = [];
+  for (const post of Array.isArray(payload.data) ? payload.data : []) {
+    const text = String(post.note_tweet?.text || post.text || '').trim();
+    const likes = normalizeMetric(post.public_metrics?.like_count);
+    const user = users.get(post.author_id);
+    if (likes < 6 || !/\bmonitoring\b/i.test(text) || !user || !/^[A-Za-z0-9_]{1,15}$/.test(user.username || '')
+      || !/^\d+$/.test(post.id || '') || !Number.isFinite(Date.parse(post.created_at)) || seen.has(post.id)) continue;
+    seen.add(post.id);
+    posts.push({
+      id: post.id, text, createdAt: post.created_at,
+      url: `https://x.com/${user.username}/status/${post.id}`,
+      hasMedia: Boolean(post.attachments?.media_keys?.length),
+      metrics: { likes, replies: normalizeMetric(post.public_metrics?.reply_count), reposts: normalizeMetric(post.public_metrics?.retweet_count) },
+      account: {
+        id: String(user.id), label: String(user.name || user.username), name: String(user.name || user.username),
+        handle: user.username, profileUrl: `https://x.com/${user.username}`,
+        profileImageUrl: cleanHttpsUrl(user.profile_image_url), verified: Boolean(user.verified),
+      },
+    });
+  }
+  posts.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  return jsonResponse({ posts, nextToken: payload.meta?.next_token || null, fetchedAt: new Date().toISOString() }, 200, SUCCESS_HEADERS);
 }

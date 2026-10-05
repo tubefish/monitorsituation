@@ -32,6 +32,7 @@ const FULL_PANELS: Record<string, PanelConfig> = {
   'fear-greed': { name: 'Fear & Greed', enabled: true, priority: 2 },
   'gdelt-intel': { name: 'Live Intelligence', enabled: true, priority: 1, ...(_desktop && { premium: 'enhanced' as const }) },
   'escalation-correlation': { name: 'Escalation Monitor', enabled: true, priority: 2 },
+  'whos-monitoring': { name: "Who's Monitoring", enabled: true, priority: 2 },
   politics: { name: 'World News', enabled: true, priority: 1 },
   'economic-correlation': { name: 'Economic Warfare', enabled: true, priority: 2 },
   cascade: { name: 'Infrastructure Cascade', enabled: true, priority: 1 },
@@ -1528,7 +1529,7 @@ export const PANEL_CATEGORY_MAP: Record<string, { labelKey: string; panelKeys: s
   },
   correlation: {
     labelKey: 'header.panelCatCorrelation',
-    panelKeys: ['military-correlation', 'escalation-correlation', 'economic-correlation', 'disaster-correlation'],
+    panelKeys: ['military-correlation', 'escalation-correlation', 'whos-monitoring', 'economic-correlation', 'disaster-correlation'],
     variants: ['full'],
   },
   regionalNews: {

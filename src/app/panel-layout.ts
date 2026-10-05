@@ -271,6 +271,7 @@ export const DEFERRED_PANEL_NATURAL_FOOTPRINTS: Readonly<Record<string, Deferred
   'energy-disruptions': { rowSpan: 2 },
   'economic-correlation': { rowSpan: 2, className: 'panel-wide' },
   'escalation-correlation': { rowSpan: 3, className: 'panel-wide' },
+  'whos-monitoring': { rowSpan: 3, className: 'panel-wide' },
   'fear-greed': { rowSpan: 2 },
   'fuel-shortages': { rowSpan: 2 },
   fx: { rowSpan: 2 },
@@ -2852,6 +2853,7 @@ export class PanelLayoutManager implements AppModule {
     this.lazyImportedPanel('escalation-correlation', () => import('@/components/EscalationCorrelationPanel'), 'EscalationCorrelationPanel', (EscalationCorrelationPanel) => {
       return new EscalationCorrelationPanel();
     });
+    this.lazyDefaultPanel('whos-monitoring', () => import('@/components/WhosMonitoringPanel'), 'WhosMonitoringPanel');
     this.lazyImportedPanel('economic-correlation', () => import('@/components/EconomicCorrelationPanel'), 'EconomicCorrelationPanel', (EconomicCorrelationPanel) => {
       const p = new EconomicCorrelationPanel();
       p.setMapNavigateHandler((lat, lon) => { this.ctx.map?.setCenter(lat, lon, 4); });
