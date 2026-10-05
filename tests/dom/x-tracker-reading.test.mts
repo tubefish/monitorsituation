@@ -29,7 +29,7 @@ async function mount() {
   vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
   panel.notifyConnected();
   await vi.advanceTimersByTimeAsync(0);
-  expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(9);
+  expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(10);
   return el;
 }
 
@@ -38,9 +38,9 @@ describe('X Tracker automatic updates', () => {
     const el = await mount();
     respond(true);
     await vi.advanceTimersByTimeAsync(60_000);
-    expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(18);
+    expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(20);
     expect(el.querySelector<HTMLButtonElement>('.monitor-feed-update')!.hidden).toBe(true);
-    expect(fetchEscalationXFeed).toHaveBeenCalledTimes(18);
+    expect(fetchEscalationXFeed).toHaveBeenCalledTimes(20);
   });
 
   it('preserves cards and scroll while reading, then applies updates on returning to the top', async () => {
@@ -52,18 +52,18 @@ describe('X Tracker automatic updates', () => {
     await vi.advanceTimersByTimeAsync(60_000);
     const update = el.querySelector<HTMLButtonElement>('.monitor-feed-update')!;
     expect(update.hidden).toBe(false);
-    expect(update.textContent).toContain('9 new posts');
-    expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(9);
+    expect(update.textContent).toContain('10 new posts');
+    expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(10);
     expect(el.querySelector('.escalation-x-post')).toBe(first);
     expect(content.scrollTop).toBe(180);
     content.scrollTop = 0;
     content.dispatchEvent(new Event('scroll'));
-    expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(18);
+    expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(20);
     expect(update.hidden).toBe(true);
     respond(false, true);
     await vi.advanceTimersByTimeAsync(60_000);
     expect(el.querySelector('.monitor-feed-notice')?.textContent).toContain('previously loaded');
-    expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(18);
+    expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(20);
     expect(el.querySelector('.escalation-x-live')?.textContent).toBe('OFFLINE');
   });
 
@@ -74,27 +74,27 @@ describe('X Tracker automatic updates', () => {
     respond(true);
     await vi.advanceTimersByTimeAsync(60_000);
     expect(document.activeElement).toBe(post);
-    expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(9);
+    expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(10);
     el.querySelector<HTMLButtonElement>('.monitor-feed-update')!.click();
-    expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(18);
+    expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(20);
   });
 
   it('pauses hidden tabs and offscreen panels and clears polling on destroy', async () => {
     const el = await mount();
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
     await vi.advanceTimersByTimeAsync(120_000);
-    expect(fetchEscalationXFeed).toHaveBeenCalledTimes(9);
+    expect(fetchEscalationXFeed).toHaveBeenCalledTimes(10);
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, -600, 400, 500));
     await vi.advanceTimersByTimeAsync(60_000);
-    expect(fetchEscalationXFeed).toHaveBeenCalledTimes(9);
+    expect(fetchEscalationXFeed).toHaveBeenCalledTimes(10);
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 100, 400, 500));
     respond(true);
     document.dispatchEvent(new Event('visibilitychange'));
     await vi.advanceTimersByTimeAsync(0);
-    expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(18);
+    expect(el.querySelectorAll('.escalation-x-post')).toHaveLength(20);
     panel!.destroy(); panel = null;
     await vi.advanceTimersByTimeAsync(120_000);
-    expect(fetchEscalationXFeed).toHaveBeenCalledTimes(18);
+    expect(fetchEscalationXFeed).toHaveBeenCalledTimes(20);
   });
 });

@@ -23,6 +23,7 @@ export const ESCALATION_X_ACCOUNTS = Object.freeze({
   rapidresponse47: 'Rapid Response 47',
   zerohedge: 'ZeroHedge',
   watcherguru: 'Watcher.Guru',
+  anniejacobsen: 'Annie Jacobsen',
 });
 
 function cleanHttpsUrl(value) {
