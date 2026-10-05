@@ -153,7 +153,7 @@ const PANEL_CLUSTER: Record<string, PanelChunkName> = {
   Deduction: 'panels-intel',
   DisasterCorrelation: 'panels-intel',
   EconomicCorrelation: 'panels-intel',
-  EscalationCorrelation: 'panels-intel',
+  EscalationCorrelation: 'panels-intel', WhosMonitoring: 'panels-intel',
   MilitaryCorrelation: 'panels-intel',
   Forecast: 'panels-intel',
   HeroSpotlight: 'panels-intel', Insights: 'panels-intel',
