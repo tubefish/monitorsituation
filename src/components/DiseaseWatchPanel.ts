@@ -42,6 +42,7 @@ export class DiseaseWatchPanel extends Panel {
   private globalStatus = node('p', 'dw-source-status');
   private globalReports = node('div', 'dw-global-grid');
   private reviewStatus = node('p', 'dw-review');
+  private assessmentStatus = node('span', 'dw-status', focus.status);
   private search = node('input', 'dw-search');
   private diseases = node('select', 'dw-select');
   private period = node('select', 'dw-select');
@@ -61,7 +62,7 @@ export class DiseaseWatchPanel extends Panel {
     lead.setAttribute('aria-label', 'Russia priority watch');
     const main = node('div', 'dw-lead-main');
     const badges = node('div', 'dw-badges');
-    badges.append(node('span', 'dw-priority', 'PRIORITY WATCH / RUSSIA'), node('span', 'dw-status', focus.status));
+    badges.append(node('span', 'dw-priority', 'PRIORITY WATCH / RUSSIA'), this.assessmentStatus);
     main.append(badges, node('h2', 'dw-title', focus.title), node('p', 'dw-location', focus.location), node('p', 'dw-summary', focus.summary));
     const sources = node('div', 'dw-sources');
     focus.sources.forEach(source => sources.append(link(`${source.name} ↗`, source.url)));
@@ -169,6 +170,7 @@ export class DiseaseWatchPanel extends Panel {
 
   private renderReview(): void {
     const old = Date.now() - focus.reviewedAt > 86_400_000;
+    this.assessmentStatus.textContent = old ? 'Unconfirmed at last review' : focus.status;
     this.reviewStatus.textContent = `${old ? 'Dated assessment — check newer reporting below. ' : ''}Reviewed ${checked(focus.reviewedAt)}. Feed refreshes do not re-verify this assessment.`;
     this.reviewStatus.classList.toggle('dw-review-old', old);
   }
