@@ -263,6 +263,7 @@ export const DEFERRED_PANEL_NATURAL_FOOTPRINTS: Readonly<Record<string, Deferred
   'china-activity-nowcast': { rowSpan: 2, className: 'panel-wide' },
   'consumer-prices': { rowSpan: 2 },
   displacement: { rowSpan: 2 },
+  'disease-outbreaks': { rowSpan: 3, className: 'panel-wide' },
   economic: { rowSpan: 2 },
   'global-procurement': { rowSpan: 2 },
   'energy-complex': { rowSpan: 2 },
@@ -985,6 +986,7 @@ export class PanelLayoutManager implements AppModule {
           ${SITE_VARIANT === 'full' ? `<nav class="monitor-primary-nav" aria-label="Sections">
             <button type="button" data-monitor-jump="map" class="active">World</button>
             <button type="button" data-monitor-jump="politics">News</button>
+            <button type="button" data-open-disease-watch>Disease Watch</button>
             <button type="button" data-monitor-jump="markets">Markets</button>
             <button type="button" data-monitor-jump="commodity-watch">Commodities</button>
             <button type="button" data-monitor-jump="escalation-correlation">X Tracker</button>
@@ -1058,6 +1060,7 @@ export class PanelLayoutManager implements AppModule {
         ).join('');
       })()}
         <div class="mobile-menu-divider"></div>
+        ${SITE_VARIANT === 'full' ? '<button type="button" class="mobile-menu-item" data-open-disease-watch>Disease Watch · Russia</button>' : ''}
         <button class="mobile-menu-item" id="mobileMenuRegion">
           <span class="mobile-menu-item-icon">🌐</span>
           <span class="mobile-menu-item-label">${t('components.deckgl.views.global')}</span>
@@ -1210,6 +1213,28 @@ export class PanelLayoutManager implements AppModule {
       reopen?.addEventListener('click', () => setCollapsed(false));
       document.getElementById('monitorAddPanel')?.addEventListener('click', () => {
         document.querySelector<HTMLButtonElement>('#panelsGrid .add-panel-block')?.click();
+      });
+      document.querySelectorAll<HTMLButtonElement>('[data-open-disease-watch]').forEach(button => {
+        button.addEventListener('click', async () => {
+          document.dispatchEvent(new Event('monitor:leave-markets'));
+          document.getElementById('mobileMenuClose')?.click();
+          if (this.ctx.isMobile) document.querySelector<HTMLButtonElement>('[data-mobile-tab="today"]')?.click();
+          setCollapsed(false);
+          const key = 'disease-outbreaks';
+          if (!this.ctx.panelSettings[key]) return;
+          this.ctx.panelSettings[key].enabled = true;
+          saveToStorage(STORAGE_KEYS.panels, this.ctx.panelSettings);
+          this.applyPanelSettings();
+          this.mountDeferredPanel(key);
+          const panel = await this.loadRegisteredPanel(key);
+          if (!panel || this.ctx.isDestroyed) return;
+          const grid = document.getElementById('panelsGrid');
+          if (grid && !panel.getElement().isConnected) this.mountPanelElement(grid, key, panel);
+          panel.toggle(true);
+          panel.setCollapsed(false);
+          panel.setFullscreen(true);
+          (panel as { fetchData?: () => Promise<boolean> }).fetchData?.();
+        });
       });
       document.querySelectorAll<HTMLButtonElement>('[data-monitor-jump]').forEach((button) => {
         button.addEventListener('click', () => {
@@ -2862,7 +2887,11 @@ export class PanelLayoutManager implements AppModule {
       return ucdpEventsPanel;
     });
 
-    this.lazyDefaultPanel('disease-outbreaks', () => import('@/components/DiseaseOutbreaksPanel'), 'DiseaseOutbreaksPanel');
+    if (SITE_VARIANT === 'full') {
+      this.lazyDefaultPanel('disease-outbreaks', () => import('@/components/DiseaseWatchPanel'), 'DiseaseWatchPanel');
+    } else {
+      this.lazyDefaultPanel('disease-outbreaks', () => import('@/components/DiseaseOutbreaksPanel'), 'DiseaseOutbreaksPanel');
+    }
     this.lazyDefaultPanel('social-velocity', () => import('@/components/SocialVelocityPanel'), 'SocialVelocityPanel');
     this.lazyDefaultPanel('wsb-ticker-scanner', () => import('@/components/WsbTickerScannerPanel'), 'WsbTickerScannerPanel');
 

@@ -4427,6 +4427,11 @@ this.ctx.mapExperience?.setLocationNews(geoLocated);
   }
 
   async loadDiseaseOutbreaks(): Promise<void> {
+    if (SITE_VARIANT === 'full') {
+      const panel = this.ctx.panels['disease-outbreaks'] as { fetchData?: () => Promise<boolean> } | undefined;
+      await panel?.fetchData?.();
+      return;
+    }
     try {
       const data = await fetchDiseaseOutbreaks();
       if (data.outbreaks?.length) {

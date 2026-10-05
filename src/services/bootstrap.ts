@@ -190,7 +190,7 @@ export async function ensureHydrated(key: string): Promise<unknown | undefined> 
     try {
       const resp = await fetch(
         toApiUrl(`/api/bootstrap?keys=${encodeURIComponent(key)}&public=1`),
-        { credentials: 'omit', signal: AbortSignal.timeout(10_000) },
+        { credentials: 'omit', signal: AbortSignal.timeout(key === 'diseaseWatch' ? 25_000 : 10_000) },
       );
       if (!resp.ok) return undefined;
       const payload = (await resp.json()) as { data?: Record<string, unknown> };
