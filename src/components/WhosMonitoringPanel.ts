@@ -30,7 +30,7 @@ export class WhosMonitoringPanel extends Panel {
     this.list = h('div', { className: 'escalation-x-posts' });
     this.setContentNodes(
       h('div', { className: 'escalation-x-account-bar' },
-        h('div', { className: 'escalation-x-identity' }, h('strong', {}, '“monitoring”'), h('span', { className: 'escalation-x-handle' }, '6+ likes')),
+        h('div', { className: 'escalation-x-identity' }, h('strong', {}, '“monitoring”')),
         h('div', { className: 'escalation-x-status' }, this.status, this.refresh)),
       h('p', { className: 'escalation-x-updated' }, 'Recent posts on X · Newest first · Auto 1m'),
       this.list, this.older,
@@ -80,7 +80,7 @@ export class WhosMonitoringPanel extends Panel {
     this.older.hidden = !this.nextToken;
     if (!this.posts.length && !this.list.querySelector('.empty-state')) {
       this.list.append(h('div', { className: 'empty-state' }, this.nextToken
-        ? 'No posts with 6+ likes in this batch. Load older matches to keep searching.'
+        ? 'No matching posts in this batch. Load older matches to keep searching.'
         : 'No matching posts found in X’s recent search window.'));
     }
     this.status.textContent = `Updated ${formatXTime(this.fetchedAt || feed.fetchedAt)} ago`;
