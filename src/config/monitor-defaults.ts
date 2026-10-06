@@ -32,6 +32,7 @@ import {
 export const MONITOR_DEFAULT_PANEL_ORDER = [
   'map',
   'escalation-correlation',
+  'whos-monitoring',
   'politics',
   'disease-outbreaks',
   'threat-timeline',
@@ -136,6 +137,22 @@ if (SITE_VARIANT === 'full' && typeof window !== 'undefined') {
       window.localStorage.setItem(migrationKey, 'done');
     }
   } catch { /* Normal defaults still apply if storage is unavailable. */ }
+}
+
+// Insert the new feed beside X Tracker once; preserve later user rearrangements.
+if (SITE_VARIANT === 'full' && typeof window !== 'undefined') {
+  try {
+    const key = 'monitor-whos-monitoring-order-v1';
+    if (window.localStorage.getItem(key) !== 'done') {
+      const order: unknown = JSON.parse(window.localStorage.getItem(PANEL_ORDER_STORAGE_KEY) || 'null');
+      if (Array.isArray(order) && order.every(item => typeof item === 'string') && !order.includes('whos-monitoring')) {
+        const tracker = order.indexOf('escalation-correlation');
+        order.splice(tracker >= 0 ? tracker + 1 : 0, 0, 'whos-monitoring');
+        window.localStorage.setItem(PANEL_ORDER_STORAGE_KEY, JSON.stringify(order));
+      }
+      window.localStorage.setItem(key, 'done');
+    }
+  } catch { /* Normal defaults apply when storage is unavailable. */ }
 }
 
 if (SITE_VARIANT === 'full' && typeof window !== 'undefined') {

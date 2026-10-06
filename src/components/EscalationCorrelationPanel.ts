@@ -1,13 +1,11 @@
 import { Panel } from './Panel';
 import { h } from '@/utils/dom-utils';
-import { sanitizeUrl } from '@/utils/sanitize';
+import { buildXPost } from './x-post-card';
 import { formatXTime } from '@/services/x-intel';
 import {
   fetchEscalationXFeed,
   X_FEED_POLL_INTERVAL_MS,
-  type EscalationXAccount,
   type EscalationXFeed,
-  type EscalationXPost,
 } from '@/services/escalation-x-feed';
 
 interface XAccountSource {
@@ -15,7 +13,6 @@ interface XAccountSource {
   handle: string;
 }
 
-const NEW_POST_THRESHOLD_MS = 30 * 60 * 1000;
 
 export const ESCALATION_X_ACCOUNTS: readonly XAccountSource[] = [
   { label: 'Monitoring', handle: 'monitoringmeme' },
@@ -182,7 +179,7 @@ export class EscalationCorrelationPanel extends Panel {
     this.setContentNodes(
       this.buildCombinedHeader(feeds.length, failedCount, fetchedAt),
       posts.length
-        ? h('div', { className: 'escalation-x-posts' }, ...posts.map(({ account, post }) => this.buildPost(account, post)))
+        ? h('div', { className: 'escalation-x-posts' }, ...posts.map(({ account, post }) => buildXPost(account, post)))
         : h('div', { className: 'empty-state escalation-x-empty' }, 'No recent original posts were returned from the tracked accounts.'),
     );
   }
@@ -201,63 +198,6 @@ export class EscalationCorrelationPanel extends Panel {
           ? h('span', { className: 'escalation-x-updated' }, `${failedCount} source${failedCount === 1 ? '' : 's'} unavailable`)
           : null,
         h('button', { type: 'button', className: 'monitor-feed-refresh', onClick: () => void this.loadCombinedFeed(true), 'aria-label': 'Refresh X Tracker' }, 'Refresh'),
-      ),
-    );
-  }
-
-  private buildPost(account: EscalationXAccount, post: EscalationXPost): HTMLElement {
-    const createdMs = Date.parse(post.createdAt);
-    const isNew = Number.isFinite(createdMs) && Date.now() - createdMs < NEW_POST_THRESHOLD_MS;
-    const stats = [
-      post.hasMedia ? 'MEDIA' : '',
-      post.metrics.reposts ? `${post.metrics.reposts.toLocaleString()} reposts` : '',
-      post.metrics.likes ? `${post.metrics.likes.toLocaleString()} likes` : '',
-    ].filter(Boolean);
-    const postUrl = sanitizeUrl(post.url);
-    const openPost = () => window.open(postUrl, '_blank', 'noopener,noreferrer');
-    const avatar = account.profileImageUrl
-      ? h('img', { className: 'escalation-x-avatar', src: sanitizeUrl(account.profileImageUrl), alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' })
-      : h('span', { className: 'escalation-x-avatar escalation-x-avatar-fallback', 'aria-hidden': 'true' }, account.label.slice(0, 1));
-
-    return h('article', {
-      className: `escalation-x-post ${isNew ? 'is-new' : ''}`,
-      role: 'link',
-      tabindex: '0',
-      'aria-label': `Open post by ${account.name} on X`,
-      style: { cursor: 'pointer' },
-      onClick: (event: MouseEvent) => {
-        const target = event.target as HTMLElement | null;
-        if (target?.closest('a, button')) return;
-        openPost();
-      },
-      onKeyDown: (event: KeyboardEvent) => {
-        if (event.target !== event.currentTarget) return;
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        openPost();
-      },
-    },
-      h('div', { className: 'escalation-x-post-rail', 'aria-hidden': 'true' }),
-      h('div', { className: 'escalation-x-post-body' },
-        h('div', { className: 'escalation-x-post-meta' },
-          h('div', { className: 'escalation-x-identity' },
-            avatar,
-            h('div', { className: 'escalation-x-account-copy' },
-              h('div', { className: 'escalation-x-name-row' },
-                h('strong', { className: 'escalation-x-name' }, account.name || account.label),
-                account.verified ? h('span', { className: 'escalation-x-verified', title: 'Verified on X', 'aria-label': 'Verified on X' }, '✓') : null,
-              ),
-              h('span', { className: 'escalation-x-handle' }, `@${account.handle}`),
-            ),
-          ),
-          isNew ? h('span', { className: 'escalation-x-new-badge' }, 'NEW') : null,
-          h('span', { className: 'escalation-x-post-time' }, `${formatXTime(post.createdAt)} ago`),
-        ),
-        h('p', { className: 'escalation-x-post-text' }, post.text),
-        h('div', { className: 'escalation-x-post-footer' },
-          h('span', { className: 'escalation-x-post-stats' }, stats.join(' · ')),
-          h('a', { className: 'escalation-x-open-post', href: postUrl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': `Open post by ${account.name} on X` }, 'View on X ↗'),
-        ),
       ),
     );
   }
