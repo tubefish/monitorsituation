@@ -175,7 +175,7 @@ async function monitoringSearch(requestUrl, bearerToken) {
     const text = String(post.note_tweet?.text || post.text || '').trim();
     const likes = normalizeMetric(post.public_metrics?.like_count);
     const user = users.get(post.author_id);
-    if (likes < 6 || !/\bmonitoring\b/i.test(text) || !user || !/^[A-Za-z0-9_]{1,15}$/.test(user.username || '')
+    if (likes < 15 || !/\bmonitoring\b/i.test(text) || !user || !/^[A-Za-z0-9_]{1,15}$/.test(user.username || '')
       || !/^\d+$/.test(post.id || '') || !Number.isFinite(Date.parse(post.created_at)) || seen.has(post.id)) continue;
     seen.add(post.id);
     posts.push({

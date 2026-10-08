@@ -8,7 +8,7 @@ let panel: WhosMonitoringPanel;
 const feed = (ids: string[], nextToken: string | null = 'next'): MonitoringFeed => ({
   nextToken, fetchedAt: new Date().toISOString(), posts: ids.map(id => ({
     id, text: 'monitoring <script>alert(1)</script>', createdAt: '2026-10-08T12:00:00Z',
-    url: `https://x.com/test/status/${id}`, hasMedia: false, metrics: { likes: 6, replies: 0, reposts: 0 },
+    url: `https://x.com/test/status/${id}`, hasMedia: false, metrics: { likes: 15, replies: 0, reposts: 0 },
     account: { id: '1', name: 'Test', label: 'Test', handle: 'test', profileUrl: 'https://x.com/test', profileImageUrl: '', verified: false },
   })),
 });
