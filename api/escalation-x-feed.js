@@ -28,8 +28,9 @@ const SOCCER_TERMS = [
 ];
 const SOCCER_ACCOUNTS = new Set(['deadlinedaylive']);
 const SOCCER_TEXT = new RegExp(`\\b(?:${SOCCER_TERMS.join('|').replaceAll(' ', '\\s+')})\\b`, 'i');
+const MIN_MONITORING_LIKES = 25;
 const MONITORING_QUERY = [
-  'monitoring -is:retweet min_likes:15',
+  `monitoring -is:retweet min_likes:${MIN_MONITORING_LIKES}`,
   ...[...SOCCER_CONTEXTS].map(context => `-context:${context}`),
   ...SOCCER_TERMS.map(term => term.includes(' ') ? `-"${term}"` : `-${term}`),
   ...[...SOCCER_ACCOUNTS].map(handle => `-from:${handle}`),
@@ -206,7 +207,7 @@ async function monitoringSearch(requestUrl, bearerToken) {
     const text = String(post.note_tweet?.text || post.text || '').trim();
     const likes = normalizeMetric(post.public_metrics?.like_count);
     const user = users.get(post.author_id);
-    if (likes < 15 || !/\bmonitoring\b/i.test(text) || !user || !/^[A-Za-z0-9_]{1,15}$/.test(user.username || '')
+    if (likes < MIN_MONITORING_LIKES || !/\bmonitoring\b/i.test(text) || !user || !/^[A-Za-z0-9_]{1,15}$/.test(user.username || '')
       || !/^\d+$/.test(post.id || '') || !Number.isFinite(Date.parse(post.created_at)) || seen.has(post.id)
       || isSoccerPost(post, text, user.username)) continue;
     seen.add(post.id);
