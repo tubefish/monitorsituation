@@ -8,11 +8,7 @@ const NEW_POST_THRESHOLD_MS = 30 * 60 * 1000;
 export function buildXPost(account: EscalationXAccount, post: EscalationXPost): HTMLElement {
   const createdMs = Date.parse(post.createdAt);
   const isNew = Number.isFinite(createdMs) && Date.now() - createdMs < NEW_POST_THRESHOLD_MS;
-  const stats = [
-    post.hasMedia ? 'MEDIA' : '',
-    post.metrics.reposts ? `${post.metrics.reposts.toLocaleString()} reposts` : '',
-    post.metrics.likes ? `${post.metrics.likes.toLocaleString()} likes` : '',
-  ].filter(Boolean);
+  const stats = formatXPostStats(post);
   const postUrl = sanitizeUrl(post.url);
   const openPost = () => window.open(postUrl, '_blank', 'noopener,noreferrer');
   const avatar = account.profileImageUrl
@@ -55,10 +51,32 @@ export function buildXPost(account: EscalationXAccount, post: EscalationXPost): 
       ),
       h('p', { className: 'escalation-x-post-text' }, post.text),
       h('div', { className: 'escalation-x-post-footer' },
-        h('span', { className: 'escalation-x-post-stats' }, stats.join(' · ')),
+        h('span', { className: 'escalation-x-post-stats' }, stats),
         h('a', { className: 'escalation-x-open-post', href: postUrl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': `Open post by ${account.name} on X` }, 'View on X ↗'),
       ),
     ),
   );
 }
 
+
+function formatXPostStats(post: EscalationXPost): string {
+  return [
+    post.hasMedia ? 'MEDIA' : '',
+    post.metrics.reposts ? `${post.metrics.reposts.toLocaleString()} reposts` : '',
+    post.metrics.likes ? `${post.metrics.likes.toLocaleString()} likes` : '',
+  ].filter(Boolean).join(' · ');
+}
+
+/** Refresh changing metadata without replacing a card, its links or selected text. */
+export function updateXPostMetadata(card: HTMLElement, post: EscalationXPost): void {
+  const stats = card.querySelector('.escalation-x-post-stats');
+  const nextStats = formatXPostStats(post);
+  if (stats && stats.textContent !== nextStats) stats.textContent = nextStats;
+  const time = card.querySelector('.escalation-x-post-time');
+  const nextTime = `${formatXTime(post.createdAt)} ago`;
+  if (time && time.textContent !== nextTime) time.textContent = nextTime;
+  const createdMs = Date.parse(post.createdAt);
+  const isNew = Number.isFinite(createdMs) && Date.now() - createdMs < NEW_POST_THRESHOLD_MS;
+  card.classList.toggle('is-new', isNew);
+  if (!isNew) card.querySelector('.escalation-x-new-badge')?.remove();
+}

@@ -1291,7 +1291,18 @@ export class PanelLayoutManager implements AppModule {
 
     // The divider changes the grid independently of the window viewport.
     // Refit spans when either zone changes size, preserving saved widths.
-    const gridObserver = new ResizeObserver(() => {
+    const gridWidths = new WeakMap<Element, number>();
+    const gridObserver = new ResizeObserver((entries) => {
+      // Feed hydration and content-visibility can change grid height while scrolling.
+      // Only width changes require the expensive read/write pass across all panels.
+      let widthChanged = false;
+      for (const entry of entries) {
+        const width = entry.contentRect.width;
+        if (gridWidths.get(entry.target) === width) continue;
+        gridWidths.set(entry.target, width);
+        widthChanged = true;
+      }
+      if (!widthChanged) return;
       for (const panel of Object.values(this.ctx.panels)) panel.refreshGridWidth();
       document.querySelectorAll<HTMLElement>('.panel-deferred-shell').forEach((shell) => {
         reconcileDeferredPanelShellColSpan(shell);
