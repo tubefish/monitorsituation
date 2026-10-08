@@ -345,6 +345,7 @@ export class App {
   /** Earliest `Date.now()` at which a failed prime key may be retried. */
   private visiblePanelPrimeRetryAt = new Map<string, number>();
   private visiblePanelPrimeRaf: number | null = null;
+  private visiblePanelPrimeTimer: ReturnType<typeof setTimeout> | null = null;
   private viewportHydrationReady = false;
   private viewportHydrationReadyAt = 0;
   private followedCountriesCapDropToastTimer: number | null = null;
@@ -380,6 +381,17 @@ export class App {
       event.target instanceof Element &&
       !event.target.matches('.main-content, .panels-grid')
     ) {
+      return;
+    }
+    // A dashboard-wide data pass on every animation frame competes with scrolling.
+    // Keep a trailing pass during long gestures, without delaying panel mounts.
+    if (event?.type === 'scroll') {
+      if (this.visiblePanelPrimeTimer === null) {
+        this.visiblePanelPrimeTimer = setTimeout(() => {
+          this.visiblePanelPrimeTimer = null;
+          this.handleViewportPrime();
+        }, 150);
+      }
       return;
     }
     if (this.visiblePanelPrimeRaf !== null) return;
@@ -3304,6 +3316,10 @@ export class App {
       CLOUD_PREFS_SIGN_IN_TERMINAL_EVENT,
       this.handleCloudPrefsSignInTerminal,
     );
+    if (this.visiblePanelPrimeTimer !== null) {
+      clearTimeout(this.visiblePanelPrimeTimer);
+      this.visiblePanelPrimeTimer = null;
+    }
     if (this.visiblePanelPrimeRaf !== null) {
       window.cancelAnimationFrame(this.visiblePanelPrimeRaf);
       this.visiblePanelPrimeRaf = null;
