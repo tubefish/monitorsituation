@@ -246,6 +246,13 @@
 
 .escalation-x-posts { padding: 8px; }
 
+.monitor-feed-pagination {
+  padding: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: center;
+}
+
 .escalation-x-post {
   position: relative;
   display: flex;

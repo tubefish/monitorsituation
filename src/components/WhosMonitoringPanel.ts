@@ -6,6 +6,7 @@ import { formatXTime } from '@/services/x-intel';
 
 const POLL_MS = 60_000;
 const SCROLL_IDLE_MS = 180;
+const LOAD_MORE_MARGIN = 240;
 
 export class WhosMonitoringPanel extends Panel {
   private posts: MonitoringPost[] = [];
@@ -20,11 +21,14 @@ export class WhosMonitoringPanel extends Panel {
   private controller: AbortController | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private applyTimer: ReturnType<typeof setTimeout> | null = null;
+  private loadMoreTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryOlderAt = 0;
+  private loadingOlder = false;
   private observer: IntersectionObserver | null = null;
   private readonly cards = new Map<string, { node: HTMLElement; signature: string }>();
   private readonly status: HTMLElement;
   private readonly retry: HTMLButtonElement;
-  private readonly older: HTMLButtonElement;
+  private readonly paginationStatus: HTMLElement;
   private readonly list: HTMLElement;
 
   constructor() {
@@ -32,8 +36,8 @@ export class WhosMonitoringPanel extends Panel {
     this.status = h('span', { className: 'escalation-x-updated', role: 'status' }, 'Connecting to X…');
     this.retry = h('button', { type: 'button', className: 'monitor-feed-refresh', onClick: () => void this.load() }, 'Retry') as HTMLButtonElement;
     this.retry.hidden = true;
-    this.older = h('button', { type: 'button', className: 'monitor-feed-refresh', onClick: () => void this.load(true) }, 'Load older matches') as HTMLButtonElement;
-    this.older.hidden = true;
+    this.paginationStatus = h('div', { className: 'monitor-feed-pagination', role: 'status' });
+    this.paginationStatus.hidden = true;
     this.list = h('div', { className: 'escalation-x-posts' });
     // Anchor explicitly around keyed updates; native anchoring would apply twice.
     this.content.style.overflowAnchor = 'none';
@@ -42,9 +46,13 @@ export class WhosMonitoringPanel extends Panel {
         h('span', { className: 'escalation-x-live', title: 'Updates automatically every minute' },
           h('span', { className: 'escalation-x-live-dot' }), 'LIVE'),
         h('div', { className: 'escalation-x-status' }, this.status, this.retry)),
-      this.list, this.older,
+      this.list, this.paginationStatus,
     );
-    const resume = () => { if (this.visible()) this.refreshIfStale(); };
+    const resume = () => {
+      if (!this.visible()) return;
+      this.refreshIfStale();
+      this.scheduleLoadMore();
+    };
     document.addEventListener('visibilitychange', resume, { signal: this.signal });
     window.addEventListener('focus', resume, { signal: this.signal });
     window.addEventListener('online', resume, { signal: this.signal });
@@ -55,6 +63,7 @@ export class WhosMonitoringPanel extends Panel {
       this.applyTimer = setTimeout(() => {
         this.applyTimer = null;
         this.applyPending();
+        this.scheduleLoadMore();
       }, SCROLL_IDLE_MS);
     }, { passive: true, signal: this.signal });
     this.runWhenConnected(() => {
@@ -82,6 +91,25 @@ export class WhosMonitoringPanel extends Panel {
     if (Date.now() - this.lastAttempt >= POLL_MS) void this.load();
   }
 
+  private scheduleLoadMore(): void {
+    if (this.loadMoreTimer || this.signal.aborted || !this.nextToken) return;
+    // Check after layout settles, including a resized panel or a sparse batch.
+    // Space requests out even when X returns pages with no qualifying matches.
+    this.loadMoreTimer = setTimeout(() => {
+      this.loadMoreTimer = null;
+      if (!this.visible() || this.loading || this.pending || Date.now() < this.retryOlderAt) return;
+      const { clientHeight, scrollHeight, scrollTop } = this.content;
+      if (clientHeight > 0 && scrollHeight - scrollTop - clientHeight <= LOAD_MORE_MARGIN) void this.load(true);
+    }, 1_000);
+  }
+
+  private updatePaginationStatus(): void {
+    this.paginationStatus.hidden = !this.loadingOlder && !this.nextToken && !this.paged;
+    this.paginationStatus.textContent = this.loadingOlder ? 'Loading more matches…'
+      : this.retryOlderAt > Date.now() ? 'Couldn’t load more matches. Retrying automatically…'
+      : this.nextToken ? 'Scroll for more matches' : 'No more matches.';
+  }
+
   private applyPending(): void {
     if (!this.pending || this.applyTimer || this.signal.aborted) return;
     const selection = window.getSelection();
@@ -98,7 +126,8 @@ export class WhosMonitoringPanel extends Panel {
       this.olderPosts.push(...added);
       this.posts.push(...added);
       this.paged = true;
-      this.nextToken = feed.nextToken;
+      // A repeated cursor must not create an endless request loop.
+      this.nextToken = feed.nextToken === this.nextToken ? null : feed.nextToken;
     } else {
       const ids = new Set(feed.posts.map(post => post.id));
       this.olderPosts = this.olderPosts.filter(post => !ids.has(post.id));
@@ -143,7 +172,7 @@ export class WhosMonitoringPanel extends Panel {
       if (card.node !== cursor) this.list.insertBefore(card.node, cursor);
       cursor = card.node.nextElementSibling;
     }
-    this.older.hidden = !this.nextToken;
+    this.updatePaginationStatus();
     if (!this.posts.length) {
       this.list.append(h('div', { className: 'empty-state' }, this.nextToken
         ? 'No matches in this batch. More posts are available below.'
@@ -154,26 +183,35 @@ export class WhosMonitoringPanel extends Panel {
       ? scrollTop + nextAnchor.getBoundingClientRect().top - viewportTop - anchorOffset
       : scrollTop;
     this.status.textContent = `Updated ${formatXTime(this.fetchedAt || feed.fetchedAt)} ago`;
+    this.scheduleLoadMore();
   }
 
   private async load(append = false): Promise<void> {
     if (this.loading || this.signal.aborted || (append && !this.nextToken)) return;
     this.loading = true;
+    this.loadingOlder = append;
     if (!append) this.lastAttempt = Date.now();
-    this.retry.disabled = this.older.disabled = true;
+    this.retry.disabled = true;
+    this.updatePaginationStatus();
     this.controller = new AbortController();
     const timeout = setTimeout(() => this.controller?.abort(), 15_000);
     try {
       const feed = await fetchMonitoringFeed(this.controller.signal, append ? this.nextToken! : undefined);
       if (this.signal.aborted) return;
-      this.retry.hidden = true;
-      if (append) this.apply(feed, true);
-      else {
+      if (append) {
+        this.retryOlderAt = 0;
+        this.apply(feed, true);
+      } else {
+        this.retry.hidden = true;
         this.pending = feed;
         this.applyPending();
       }
     } catch (error) {
       if (this.signal.aborted) return;
+      if (append) {
+        this.retryOlderAt = Date.now() + POLL_MS;
+        return;
+      }
       this.status.textContent = this.fetchedAt ? 'Retrying automatically · Showing saved posts' : 'Retrying automatically';
       this.retry.hidden = false;
       if (!this.fetchedAt) this.list.replaceChildren(h('div', { className: 'escalation-x-error', role: 'status' },
@@ -181,13 +219,17 @@ export class WhosMonitoringPanel extends Panel {
     } finally {
       clearTimeout(timeout);
       this.loading = false;
-      this.retry.disabled = this.older.disabled = false;
+      this.loadingOlder = false;
+      this.retry.disabled = false;
+      this.updatePaginationStatus();
+      this.scheduleLoadMore();
     }
   }
 
   override destroy(): void {
     if (this.timer) clearInterval(this.timer);
     if (this.applyTimer) clearTimeout(this.applyTimer);
+    if (this.loadMoreTimer) clearTimeout(this.loadMoreTimer);
     this.observer?.disconnect();
     this.controller?.abort();
     this.pending = null;
