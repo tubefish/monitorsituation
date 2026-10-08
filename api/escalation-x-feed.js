@@ -13,6 +13,37 @@ const SUCCESS_HEADERS = {
 };
 const NO_STORE_HEADERS = { 'Cache-Control': 'no-store' };
 
+// Exclude soccer upstream so these posts do not consume paid search reads.
+// X's taxonomy: Soccer (Sport/Topics) and Soccer transfers (Topics).
+// https://github.com/xdevplatform/twitter-context-annotations
+const SOCCER_CONTEXTS = new Set([
+  '11.733756536430809088',
+  '131.733756536430809088',
+  '131.1294019337066438657',
+]);
+const SOCCER_TERMS = [
+  'soccer', 'futbol', 'futebol', 'UEFA', 'FIFA', 'Premier League',
+  'Champions League', 'La Liga', 'Bundesliga', 'Serie A', 'Ligue 1',
+  'midfielder', 'midfielders',
+];
+const SOCCER_ACCOUNTS = new Set(['deadlinedaylive']);
+const SOCCER_TEXT = new RegExp(`\\b(?:${SOCCER_TERMS.join('|').replaceAll(' ', '\\s+')})\\b`, 'i');
+const MONITORING_QUERY = [
+  'monitoring -is:retweet min_likes:15',
+  ...[...SOCCER_CONTEXTS].map(context => `-context:${context}`),
+  ...SOCCER_TERMS.map(term => term.includes(' ') ? `-"${term}"` : `-${term}`),
+  ...[...SOCCER_ACCOUNTS].map(handle => `-from:${handle}`),
+].join(' ');
+
+function isSoccerPost(post, text, handle) {
+  // Defense for full note text and any annotation/indexing discrepancies.
+  const normalizedText = text.normalize('NFD').replace(/\p{M}/gu, '');
+  return SOCCER_ACCOUNTS.has(handle.toLowerCase()) || SOCCER_TEXT.test(normalizedText)
+    || (Array.isArray(post.context_annotations) && post.context_annotations.some(
+      annotation => SOCCER_CONTEXTS.has(`${annotation.domain?.id}.${annotation.entity?.id}`),
+    ));
+}
+
 export const ESCALATION_X_ACCOUNTS = Object.freeze({
   monitoringmeme: 'Monitoring the Situation',
   sentdefender: 'OSINTdefender',
@@ -156,11 +187,11 @@ async function monitoringSearch(requestUrl, bearerToken) {
     return jsonResponse({ error: 'Invalid search cursor' }, 400, NO_STORE_HEADERS);
   }
   const params = new URLSearchParams({
-    query: 'monitoring -is:retweet',
+    query: MONITORING_QUERY,
     max_results: '100',
     sort_order: 'recency',
     expansions: 'author_id',
-    'tweet.fields': 'created_at,author_id,attachments,public_metrics,note_tweet',
+    'tweet.fields': 'created_at,author_id,attachments,public_metrics,note_tweet,context_annotations',
     'user.fields': 'name,username,profile_image_url,verified',
   });
   if (cursor) params.set('next_token', cursor);
@@ -176,7 +207,8 @@ async function monitoringSearch(requestUrl, bearerToken) {
     const likes = normalizeMetric(post.public_metrics?.like_count);
     const user = users.get(post.author_id);
     if (likes < 15 || !/\bmonitoring\b/i.test(text) || !user || !/^[A-Za-z0-9_]{1,15}$/.test(user.username || '')
-      || !/^\d+$/.test(post.id || '') || !Number.isFinite(Date.parse(post.created_at)) || seen.has(post.id)) continue;
+      || !/^\d+$/.test(post.id || '') || !Number.isFinite(Date.parse(post.created_at)) || seen.has(post.id)
+      || isSoccerPost(post, text, user.username)) continue;
     seen.add(post.id);
     posts.push({
       id: post.id, text, createdAt: post.created_at,
