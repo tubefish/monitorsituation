@@ -1,3 +1,4 @@
+import { MONITOR_BRIEF_FEEDS } from '../../shared/monitor-news';
 import type { Feed } from '@/types';
 import { SITE_VARIANT } from './variant';
 import { rssProxyUrl } from '@/utils';
@@ -62,11 +63,7 @@ export function getSourcePanelId(sourceName: string): string {
 // #5957) — the full-variant news catalog is the reference set the audit counts.
 export const FULL_FEEDS: Record<string, Feed[]> = {
   politics: [
-    { name: 'BBC World', url: rss('https://feeds.bbci.co.uk/news/world/rss.xml') },
-    { name: 'Guardian World', url: rss('https://www.theguardian.com/world/rss') },
-    { name: 'AP News', url: rss('https://news.google.com/rss/search?q=site:apnews.com&hl=en-US&gl=US&ceid=US:en') },
-    { name: 'Reuters World', url: rss('https://news.google.com/rss/search?q=site:reuters.com+world&hl=en-US&gl=US&ceid=US:en') },
-    { name: 'CNN World', url: rss('https://news.google.com/rss/search?q=site:cnn.com+world+news+when:1d&hl=en-US&gl=US&ceid=US:en') },
+    ...MONITOR_BRIEF_FEEDS.map(feed => ({ ...feed, url: rss(feed.url) })),
     { name: 'Trump - Truth Social', url: rss('https://trumpstruth.org/feed') },
   ],
   us: [
@@ -1574,7 +1571,7 @@ export function getStrategicDefaultSources(): Set<string> {
  * so it is fetched regardless of the user's UI language.
  */
 export const DEFAULT_ENABLED_SOURCES: Record<string, string[]> = {
-  politics: ['BBC World', 'Guardian World', 'AP News', 'Reuters World', 'CNN World'],
+  politics: MONITOR_BRIEF_FEEDS.map(feed => feed.name),
   // Canada pack (#5960/#6604/#6605): CBC News + CTV News + Toronto Star
   // default-on for North America keyCountry CA (floors.CA = 3). Globe and Mail
   // + Global News remain catalog opt-in (arctic pack). Remaining depth names
