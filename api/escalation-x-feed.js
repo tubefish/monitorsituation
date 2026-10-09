@@ -28,7 +28,7 @@ const SOCCER_TERMS = [
 ];
 const SOCCER_ACCOUNTS = new Set(['deadlinedaylive']);
 const SOCCER_TEXT = new RegExp(`\\b(?:${SOCCER_TERMS.join('|').replaceAll(' ', '\\s+')})\\b`, 'i');
-const MIN_MONITORING_LIKES = 25;
+const MIN_MONITORING_LIKES = 49;
 const MONITORING_QUERY = [
   `monitoring -is:retweet min_likes:${MIN_MONITORING_LIKES}`,
   ...[...SOCCER_CONTEXTS].map(context => `-context:${context}`),
