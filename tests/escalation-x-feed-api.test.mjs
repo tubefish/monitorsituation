@@ -54,7 +54,7 @@ test('fetches and normalizes an allowlisted account with paid reads behind CDN c
     {
       data: [{
         id: '99',
-        text: 'A developing situation.',
+        text: 'Monitoring soccer news from a curated account.',
         created_at: '2026-09-21T05:00:00.000Z',
         attachments: { media_keys: ['3_99'] },
         public_metrics: { like_count: 12, reply_count: 2, retweet_count: 4 },
@@ -78,19 +78,29 @@ test('fetches and normalizes an allowlisted account with paid reads behind CDN c
   assert.equal(body.account.handle, 'monitoringmeme');
   assert.equal(body.posts[0].url, 'https://x.com/monitoringmeme/status/99');
   assert.equal(body.posts[0].metrics.likes, 12);
+  assert.match(body.posts[0].text, /soccer/);
   assert.equal(body.posts[0].hasMedia, true);
 });
 
-test('monitoring search enforces 15+ likes, literal text, authors, sort and pagination', async () => {
+test('monitoring search enforces 49+ likes, literal text, authors, sort and pagination', async () => {
   process.env.X_BEARER_TOKEN = 'fixture';
   const post = (id, text, likes) => ({ id, text, author_id: '42', created_at: `2026-10-05T12:00:${id.padStart(2,'0')}Z`, public_metrics: { like_count: likes } });
   globalThis.fetch = async url => {
     const params = new URL(url).searchParams;
-    assert.equal(params.get('query'), 'monitoring -is:retweet');
+    const query = params.get('query');
+    assert.ok(query.startsWith('monitoring -is:retweet min_likes:49 '));
+    assert.ok(query.includes('-context:11.733756536430809088'));
+    assert.ok(query.includes('-context:131.733756536430809088'));
+    assert.ok(query.includes('-context:131.1294019337066438657'));
+    assert.ok(query.includes('-soccer'));
+    assert.ok(query.includes('-"Premier League"'));
+    assert.ok(query.includes('-from:deadlinedaylive'));
+    assert.ok(query.length <= 512, 'recent search query must fit the self-serve limit');
+    assert.doesNotMatch(query, /-(?:football|arsenal|transfer|club)(?:\s|$)/i);
     assert.equal(params.get('next_token'), 'next_123');
     assert.equal(params.get('sort_order'), 'recency');
     return Response.json({
-      data: [post('1', 'Monitoring the situation', 14), post('2', 'MONITORING now', 15), post('3', 'unmonitoring', 90), post('4', '#monitoring', 100), post('4', '#monitoring', 100), post('5', 'monitoring', undefined), post('6', 'monitoring', 16)],
+      data: [post('1', 'Monitoring the situation', 48), post('2', 'MONITORING now', 49), post('3', 'unmonitoring', 90), post('4', '#monitoring', 100), post('4', '#monitoring', 100), post('5', 'monitoring', undefined), post('6', 'monitoring', 50)],
       includes: { users: [{ id: '42', username: 'tester', name: '<script>test</script>', profile_image_url: 'javascript:alert(1)' }] },
       meta: { next_token: 'next_456' },
     });
@@ -99,9 +109,47 @@ test('monitoring search enforces 15+ likes, literal text, authors, sort and pagi
   const body = await response.json();
   assert.equal(response.status, 200);
   assert.deepEqual(body.posts.map(p => p.id), ['6', '4', '2']);
-  assert.deepEqual(body.posts.map(p => p.metrics.likes), [16, 100, 15]);
+  assert.deepEqual(body.posts.map(p => p.metrics.likes), [50, 100, 49]);
   assert.equal(body.posts[0].account.profileImageUrl, '');
   assert.equal(body.nextToken, 'next_456');
+});
+
+test('monitoring excludes soccer context, transfer sources and full note text without hiding unrelated posts', async () => {
+  process.env.X_BEARER_TOKEN = 'fixture';
+  const post = (id, text, extra = {}) => ({
+    id, text, author_id: '42', created_at: '2026-10-05T12:00:00Z',
+    public_metrics: { like_count: 60 }, ...extra,
+  });
+  const soccerContext = (domain, entity) => ({ context_annotations: [{ domain: { id: domain }, entity: { id: entity } }] });
+  let calls = 0;
+  globalThis.fetch = async url => {
+    calls++;
+    assert.ok(new URL(url).searchParams.get('tweet.fields').split(',').includes('context_annotations'));
+    return Response.json({
+      data: [
+        post('1', 'Monitoring a possible signing', soccerContext('11', '733756536430809088')),
+        post('2', 'Monitoring the situation', soccerContext('131', '733756536430809088')),
+        post('3', 'Monitoring the situation', soccerContext('131', '1294019337066438657')),
+        post('4', 'Monitoring the situation', { author_id: '43' }),
+        post('5', 'Monitoring the situation', { note_tweet: { text: 'Monitoring FÚTBOL news' } }),
+        post('6', 'Monitoring the Premier\nLeague'),
+        post('7', 'Barcelona monitoring a Fulham midfielder'),
+        post('8', 'Monitoring #soccer'),
+        post('9', 'Monitoring NFL football injuries'),
+        post('10', 'Monitoring the nuclear arsenal and weapons transfer'),
+        post('11', 'Monitoring flooding in Chelsea and Liverpool'),
+        post('12', 'Monitoring the situation', { context_annotations: null }),
+      ],
+      includes: { users: [{ id: '42', username: 'tester' }, { id: '43', username: 'DeadlineDayLive' }] },
+      meta: { next_token: 'more_results' },
+    });
+  };
+  const response = await handler(new Request('https://example.test/api/escalation-x-feed?mode=monitoring'));
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(calls, 1, 'filtering must not trigger additional paid lookups');
+  assert.deepEqual(body.posts.map(p => p.id), ['9', '10', '11', '12']);
+  assert.equal(body.nextToken, 'more_results');
 });
 
 test('monitoring search validates cursors and handles access/rate failures without secrets', async () => {
